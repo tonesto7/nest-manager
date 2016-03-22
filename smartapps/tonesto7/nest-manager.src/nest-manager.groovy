@@ -84,7 +84,11 @@ mappings {
 def authPage() {
 	preReqVariableCheck()
     //log.trace "authPage()"
-    getWebFileData()
+    //state.advAppDebug = true
+    //state.appDebug = true
+    if(getLastWebUpdSec() > 1800) {
+       	getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
+    }
     //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     if(!state.accessToken) { //this is an access token for the 3rd party to make a call to the connect app
         state.accessToken = createAccessToken()
@@ -269,6 +273,7 @@ def updated() {
 def uninstalled() {
     state.thermostats = []
     state.protects = []
+    state.presDevice =  false
     addRemoveDevices()
     //Revokes Smartthings endpoint token...
 	revokeAccessToken()
@@ -284,7 +289,8 @@ def initialize() {
     addRemoveDevices()
     subscriber()
     setPollingState()
-    schedFollowPoll()
+    atomicState?.lastChildUpdDt = "" // force child update on next poll
+    schedFollowPoll(20)
 	//getEndpointUrl() //This can stay for now
 }
 
@@ -309,7 +315,9 @@ def setPollingState() {
     } else { 
     	if(!state.pollingOn) { 
         	LogAction("Polling is Now ACTIVE!!!", "info", true)
-            state.pollingOn = true }
+            state.pollingOn = true
+            poll(true)
+        }
     	if(!state.isInstalled) { poll(true) }
     }
 }
@@ -328,13 +336,17 @@ def pollWatcher(evt) {
     if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
 
-def poll(force = false, type = null) {
+def poll(force = false, type = "all") {
 	//setStateVar()
     schedFollowPoll()
    	if(isPollAllowed()) { 
    		def dev = false
         def str = false
-        if (force == true) { forcedPoll() }
+        if (force == true) { forcedPoll(type) }
+        if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
+            LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", false) 
+            scheduleNextPoll()
+        }
    		else if(!force) {
    			if(ok2PollDevice()) { 
             	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
@@ -342,15 +354,13 @@ def poll(force = false, type = null) {
                 scheduleNextPoll("dev")
             }
             if(ok2PollStruct()) {
-            	if(getLastStructPollSec() > state?.pollStrValue) { pollStr() }
-            }    
-            else { 
-    			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", false) 
-    			scheduleNextPoll()
-    		}
+                LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
+                str = getApiStructureData()
+                scheduleNextPoll("str")
+            }
 		}
         if(state?.updChildOnNewOnly) {
-        	if (force || dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
+        	if (dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
         }
         else { updateChildData() }
         if(getLastWebUpdSec() > 1800) {
@@ -361,15 +371,7 @@ def poll(force = false, type = null) {
 }
 
 def pollStr() {
-   	if(isPollAllowed()) { 
-        def str = false
-        if(ok2PollStruct()) {
-   			LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
-            str = getApiStructureData()
-            scheduleNextPoll("str")
-       	} 
-        if(str) { updateChildData() }
-    }
+    poll()
 }
 
 def schedDevPoll(val = null) {
@@ -384,25 +386,48 @@ def schedStrPoll(val = null) {
     runIn(pollStrVal, "pollStr",[overwrite: true])
 }
 
-def schedFollowPoll() {
-    runIn(90, "pollFollow",[overwrite: true])
+def schedFollowPoll(val = 90) {
+    //log.trace "scheduling Follow Poll for (${val}) seconds"
+    runIn(val, "pollFollow",[overwrite: true])
 }
 
 def scheduleNextPoll(type = null) {
-    if(type == "dev" || !type) {
     	def pollVal = state?.pollValue ? state?.pollValue.toInteger() : 60
+    	def nextfollow = pollVal - 1
     	def lastDevPoll = getLastDevicePollSec().toInteger()
     	def newPollVal = ((pollVal - lastDevPoll) > 6) ? (int) (pollVal - lastDevPoll) : pollVal 
-    	if	(newPollVal < pollVal) { schedDevPoll(newPollVal) }
-    	else { schedDevPoll(pollVal) }
-	}
-    if(type == "str" || !type) {
+    if(type == "dev" || !type) {
+    	if	(newPollVal < pollVal) {
+            schedDevPoll(newPollVal)
+            nextfollow = newPollVal
+        }
+    	else {
+            schedDevPoll(pollVal)
+            nextfollow = pollVal
+        }
+    }
+    
     	def pollStrVal = state?.pollStrValue ? state?.pollStrValue.toInteger() : 180
+    	def nextfollowstr = pollStrVal - 3
     	def lastStrPoll = getLastStructPollSec().toInteger()
     	def newStrPollVal = ((pollStrVal - lastStrPoll) > 6) ? (int) (pollStrVal - lastStrPoll) : pollStrVal
-    	if	(newStrPollVal < pollStrVal) { schedStrPoll(newStrPollVal) }
-    	else { schedStrPoll(pollStrVal) }
+    if(type == "str" || !type) {
+    	if	(newStrPollVal < pollStrVal) {
+			if (Math.abs(newStrPollVal - nextfollow) < 6) {
+			    newStrPollVal = newStrPollVal + 20
+			}
+   		    schedStrPoll(newStrPollVal) 
+        	nextfollowstr = newStrPollVal
+    	} else {
+			if (Math.abs(pollStrVal - nextfollow) < 6) {
+				pollStrVal = pollStrVal + 20
+			}
+            schedStrPoll(pollStrVal)
+            nextfollowstr = pollStrVal
+        }
     }
+    if ( nextfollow < nextfollowstr ) { schedFollowPoll(nextfollow + 90) }
+    else { schedFollowPoll(nextfollowstr + 90) }
 }
 
 def forcedPoll(type = "dev") {
@@ -552,6 +577,9 @@ def updateChildData() {
             	return true
         	} 
             
+        	else if(devId == "NestPresenceDevice") {
+            	return true
+        	} 
         	else if(!state?.deviceData?.thermostats[devId] && !state?.deviceData?.smoke_co_alarms[devId]) {
             	LogAction("Device connection removed? no data for ${devId}", "warn", true, true)
             	return null
@@ -564,6 +592,7 @@ def updateChildData() {
     }
     catch (ex) {
     	LogAction("updateChildData Exception: ${ex}", "error", true, true)
+    	atomicState?.lastChildUpdDt = ""
    	}
 }
 
@@ -609,7 +638,7 @@ def ok2PollStruct() { return (!atomicState?.lastStrucDataUpd|| ((getLastStructPo
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
-def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
+def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
 def getLastWebUpdSec() { return !atomicState?.lastWebUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWebUpdDt).toInteger() }
 /************************************************************************************************
 |										Nest API Commands										|
@@ -747,6 +776,7 @@ def setFanMode(child, fanOn) {
     if(childDebug) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val}, timeVal: ${timeVal}") }
     try {	
 		if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.fanActive, val, child)) { runIn(3, "postDevCmd") }
+		return true
      }
     catch (ex) { 
     	LogAction("setFanMode Exception: ${ex}", "error", true, true) 
@@ -870,7 +900,6 @@ def getLastUpdMsgSec() { return !state?.lastUpdMsgDt ? 1000 : GetTimeDiffSeconds
 def getLastMisPollMsgSec() { return !state?.lastMisPollMsgDt ? 1000 : GetTimeDiffSeconds(state?.lastMisPollMsgDt).toInteger() }
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
-
 def getWebFileData() {
 	def now = new Date()
 	def params = [ 
@@ -1116,27 +1145,29 @@ def addRemoveDevices() {
         		} else {
             		LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
         		}
-        		return d3
+        		//return d3
             } catch (ex) { LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) }
         }
-        
+
     	def delete  // Delete any that are no longer in settings
     	if(!state?.thermostats && !state?.protects && !state?.presDevice) {
         	//LogAction("Deleting All Nest Thermostats and Protects", "debug", true)
         	delete = getAllChildDevices() //inherits from SmartApp (data-management)
     	} else { //delete only thermostat
         	//LogAction("Deleteing individual Thermostat(s) and/or Protect(s)", "debug", )
-        	if (!state?.protects) {
+        	if (!state?.protects && !state?.presDevice) {
             	delete = getChildDevices().findAll { !state.thermostats?.toString().contains(it?.deviceNetworkId) }
         	}	 
-        	else if (!state?.thermostats) { 
+        	else if (!state?.thermostats && !state?.presDevice) { 
         		delete = getChildDevices().findAll { !state?.protects.toString().contains(it?.deviceNetworkId) }
         	}
             else if (!state?.presDevice) {
-            	delete = getChildDevices().findAll { it?.deviceNetworkId == "Nest Presence Device" }
+            	delete = getChildDevices().findAll { it?.deviceNetworkId == "NestPresenceDevice" }
             }
         	else {
-            	delete = getChildDevices().findAll { !state?.thermostats?.toString().contains(it?.deviceNetworkId) && !state?.protects.toString().contains(it?.deviceNetworkId) }
+                def presdni = "NestPresenceDevice"
+            	delete = getChildDevices().findAll { !state?.thermostats?.toString().contains(it?.deviceNetworkId) && 
+                     !state?.protects.toString().contains(it?.deviceNetworkId) && !presdni.toString().contains(it?.deviceNetworkId) }
         	}
     	}
     	if(delete.size() > 0) { 
