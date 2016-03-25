@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.2"}
+def devVer() { return "1.1.3"}
 
 // for the UI
 metadata {
@@ -819,13 +819,20 @@ void changeSetpoint(val) {
     }
 }
 
+// Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
 void setHeatingSetpoint(temp) {
     setHeatingSetpoint(temp.toDouble())
 }
 
-void setHeatingSetpoint(Double temp) {
-	log.trace "setHeatingSetpoint()... ($temp)"
+void setHeatingSetpoint(Double reqtemp) {
+	log.trace "setHeatingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
+	def temp = 0.0
+	if (wantMetric()) {
+		temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+	} else {
+		temp = reqtemp.round(0).toInteger()
+	}
 	def tempUnit = state?.tempUnit
 	def canHeat = state?.can_heat.toBoolean()
 	def result = false
@@ -880,11 +887,17 @@ void setCoolingSetpoint(temp) {
     setCoolingSetpoint( temp.toDouble() )
 }
 
-void setCoolingSetpoint(Double temp) {
-	log.trace "setCoolingSetpoint()... ($temp)"
+void setCoolingSetpoint(Double reqtemp) {
+	log.trace "setCoolingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
+	def temp = 0.0
+	if (wantMetric()) {
+		temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+	} else {
+		temp = reqtemp.round(0).toInteger()
+	}
 	def tempUnit = state?.tempUnit
-    def canCool = state?.can_cool.toBoolean()
+	def canCool = state?.can_cool.toBoolean()
 	def result = false
 
     log.debug "Cool Temp Received: ${temp} (${tempUnit})"
@@ -979,7 +992,7 @@ def setHome() {
 |										HVAC MODE FUNCTIONS										|
 *************************************************************************************************/
 
-def off() {
+void off() {
 	log.trace "off()..."
     def currentMode = getHvacMode()
     if (parent.setHvacMode(this, "off")) {
@@ -990,7 +1003,7 @@ def off() {
     }
 }
 
-def heat() {
+void heat() {
 	log.trace "heat()..."
     def curPres = getNestPresence()
     def currentMode = getHvacMode()
@@ -1004,12 +1017,12 @@ def heat() {
     }
 }
 
-def emergencyHeat() {
+void emergencyHeat() {
     log.trace "emergencyHeat()..."
     log.warn "Emergency Heat setting not allowed"
 }
 
-def cool() {
+void cool() {
 	log.trace "cool()..."
     def curPres = getNestPresence()
     def currentMode = getHvacMode()
@@ -1023,7 +1036,7 @@ def cool() {
     }
 }
 
-def auto() {
+void auto() {
 	log.trace "auto()..."
     def curPres = getNestPresence()
     def currentMode = getHvacMode()
@@ -1037,7 +1050,7 @@ def auto() {
     }
 }
 
-def setThermostatMode(modeStr) {
+void setThermostatMode(modeStr) {
 	log.trace "setThermostatMode()..."
 	switch(modeStr) {
     	case "auto":
@@ -1065,14 +1078,14 @@ def setThermostatMode(modeStr) {
 /************************************************************************************************
 |										FAN MODE FUNCTIONS										|
 *************************************************************************************************/
-def fanOn() {
+void fanOn() {
 	if(state?.has_fan.toBoolean()) {
     	parent.setFanMode(this, true)
         fanModeEvent("true")
     }
 }
 
-def fanOff() {
+void fanOff() {
 	log.trace "fanOff()..."
 	if(state?.has_fan.toBoolean()) {
     	parent.setFanMode (this, "off")
@@ -1080,12 +1093,12 @@ def fanOff() {
     }
 }
 
-def fanCirculate() {
+void fanCirculate() {
 	log.trace "fanCirculate()..."
 	log.warn "fanCirculate setting not supported by Nest API"
 }
 
-def fanAuto() {
+void fanAuto() {
 	log.trace "fanAuto()..."
 	if(state?.has_fan.toBoolean()) {
    		parent.setFanMode(this,false)
@@ -1093,8 +1106,25 @@ def fanAuto() {
     }
 }
 
-def setThermostatFanMode(fanModeStr) {
+void setThermostatFanMode(fanModeStr) {
     log.trace "setThermostatFanMode()... ($fanModeStr)"
+	switch(fanModeStr) {
+    	case "auto":
+        	fanAuto()
+        	break
+    	case "on":
+        	fanOn()
+        	break
+       	case "circulate":
+        	fanCirculate()
+        	break
+        case "off":   // non standard by Nest Capabilities Thermostat
+        	fanOff()
+        	break
+        default:
+        	log.warn "setThermostatFanMode Received an Invalid Request: ${fanModeStr}"
+            break
+    }
 }
 
 
