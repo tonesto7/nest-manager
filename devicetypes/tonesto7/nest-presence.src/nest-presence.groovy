@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.0" }
+def devVer() { return "1.1.1" }
 
 // for the UI
 metadata {
@@ -64,7 +64,7 @@ metadata {
 			state("not present",labelIcon:"st.presence.tile.mobile-not-present",backgroundColor:"#ebeef2", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-			state "present",	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "home",	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
             state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
             state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
         	state "unknown", 	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
@@ -163,7 +163,7 @@ def presenceEvent(presence) {
 	def val = device.currentState("presence")?.value
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = getNestPresence()
-    def newNestPres = (presence == "home") ? "present" : ((presence == "auto-away") ? "auto-away" : "away")
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
     state?.nestPresence = newNestPres
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
@@ -189,7 +189,7 @@ def getHvacMode() {
 
 def getNestPresence() { 
 	try { return device.currentState("nestPresence").value.toString() } 
-	catch (e) { return "present" }
+	catch (e) { return "home" }
 }
 
 def getPresence() { 
@@ -208,7 +208,7 @@ def setPresence() {
 		parent.setStructureAway(this, "false")
         presenceEvent("home") 
     }
-    else if (pres == "present") {
+    else if (pres == "home") {
         parent.setStructureAway(this, "true")
         presenceEvent("away")
     }
