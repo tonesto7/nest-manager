@@ -812,7 +812,7 @@ private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
         if (cmdQueue?.contains(cmdData)) { // || atomicState?.lastQcmd == cmdData) {    
             LogAction("Command Exists in queue... Skipping...", "warn", true)
             if(childDebug && childDev) { childDev?.log("Command Exists in queue... Skipping...", "warn") }
-            return false
+//            return false
         }
         else {
             LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
@@ -823,21 +823,23 @@ private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             atomicState?.lastQcmd = cmdData
             log.debug "cmdQueue Size: ${cmdQueue?.size()}"
             if(childDebug && childDev) { childDev?.log("cmdQueue: ${cmdQueue} | cmdQueue Size: ${cmdQueue?.size()}") }
-            return true
+  //          return true
         }
-        checkQueue()
+               	runIn(cmdQueueDelay(), "checkQueue", [overwrite: true])
+ //       checkQueue()
     }
     catch (ex) {
     	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
         if(childDebug && childDev) { childDev?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
         return false
     }
+   return true
 }
 
 void checkQueue() {
 	log.trace "checkQueue..."
-    try {
     	def cmdQueue = atomicState?.cmdQ
+    try {
         def cmdQcnt = cmdQueue?.size()
 		if(cmdQcnt > 0) {
     		processQueue()
@@ -867,16 +869,13 @@ private processQueue() {
 		def cmdQueue = atomicState?.cmdQ
         if(cmdQueue && cmdQueue.size() > 0) {
             def cmd = cmdQueue?.first()
-            def childDev = getChildDevice(cmd[4].toString())
-            if(childDebug && childDev) { childDev?.log("cmd: $cmd ") } //${cmd[0]}, ${cmd[1]}, ${cmd[2]}, ${cmd[3]}, ${cmd[4]}...", "warn") }
+//            def childDev = getChildDevice(cmd[4].toString())
+//            if(childDebug && childDev) { childDev?.log("cmd: $cmd ") } //${cmd[0]}, ${cmd[1]}, ${cmd[2]}, ${cmd[3]}, ${cmd[4]}...", "warn") }
             cmdProcState(true)
             
-			if(procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4])) {
-            	cmdQueue?.remove(0)
-            }
-            else { 
-            	atomicState?.failedItemsCnt = atomicState?.failedItemsCnt + 1
-            }
+	procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4])
+       	cmdQueue?.remove(0)
+        atomicState?.cmdQ = cmdQueue
             if(cmdQueue?.size() == 0) {
                	atomicState?.cmdQ = []
                	if(cmd[1] == apiVar().types.struct.toString()) {
@@ -885,7 +884,6 @@ private processQueue() {
                    	runIn(3, "postDevCmd")
                	}
             } else {
-               	atomicState?.cmdQ = cmdQueue
                	runIn(cmdQueueDelay(), "checkQueue", [overwrite: true])
             }
       	}
@@ -903,8 +901,8 @@ private processQueue() {
 
 def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
 	//LogAction("procNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
-    def childDev = getChildDevice(childId)
-    if(childDebug && childDev) { childDev?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
+//    def childDev = getChildDevice(childId)
+//    if(childDebug && childDev) { childDev?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
 	def data
     try {
     	def urlPath = redir ? "" : "/${type}/${typeId}"
@@ -917,7 +915,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
     		body: data.toString()
     	]
     	LogTrace("procNestApiCmd params: ${params}")
-        if(childDebug && childDev) { childDev?.log("procNestApiCmd params: ${params}", "debug") }
+//        if(childDebug && childDev) { childDev?.log("procNestApiCmd params: ${params}", "debug") }
         httpPutJson(params) { resp ->
         	if (resp.status == 307) {
             	def newUrl = resp.headers.location.split("\\?")
@@ -929,18 +927,20 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
                 }
             }
             else { 
-            	if(childDebug && childDev) { childDev?.log("procNestApiCmd Response: ${resp.status}") }
+    	LogAction("procNestApiCmd Response: ${resp.status}", "error", true, true)
+ //           	if(childDebug && childDev) { childDev?.log("procNestApiCmd Response: ${resp.status}") }
             }
        	}
-        return true
-        checkQueue()
+//        checkQueue()
     }   
 	catch (ex) {
     	LogAction("procNestApiCmd Exception: ${ex}", "error", true, true)
-        if(childDebug && childDev) { childDev?.log("procNestApiCmd Response Exception: ${ex}", "error") }
+  //      if(childDebug && childDev) { childDev?.log("procNestApiCmd Response Exception: ${ex}", "error") }
+            	//atomicState?.failedItemsCnt = atomicState?.failedItemsCnt + 1
         //atomicState?.apiIssues = true
         return false
     }
+        return true
 }
 
 /************************************************************************************************
