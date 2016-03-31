@@ -799,55 +799,53 @@ def setTargetTempHigh(child, unit, temp) {
 private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 	log.trace "sendNestApiCmd... $cmdUri, $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId"
     try {
-    	//state?.cmdQueue = []
     	def childDev = getChildDevice(childId)
-        //if(!atomicState?.cmdQ) { atomicState?.cmdQ = [] }
 		def cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
          if(childDebug && childDev) { childDev?.log("cmdQueue: (${cmdQueue.size()}) | $cmdQueue") }
-        def cmdData = [cmdTypeId.toString(), cmdType.toString(), cmdObj.toString(), cmdObjVal.toString(), childId.toString()]
+        def cmdData = [cmdTypeId.toString(), cmdType.toString(), cmdObj.toString(), cmdObjVal, childId.toString()]
         
         if(childDebug && childDev) { childDev?.log("cmdData: $cmdData") }
         
         log.debug "cmdData: $cmdData"
+		cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
         if (cmdQueue?.contains(cmdData)) { // || atomicState?.lastQcmd == cmdData) {    
             LogAction("Command Exists in queue... Skipping...", "warn", true)
             if(childDebug && childDev) { childDev?.log("Command Exists in queue... Skipping...", "warn") }
-            return false
         }
         else {
             LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
             if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
+		cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
             cmdQueue << cmdData
            	atomicState?.cmdQ = cmdQueue
             
             atomicState?.lastQcmd = cmdData
             log.debug "cmdQueue Size: ${cmdQueue?.size()}"
             if(childDebug && childDev) { childDev?.log("cmdQueue: ${cmdQueue} | cmdQueue Size: ${cmdQueue?.size()}") }
-            return true
         }
-        checkQueue()
+               	runIn(cmdQueueDelay(), "checkQueue", [overwrite: true])
     }
     catch (ex) {
     	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
         if(childDebug && childDev) { childDev?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
         return false
     }
+   return true
 }
 
 void checkQueue() {
 	log.trace "checkQueue..."
-    try {
     	def cmdQueue = atomicState?.cmdQ
+    try {
         def cmdQcnt = cmdQueue?.size()
 		if(cmdQcnt > 0) {
-    		processQueue()
 		}
         else {
     		if(cmdQcnt > 10) {
     			sendMsg("There is now ${cmdQcnt} events in the Command Queue. Something must be wrong...", "info")
-                processQueue()
         	}
     	}
+    		processQueue()
         
 	}
 	catch (ex) {
@@ -862,34 +860,41 @@ private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSe
 
 private processQueue() {
 	log.trace "processQueue..."
-    cmdProcState(false)
 	try {
-		def cmdQueue = atomicState?.cmdQ
+       	def  cmdQueue = atomicState?.cmdQ
+        def cmd = []
         if(cmdQueue && cmdQueue.size() > 0) {
-            def cmd = cmdQueue?.first()
+       		cmdQueue = atomicState.cmdQ
+//log.trace "before  cmdQueue: ${cmdQueue}"
+       		cmd = cmdQueue.remove(0)
+//log.trace "after cmd: ${cmd}   cmdQueue: ${cmdQueue}"
+       		atomicState?.cmdQ = cmdQueue
+      	}
+
+        if(cmd.size() > 0) {
             def childDev = getChildDevice(cmd[4].toString())
-            if(childDebug && childDev) { childDev?.log("cmd: $cmd ") } //${cmd[0]}, ${cmd[1]}, ${cmd[2]}, ${cmd[3]}, ${cmd[4]}...", "warn") }
+            if(childDebug && childDev) { childDev?.log("cmd: $cmd ") } //${cmd[0]}, ${cmd[1]}, ${cmd[2]}, ${cmd[3]}, ${cmd[4]}...", "warn") 
+
             cmdProcState(true)
-            
-			if(procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4])) {
-            	cmdQueue?.remove(0)
-            }
-            else { 
-            	atomicState?.failedItemsCnt = atomicState?.failedItemsCnt + 1
-            }
-            if(cmdQueue?.size() == 0) {
-               	atomicState?.cmdQ = []
+	procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4])
+            cmdProcState(false)
+
                	if(cmd[1] == apiVar().types.struct.toString()) {
-                   	runIn(3, "postStrCmd")
+			atomicState.needStructpoll = true
+               	}
+
+		cmdQueue = atomicState?.cmdQ
+            if(cmdQueue?.size() == 0) {
+               	if(atomicState?.needStructpoll) {
+                   	postStrCmd()
+			atomicState.needStructpoll = false
                 } else {
-                   	runIn(3, "postDevCmd")
+                   	postDevCmd()
                	}
             } else {
-               	atomicState?.cmdQ = cmdQueue
                	runIn(cmdQueueDelay(), "checkQueue", [overwrite: true])
             }
       	}
-       	cmdProcState(false)
         atomicState?.cmdLastProcDt = getDtNow()
        	return
     }
@@ -902,9 +907,9 @@ private processQueue() {
 }
 
 def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
-	//LogAction("procNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
+	LogAction("procNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
     def childDev = getChildDevice(childId)
-    if(childDebug && childDev) { childDev?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
+//    if(childDebug && childDev) { childDev?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
 	def data
     try {
     	def urlPath = redir ? "" : "/${type}/${typeId}"
@@ -916,7 +921,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
         	query: [ "auth": atomicState?.authToken ],
     		body: data.toString()
     	]
-    	LogTrace("procNestApiCmd params: ${params}")
+    	log.trace("procNestApiCmd params: ${params}")
         if(childDebug && childDev) { childDev?.log("procNestApiCmd params: ${params}", "debug") }
         httpPutJson(params) { resp ->
         	if (resp.status == 307) {
@@ -929,18 +934,19 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
                 }
             }
             else { 
+    	LogAction("procNestApiCmd Response: ${resp.status}", "info", false, false)
             	if(childDebug && childDev) { childDev?.log("procNestApiCmd Response: ${resp.status}") }
             }
        	}
-        return true
-        checkQueue()
     }   
 	catch (ex) {
     	LogAction("procNestApiCmd Exception: ${ex}", "error", true, true)
         if(childDebug && childDev) { childDev?.log("procNestApiCmd Response Exception: ${ex}", "error") }
+            	//atomicState?.failedItemsCnt = atomicState?.failedItemsCnt + 1
         //atomicState?.apiIssues = true
         return false
     }
+        return true
 }
 
 /************************************************************************************************
