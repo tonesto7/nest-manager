@@ -108,7 +108,7 @@ def authPage() {
         }
     }
     
-    updateWebStuff(true)
+    updateWebStuff()
     
     def description
     def uninstallAllowed = false
@@ -202,10 +202,12 @@ def authPage() {
                    		}
                 	}
                 }
+                
                 section("Preferences:") { 
         			href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nApp Logs: (${debugStatus()})\nDevice Logs: (${childDebugStatus()})\nTap to configure...", 
             			image: getAppImg("settings_icon.png")
                 }
+                
             }
             section(" ") { 
             	href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
@@ -453,13 +455,15 @@ def getApiData(type = null) {
         }
     }
 	catch(ex) {
+        atomicState.apiIssues = true
         if(ex instanceof groovyx.net.http.HttpResponseException) {
         	if (ex.message.contains("Too Many Requests")) {
             	log.warn "Received '${ex.message}' response code..."
-                atomicState.apiIssues = true
             }
         } else { 
         	LogAction("getApiData (type: $type) Exception: ${ex}", "error", true, true) 
+        	if(type == "str") { atomicState.needStrPoll = true }
+        	else if(type == "dev") { atomicState?.needDevPoll = true }
         }
     }
     return result
@@ -533,6 +537,14 @@ def locationPresence() {
 def apiIssues() {
 	return atomicState?.apiIssues ? true : false
     LogAction("API Issues: ${atomicState.apiIssues}", "debug", false) 
+}
+
+def sunrise() {
+	return location.currentState("sunriseTime")?.dateValue
+}
+
+def sunset() {
+	return location.currentState("sunsetTime")?.dateValue
 }
 
 def ok2PollDevice() {
@@ -702,6 +714,7 @@ def setTargetTempHigh(child, unit, temp) {
 def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 	//log.trace "sendNestApiCmd... $cmdUri, $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId"
 	def childDev = getChildDevice(childId)
+	def cmdDelay = !atomicState.cmdDelayVal ? 4 : atomicState?.cmdDelayVal.toInteger()
     try {
         if (!atomicState?.cmdQ) { atomicState.cmdQ = [] }
         def cmdQueue = atomicState?.cmdQ
@@ -710,6 +723,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
         if (cmdQueue?.contains(cmdData)) {
             LogAction("Command Exists in queue... Skipping...", "warn", true)
             if(childDebug && childDev) { childDev?.log("Command Exists in queue... Skipping...", "warn") }
+            runIn(cmdDelay*2, "workQueue", [overwrite: true])
         } else {
             LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
             if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
@@ -719,7 +733,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             atomicState?.cmdQ = cmdQueue
             
             atomicState?.lastQcmd = cmdData
-            runIn(2, "workQueue", [overwrite: true])
+            runIn(cmdDelay, "workQueue", [overwrite: true])
         }
         return true
     }
@@ -743,16 +757,22 @@ void workQueue() {
             def cmd = cmdQueue?.remove(0)
             atomicState.cmdQ = cmdQueue
 
-            cmdProcState(true)
-            def cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
-            if ( !cmdres ) {
+            if (cmd[1] == "poll") {
+            	atomicState.needStrPoll = true 
+            	atomicState.needDevPoll = true
             	atomicState.needChildUpd = true
-                atomicState.pollBlocked = false
-                runIn((cmdDelay+4), "postCmd", [overwrite: true])
+            } else {
+                cmdProcState(true)
+                def cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
+                if ( !cmdres ) {
+                    atomicState.needChildUpd = true
+                    atomicState.pollBlocked = false
+                    runIn((cmdDelay*2), "postCmd", [overwrite: true])
+                }
+                cmdProcState(false)
             }
-            cmdProcState(false)
 
-            atomicState?.needDevPoll = true
+            atomicState.needDevPoll = true
             if(cmd[1] == apiVar().types.struct.toString()) {
             	atomicState.needStrPoll = true 
             }
@@ -921,35 +941,38 @@ def updateWebStuff(force = false) {
         getWeatherConditions()
     } 
     if (!force && getLastWebUpdSec() > 1800) {
-		if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+		if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
 	}
-    if(!force && getLastWeatherUpdSec() > 900) {
+    if(!force && atomicState?.weatherDevice && getLastWeatherUpdSec() > 900) {
         if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
     }
 }
 
 def getWeatherConditions() {
 	//log.trace "getWeatherConditions..."
-	try {
-    	LogAction("Retrieving Latest Local Weather Conditions", "info", true)
-    	def curWeather = getWeatherFeature("conditions")
-        if(curWeather) { 
-        	atomicState?.currentWeather = curWeather 
-        	atomicState?.lastWeatherUpdDt = getDtNow()
-        	return true
-        } else {
-        	LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
-            return false
-        }
-    }
-    catch (ex) {
-    	LogAction("getWeatherConditions Exception: ${ex}", "error", true, true)
-        return false
-    }
+	if(atomicState?.weatherDevice) {
+	    try {
+    	    LogAction("Retrieving Latest Local Weather Conditions", "info", true)
+    	    def curWeather = getWeatherFeature("conditions")
+            if(curWeather) { 
+        	    atomicState?.currentWeather = curWeather 
+        	    atomicState?.lastWeatherUpdDt = getDtNow()
+        	    atomicState.needChildUpd = true
+        	    return true
+            } else {
+        	    LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
+                return false
+            }
+	    }
+	    catch (ex) {
+        	    LogAction("getWeatherConditions Exception: ${ex}", "error", true, true)
+        	    return false
+	    }
+	} else { return false }
 }
 
 def getWData() {
-	if(state?.currentWeather) {
+	if(atomicState?.currentWeather) {
     	return atomicState?.currentWeather
     } else {
     	if(getWeatherConditions()) {
@@ -985,9 +1008,11 @@ def getWebFileData() {
     return result
 }
 
-def refresh() {
-	LogAction("Refresh Received from Device...", "debug", true)
-    poll(true)
+def refresh(child = null) {  // This is backward compatible; in device handlers, change parent.refresh()  to parent.refresh(this) to enable proper logging
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+	LogAction("Refresh Received from Device...${devId}", "debug", true, true)
+    if(childDebug && child) { child?.log("refresh: ${devId}") }
+    return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
 }
 
 def ver2IntArray(val) { 
