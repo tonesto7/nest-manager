@@ -584,6 +584,7 @@ def getLastWeatherUpdSec() { return !atomicState?.lastWeatherUpdDt ? 100000 : Ge
 private cmdProcState(Boolean value) { atomicState?.cmdIsProc = value }
 private cmdIsProc() { return !atomicState?.cmdIsProc ? false : true }
 private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSeconds(atomicState?.cmdLastProcDt) : 0 }
+private getLastCmdSentSeconds() { return atomicState?.lastCmdSentDt ? GetTimeDiffSeconds(atomicState?.lastCmdSentDt) : 3601 }
 
 def apiVar() {
 	def api = [	
@@ -732,7 +733,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
         if (cmdQueue?.contains(cmdData)) {
             LogAction("Command Exists in queue... Skipping...", "warn", true)
             if(childDebug && childDev) { childDev?.log("Command Exists in queue... Skipping...", "warn") }
-            runIn(cmdDelay*2, "workQueue", [overwrite: true])
+            schedNextworkQ(childId)
         } else {
             LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
             if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
@@ -742,7 +743,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             atomicState?.cmdQ = cmdQueue
             
             atomicState?.lastQcmd = cmdData
-            runIn(cmdDelay, "workQueue", [overwrite: true])
+            schedNextworkQ(childId)
         }
         return true
     }
@@ -753,6 +754,22 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
     }
 }
 
+void schedNextworkQ(childId) {
+    def childDev = getChildDevice(childId)
+    def cmdDelay = getChildWaitVal()
+    //
+    // This is throttling the rate of commands to the Nest service for this access token.
+    // If too many commands are sent Nest throttling could shut all write commands down for 1 hour
+    //
+    // This allows up to 3 commands if none sent in the last hour, then only 1 per 60 seconds.   Nest could still
+    // throttle this if the battery state on devices is low.
+    //
+    if(childDebug && childDev) { childDev?.log("schedNextworkQ recentSendCmd:  ${atomicState?.recentSendCmd}  ${getLastCmdSentSeconds()} ${cmdDelay}" ) }
+if(childDev) { childDev?.log("schedNextworkQ recentSendCmd:  ${atomicState?.recentSendCmd}  ${getLastCmdSentSeconds()} ${cmdDelay}" ) }
+    if ( (atomicState?.recentSendCmd > 0 ) || (getLastCmdSentSeconds() > 60)) { runIn(cmdDelay, "workQueue", [overwrite: true]) }
+    else { runIn((60-getLastCmdSentSeconds()+cmdDelay), "workQueue", [overwrite: true]) }
+}
+
 void workQueue() {
 	//log.trace "workQueue..."
     def cmdDelay = getChildWaitVal()
@@ -760,12 +777,13 @@ void workQueue() {
     def cmdQueue = atomicState?.cmdQ
     try {
     	if(cmdQueue.size() > 0) {
-            runIn(cmdDelay*2, "workQueue", [overwrite: true])
+            runIn(60, "workQueue", [overwrite: true])  // lost schedule catchall
         	atomicState?.pollBlocked = true
             cmdQueue = atomicState.cmdQ
             def cmd = cmdQueue?.remove(0)
             atomicState.cmdQ = cmdQueue
 
+            if (getLastCmdSentSeconds() > 3600) { atomicState.recentSendCmd = 3 } // if nothing sent in last hour, reset 3 command limit
             if (cmd[1] == "poll") {
             	atomicState.needStrPoll = true 
             	atomicState.needDevPoll = true
@@ -790,9 +808,10 @@ void workQueue() {
             cmdQueue = atomicState?.cmdQ
             if(cmdQueue?.size() == 0) {
             	atomicState.pollBlocked = false
-                runIn(2, "postCmd", [overwrite: true])
+            	atomicState.needChildUpd = true
+                runIn(cmdDelay+2, "postCmd", [overwrite: true])
             }
-            else { runIn(cmdDelay, "workQueue", [overwrite: true]) }
+            else { schedNextworkQ(null) }
             
             atomicState?.cmdLastProcDt = getDtNow()
             if(cmdQueue?.size() > 10) {
@@ -809,8 +828,8 @@ void workQueue() {
         atomicState.needStrPoll = true 
         atomicState.needChildUpd = true
         atomicState?.pollBlocked = false
-        runIn(cmdDelay, "workQueue", [overwrite: true])
-        runIn((cmdDelay+4), "postCmd", [overwrite: true])
+        runIn(60, "workQueue", [overwrite: true])
+        runIn((60+4), "postCmd", [overwrite: true])
     	return
     }
 }
@@ -831,6 +850,14 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
     	]
     	LogTrace("procNestApiCmd Url: $uri | params: ${params}")
         log.trace "procNestApiCmd Url: $uri | params: ${params}"
+
+        if (!redir && (atomicState?.recentSendCmd > 0) && (getLastCmdSentSeconds() < 60)) {
+            def val = atomicState.recentSendCmd
+            val -= 1
+            atomicState.recentSendCmd = val
+        }
+        atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
+        atomicState?.lastCmdSentDt = getDtNow()
         httpPutJson(params) { resp ->
             if (resp.status == 307) {
             	def newUrl = resp.headers.location.split("\\?")
@@ -841,8 +868,6 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
             }
             else if( resp.status == 200) {
             	LogAction("procNestApiCmd Processed ($type | ($obj:$objVal)) Successfully!!!", "info", true)
-            	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
-            	atomicState?.lastCmdSentDt = getDtNow()
             	atomicState?.apiIssues = false
             	result = true
             }
