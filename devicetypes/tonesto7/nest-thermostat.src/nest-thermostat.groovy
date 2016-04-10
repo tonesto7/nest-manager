@@ -1273,8 +1273,6 @@ def getInfoHtml() {
             <style type="text/css">
                 .flat-table {
                   width: 100%;
-                  //height: 400px
-                  border-collapse: collapse;
                   font-family: 'Lato', Calibri, Arial, sans-serif;
                   border: none;
                   border-radius: 3px;
@@ -1285,16 +1283,15 @@ def getInfoHtml() {
                 .flat-table th,
                 .flat-table td {
                   box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
+                  padding: 2px;
+                  font-size: 14px;
                 }
 
                 .flat-table th {
                   font-weight: bold;
                   -webkit-font-smoothing: antialiased;
-                  padding: 1px;
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
-                  font-size: 16px;
-                  border-radius: 2px;
                   -webkit-border-radius: 2px;
                   -moz-border-radius: 2px;
                   background: #00a1db;
@@ -1302,9 +1299,7 @@ def getInfoHtml() {
 
                 .flat-table td {
                   color: grey;
-                  padding: 0.4em 1em 0.4em 1.15em;
                   text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
-                  font-size: 14px;
                   text-align: center;
                 }
 
@@ -1312,6 +1307,10 @@ def getInfoHtml() {
                   -webkit-transition: background 0.3s, box-shadow 0.3s;
                   -moz-transition: background 0.3s, box-shadow 0.3s;
                   transition: background 0.3s, box-shadow 0.3s;
+                }
+
+				.datetime {
+                  font-size:12px;
                 }
             </style>
            	"""
@@ -1347,8 +1346,8 @@ def getInfoHtml() {
               </thead>
               <tbody>
                   <tr>
-                    <td>${state?.lastConnection.toString()}</td>
-                    <td>${state?.lastUpdatedDt.toString()}</td>
+                  <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
+                  <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
                   </tr>
                 </tbody>
               </table>

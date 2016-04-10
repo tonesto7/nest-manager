@@ -480,10 +480,8 @@ def getInfoHtml() {
     	head {
         	"""
             <style type="text/css">
-                .flat-table {
+                 .flat-table {
                   width: 100%;
-                  //height: 400px
-                  border-collapse: collapse;
                   font-family: 'Lato', Calibri, Arial, sans-serif;
                   border: none;
                   border-radius: 3px;
@@ -502,7 +500,7 @@ def getInfoHtml() {
                   padding: 1px;
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
-                  font-size: 16px;
+                  font-size: 14px;
                   border-radius: 2px;
                   -webkit-border-radius: 2px;
                   -moz-border-radius: 2px;
@@ -511,9 +509,8 @@ def getInfoHtml() {
 
                 .flat-table td {
                   color: grey;
-                  padding: 0.7em 1em 0.7em 1.15em;
+                  padding: 2px;
                   text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
-                  font-size: 14px;
                   text-align: center;
                 }
 
@@ -522,6 +519,10 @@ def getInfoHtml() {
                   -moz-transition: background 0.3s, box-shadow 0.3s;
                   transition: background 0.3s, box-shadow 0.3s;
                 }
+               
+               .datetime {
+                  font-size:12px;
+                }
             </style>
            	"""
         }
@@ -529,35 +530,34 @@ def getInfoHtml() {
         	"""
             <table class="flat-table">
               <thead>
-                <th>Nest Last Checked-In</th>
-                <th>Data Last Received</th>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>${state?.lastConnection.toString()}</td>
-                  <td>${state?.lastUpdatedDt.toString()}</td>
-                </tr>
-              </tbody>
-              </table>
-            <table class="flat-table">
-              <thead>
                 <th>Network Status</th>
-                <th>API Status</th>
                 <th>Debug</th>
+                <th>API Status</th>
               </thead>
                 <tbody>
                   <tr>
                     <td>${state?.onlineStatus.toString()}</td>
-                    <td>${state?.apiStatus}</td>
                     <td>${state?.debugStatus}</td>
+                   <td>${state?.apiStatus}</td>
                   </tr>
-                  <tr>
-                    <th>Firmware Version</th>
-                    <th>Device Type</th>
-                  </tr>
-                  <td>${state?.softwareVer.toString()}</td>
-                  
+                 </tbody>
+             </table>
+            <table class="flat-table">
+              <thead>
+                   <th>Firmware Version</th>
+                   <th>Device Type</th>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${state?.softwareVer.toString()}</td>   
                   <td>${state?.devTypeVer.toString()}</td>
+                </tr>
+        			<tr>
+                <th>Nest Last Checked-In</th>
+                <th>Data Last Received</th>
+              </tr>
+                  <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
+                  <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
                </tbody>
             </table>
             
