@@ -270,12 +270,11 @@ def updated() {
 }
 
 def uninstalled() {
-    if(addRemoveDevices(true)) {
-    	//Revokes Smartthings endpoint token...
-		revokeAccessToken()
-		//Revokes Nest Auth Token
-    	if(atomicState?.authToken) { revokeNestToken() }
-    }
+    addRemoveDevices(true)
+    //Revokes Smartthings endpoint token...
+    revokeAccessToken()
+    //Revokes Nest Auth Token
+    if(atomicState?.authToken) { revokeNestToken() }
     //sends notification of uninstall
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -284,13 +283,13 @@ def initialize() {
 	setStateVar()
 	unschedule()
 	unsubscribe()
-    atomicState.pollingOn = false
-    if (addRemoveDevices()) {
+	atomicState.pollingOn = false
+	atomicState.lastChildUpdDt = null // force child update on next poll
+	atomicState.lastForcePoll = null
+	if (!atomicState?.altNames) { atomicState.altNames = false } // THIS SHOULD BE A SETTINGS WITH DEFAULT FALSE
+	if (addRemoveDevices()) { // if we changed devices, reset queues and polling
     	atomicState.cmdQlist = []
-    	atomicState.lastChildUpdDt = null // force child update on next poll
-    	atomicState.lastForcePoll = null
-     	atomicState.pollingOn = false
-   	}
+	}
     subscriber()
     setPollingState()
     runIn(20, "stateCleanup", [overwrite: true])
@@ -1331,30 +1330,51 @@ def getProtectDisplayName(prot) {
 }
 
 def getNestPresId() {
-	return "Nest Presence Device"
-    /*if(settings?.structures) {
+	def dni = "Nest Presence Device"
+	def d3 = getChildDevice(dni)
+	if(d3) { return "Nest Presence Device" }  // found old name, return it
+	else { if(atomicState?.structures) { return "NestPres${atomicState.structures}" }
+	    else {
+	        LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
+	        return ""
+	    }
+	}
+}
+/*	//return "Nest Presence Device"
+    if(settings?.structures) {
         return "NestPres${settings.structures}"
     } else if(atomicState?.structures) {
         return "NestPres${atomicState.structures}"
     } else {
         LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
         return ""
-    }*/
-}
+    }
+}*/
+
 def getNestWeatherId() {
-	return "Nest Weather Device (${location?.zipCode})"
-    /*if(settings?.structures) {
+	def dni = "Nest Weather Device (${location?.zipCode})"
+	def d4 = getChildDevice(dni)
+	if(d4) { return "Nest Weather Device (${location?.zipCode})" }  // found old name, return it
+	else { if(atomicState?.structures) { return "NestWeather${settings.structures}" }
+	    else {
+	        LogAction("getNestWeatherId No structures ${atomicState?.structures}", "warn", true)
+	        return ""
+	    }
+	}
+}
+/*	//return "Nest Weather Device (${location?.zipCode})"
+    if(settings?.structures) {
         return "NestWeather${settings.structures}"
     } else if(atomicState?.structures) {
         return "NestWeather${atomicState.structures}"
     } else {
-        LogAction("getNestWeatherID No structures ${atomicState?.structures}", "warn", true)
+        LogAction("getNestWeatherId No structures ${atomicState?.structures}", "warn", true)
         return ""
-    }*/
-}
+    }
+}*/
 
 def addRemoveDevices(uninst = null) {
-    def retVal = false
+    def changedDevs = false
     try {
 		def tstats
     	def nProtects
@@ -1365,13 +1385,16 @@ def addRemoveDevices(uninst = null) {
     			tstats = atomicState?.thermostats.collect { dni ->
         			def d = getChildDevice(dni.key.toString())
         			if(!d) {
-                		d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "Nest Thermostat - ${dni.value}"])
+                		def d1Label = "Nest Thermostat - ${dni.value}"
+                		if (atomicState?.altNames) { d1Label = "${location.name} - ${dni.value}" }
+                		d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d1Label}"])
              			//d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
                     	d.take()
                 		devsCrt = devsCrt + 1
+                		changedDevs = true
            				LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
         			} else {
-            			LogAction("Found ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
+            			LogAction("Found: ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
         			}
         			return d
         		}
@@ -1381,10 +1404,13 @@ def addRemoveDevices(uninst = null) {
                 nProtects = atomicState?.protects.collect { dni ->
                     def d2 = getChildDevice(dni.key.toString())
                     if(!d2) {
-                        d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "Nest Protect - ${dni.value}"])
+                        def d2Label = "Nest Protect - ${dni.value}"
+                        if (atomicState?.altNames) { d2Label = "${location.name} - ${dni.value}" }
+                        d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${d2Label}"])
                         //d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
                         d2.take()
                         devsCrt = devsCrt + 1
+                        changedDevs = true
                         LogAction("Created: ${d2.displayName} with (Id: ${dni.key})", "debug", true)
                     } else {
                         LogAction("Found: ${d2.displayName} with (Id: ${dni.key}) already exists", "debug", true)
@@ -1399,10 +1425,13 @@ def addRemoveDevices(uninst = null) {
                     def dni = getNestPresId()
                     def d3 = getChildDevice(dni)
                     if(!d3) {
-                        d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: getNestPresId()])
+                        def d3Label = "Nest Presence Device"
+                        if (atomicState?.altNames) { d3Label = "${location.name} - Nest Presence Device" }
+                        d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${d3Label}"])
                         //d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${location.name} - Nest Presence Device"])
                         d3.take()
                         devsCrt = devsCrt + 1
+                        changedDevs = true
                         LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
                     } else {
                         LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
@@ -1410,7 +1439,6 @@ def addRemoveDevices(uninst = null) {
                     //return d3
                 } catch (ex) { 
                     LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) 
-                    retVal = false
                 }
             }
             
@@ -1419,10 +1447,13 @@ def addRemoveDevices(uninst = null) {
                     def dni = getNestWeatherId()
                     def d4 = getChildDevice(dni)
                     if(!d4) {
-                        d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "Nest Weather (${location?.zipCode})"])
+                        def d4Label = "Nest Weather (${location?.zipCode})"
+                        if (atomicState?.altNames) { d4Label = "${location.name} - Nest Weather Device" }
+                        d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${d4Label}"])
                         //d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${location.name} - Nest Weather Device"])
                         d4.take()
                         devsCrt = devsCrt + 1
+                        changedDevs = true
                         LogAction("Created: ${d4.displayName} with (Id: ${dni})", "debug", true)
                     } else {
                         LogAction("Found: ${d4.displayName} with (Id: ${dni}) already exists", "debug", true)
@@ -1430,7 +1461,6 @@ def addRemoveDevices(uninst = null) {
                     //return d4
                 } catch (ex) { 
                     LogAction("Nest Weather Device Type is Likely not installed/published", "warn", true) 
-                    retVal = false
                 }
             }
             def presCnt = 0
@@ -1464,6 +1494,7 @@ def addRemoveDevices(uninst = null) {
             }
             else if (!atomicState?.weatherDevice) {
             	atomicState?.curWeather = null 
+            	atomicState?.curForecast = null 
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestWeatherId() }
             }            
         	else {
@@ -1474,8 +1505,8 @@ def addRemoveDevices(uninst = null) {
     	if(delete.size() > 0) { 
         	LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true) 
     		delete.each { deleteChildDevice(it.deviceNetworkId) }
+    		changedDevs = true
         }
-       	retVal = true
     } catch (ex) { 
     	if(ex instanceof physicalgraph.exception.ConflictException) {
         	def msg = "Error: Can't Delete App because Devices are still in use in other Apps, Routines, or Rules.  Please double check before trying again."
@@ -1488,9 +1519,9 @@ def addRemoveDevices(uninst = null) {
             LogAction("addRemoveDevices Exception | $msg", "warn", true, true)
         } 
         else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
-        retVal = false
+        changedDevs = true
     }
-    return retVal
+    return changedDevs
 }
 
 def deviceHandlerTest() {
@@ -1914,48 +1945,50 @@ log.trace "stateCleanup..."
     state.remove("cmdQ")
     state.remove("recentSendCmd")
     state.remove("currentWeather")
-    state.remove("cmdQ2")
-    state.remove("cmdQ3")
-    state.remove("cmdQ4")
-    state.remove("cmdQ5")
-    state.remove("cmdQ6")
-    state.remove("cmdQ7")
-    state.remove("cmdQ8")
-    state.remove("cmdQ9")
-    state.remove("cmdQ10")
-    state.remove("cmdQ11")
-    state.remove("cmdQ12")
-    state.remove("cmdQ13")
-    state.remove("cmdQ14")
-    state.remove("cmdQ15")
-    state.remove("lastCmdSentDt2")
-    state.remove("lastCmdSentDt3")
-    state.remove("lastCmdSentDt4")
-    state.remove("lastCmdSentDt5")
-    state.remove("lastCmdSentDt6")
-    state.remove("lastCmdSentDt7")
-    state.remove("lastCmdSentDt8")
-    state.remove("lastCmdSentDt9")
-    state.remove("lastCmdSentDt10")
-    state.remove("lastCmdSentDt11")
-    state.remove("lastCmdSentDt12")
-    state.remove("lastCmdSentDt13")
-    state.remove("lastCmdSentDt14")
-    state.remove("lastCmdSentDt15")
-    state.remove("recentSendCmd2")
-    state.remove("recentSendCmd3")
-    state.remove("recentSendCmd4")
-    state.remove("recentSendCmd5")
-    state.remove("recentSendCmd6")
-    state.remove("recentSendCmd7")
-    state.remove("recentSendCmd8")
-    state.remove("recentSendCmd9")
-    state.remove("recentSendCmd10")
-    state.remove("recentSendCmd11")
-    state.remove("recentSendCmd12")
-    state.remove("recentSendCmd13")
-    state.remove("recentSendCmd14")
-    state.remove("recentSendCmd15")
+    if (!atomicState?.cmdQlist) {
+	state.remove("cmdQ2")
+	state.remove("cmdQ3")
+	state.remove("cmdQ4")
+	state.remove("cmdQ5")
+	state.remove("cmdQ6")
+	state.remove("cmdQ7")
+	state.remove("cmdQ8")
+	state.remove("cmdQ9")
+	state.remove("cmdQ10")
+	state.remove("cmdQ11")
+	state.remove("cmdQ12")
+	state.remove("cmdQ13")
+	state.remove("cmdQ14")
+	state.remove("cmdQ15")
+	state.remove("lastCmdSentDt2")
+	state.remove("lastCmdSentDt3")
+	state.remove("lastCmdSentDt4")
+	state.remove("lastCmdSentDt5")
+	state.remove("lastCmdSentDt6")
+	state.remove("lastCmdSentDt7")
+	state.remove("lastCmdSentDt8")
+	state.remove("lastCmdSentDt9")
+	state.remove("lastCmdSentDt10")
+	state.remove("lastCmdSentDt11")
+	state.remove("lastCmdSentDt12")
+	state.remove("lastCmdSentDt13")
+	state.remove("lastCmdSentDt14")
+	state.remove("lastCmdSentDt15")
+	state.remove("recentSendCmd2")
+	state.remove("recentSendCmd3")
+	state.remove("recentSendCmd4")
+	state.remove("recentSendCmd5")
+	state.remove("recentSendCmd6")
+	state.remove("recentSendCmd7")
+	state.remove("recentSendCmd8")
+	state.remove("recentSendCmd9")
+	state.remove("recentSendCmd10")
+	state.remove("recentSendCmd11")
+	state.remove("recentSendCmd12")
+	state.remove("recentSendCmd13")
+	state.remove("recentSendCmd14")
+	state.remove("recentSendCmd15")
+    }
 }
 
 
