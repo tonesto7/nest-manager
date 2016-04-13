@@ -36,15 +36,11 @@ metadata {
 
         capability "Presence Sensor"
         capability "Sensor"
-  		capability "Refresh"
+        capability "Refresh"
         
-        command "away"
-        command "present"
-		//command "setAway"
-        //command "setHome"
-		command "setPresence"
+        command "setPresence"
         command "refresh"
-		command "log"
+        command "log"
         
         attribute "lastConnection", "string"
         attribute "apiStatus", "string"
@@ -198,30 +194,12 @@ def getPresence() {
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
-def setPresence() {
+void setPresence() {
 	log.trace "setPresence()..."
     def pres = getNestPresence()
     log.trace "Current Nest Presence: ${pres}"
-    if(pres == "auto-away" || pres == "away") {
-		parent.setStructureAway(this, "false")
-        presenceEvent("home") 
-    }
-    else if (pres == "home") {
-        parent.setStructureAway(this, "true")
-        presenceEvent("away")
-    }
-}
-
-// backward compatibility for previous nest thermostat (and rule machine)
-def away() {
-    log.trace "away()..."
-    setAway()
-}
-
-// backward compatibility for previous nest thermostat (and rule machine)
-def present() {
-    log.trace "present()..."
-    setHome()
+    if(pres == "auto-away" || pres == "away") { setHome() }
+    else if (pres == "home") { setAway() }
 }
 
 def setAway() {

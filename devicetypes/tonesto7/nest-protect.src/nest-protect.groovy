@@ -33,11 +33,12 @@ preferences {
             ])
 }
 
-def devVer() { return "1.2.0" }
+def devVer() { return "2.0.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
-		capability "Polling"
+		//capability "Polling"
+        capability "Sensor"
 		capability "Battery"
 		capability "Smoke Detector"
 		capability "Carbon Monoxide Detector"
@@ -74,11 +75,21 @@ metadata {
     	multiAttributeTile(name:"alarmState", type:"generic", width:6, height:4) {
   			tileAttribute("device.alarmState", key: "PRIMARY_CONTROL") {
     			attributeState("default", label:'--', icon: "st.unknown.unknown.unknown")
-				attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
+                attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
 				attributeState("smoke-warning", label:"SMOKE!\nWARNING", icon:"st.alarm.smoke.smoke", backgroundColor:"#e8d813")
                 attributeState("smoke-emergency", label:"SMOKE!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13")
 				attributeState("co-warning", label:"CO!\nWARNING!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e8d813")
   				attributeState("co-emergency", label:"CO!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e86d13")
+				/*attributeState("ok", label:"", backgroundColor:"#44B621",
+            		icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/alarm_clear.png")
+				attributeState("smoke-warning", label:"", backgroundColor:"#e8d813",
+            		icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_warn.png")
+            	attributeState("smoke-emergency", label:"", backgroundColor:"#e8d813",
+            		icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_emergency.png")
+				attributeState("co-warning", label:"", backgroundColor:"#e86d13",
+            		icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_warn.png")
+  				attributeState("co-emergency", label:"", backgroundColor:"#e86d13",
+            		icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_emergency.png")*/
   			}
   			tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
     			attributeState("default", label:'unknown', icon: "st.unknown.unknown.unknown")
@@ -89,37 +100,38 @@ metadata {
         standardTile("main2", "device.alarmState", width: 2, height: 2) {
     		state("default", label:'--', icon: "st.unknown.unknown.unknown")
 			state("ok", label:"clear", backgroundColor:"#44B621",
-            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/alarm_clear.png")
+                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/alarm_clear.png")
 			state("smoke-warning", label:"SMOKE!\nWARNING", backgroundColor:"#e8d813",
-            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
+            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_warn.png")
             state("smoke-emergency", label:"SMOKE!", backgroundColor:"#e8d813",
-            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
+            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_emergency.png")
 			state("co-warning", label:"CO!\nWARNING!", backgroundColor:"#e86d13",
-            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
+            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_warn.png")
   			state("co-emergency", label:"CO!", backgroundColor:"#e86d13",
-            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
+            	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_emergency.png")
   		}
 		standardTile("smoke", "device.Nestsmoke", width: 2, height: 2) {
 			state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_clear.png")
-            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
-			state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
+            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_clear.png")
+            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_warn.png")
+			state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_emergency.png")
 		}
 		standardTile("carbonMonoxide", "device.NestcarbonMonoxide", width: 2, height: 2){
 			state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-			state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_clear.png")
-			state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
-			state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
+			state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_clear.png")
+			state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_warn.png")
+			state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_emergency.png")
 		}
  		standardTile("batteryState", "device.batteryState", width: 2, height: 2){
 			state("default", label:'unknown')
 			state("ok", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_ok.png")
 			state("replace", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_low.png")
         }
+        standardTile("filler", "device.filler", width: 2, height: 2){
+        	state("default", label:'')
+        }
         valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Network Status:\n${currentValue}')
-            //state("on", label: 'Network Status:\n\Online', backgroundColor:"#44b621")
-            //state("off", label: 'Network Status:\nOffline', backgroundColor:"#bc2323")
 		}
         valueTile("uiColor", "device.uiColor", inactiveLabel: false, width: 2, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'UI Color:\n${currentValue}')
@@ -133,8 +145,8 @@ metadata {
         valueTile("lastTested", "device.lastTested", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Last Manual Test:\n${currentValue}')
 	    }
-        standardTile("refresh", "device.refresh", width: 2, height: 2, inactiveLabel: false, canChangeIcon: false, decoration: "flat") {
-			state("default", label: 'refresh', action: "refresh.refresh", icon:"st.secondary.refresh-icon")
+        standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
+			state "default", label: 'refresh', action:"refresh.refresh", icon:"st.secondary.refresh-icon"
 		}
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Data Last Received:\n${currentValue}')
@@ -150,10 +162,11 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
             state "false", 	label: 'Debug:\n${currentValue}'
 		}
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 3)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 6)
         
 	main "main2"
-	details(["alarmState", "smoke", "carbonMonoxide", "batteryState", "devInfoHtml", "refresh"])
+	details(["alarmState", "devInfoHtml", "refresh"])
+    //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
    }
 }
 
@@ -232,7 +245,7 @@ def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
     def pubVer = parent?.latestProtVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
-    def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    def newData = (pubVer != dVer) ? "v${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData
     if(curData != newData) {
         Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
@@ -271,7 +284,7 @@ def softwareVerEvent(ver) {
     state?.softwareVer = ver
     if(!verVal.equals(ver)) {
     	log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
-        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false)
+        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
     } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
 
@@ -362,6 +375,7 @@ def batteryStateEvent(batt) {
 		log.debug("Battery is: ${batt} | Original State: (${battVal})")
 		sendEvent(name:'batteryState', value: batt, descriptionText: "Nest Battery status is: ${batt}", displayed: true, isStateChange: true)
 		sendEvent(name:'battery', value: stbattery, descriptionText: "Battery is: ${stbattery}", displayed: true, isStateChange: true)
+        state?.battVal = batt
 	} else { Logger("Battery State: (${batt}) | Original State: (${battVal})") }
 }
 
@@ -479,14 +493,79 @@ def log(message, level = "trace") {
     return null
 }
 
+def getCarbonImg() {
+	def carbonVal = device.currentState("NestcarbonMonoxide")?.value
+    switch(carbonVal) {
+    	case "warn":
+        	return getImgBase64(getTestImg("co_warn.png"), "png")
+        	break
+        case "emergency":
+        	return getImgBase64(getTestImg("co_emergency.png"), "png")
+        	break
+        default:
+        	return getImgBase64(getTestImg("co_clear.png"), "png")
+        	break
+    }
+}
+
+def getSmokeImg() {
+	def smokeVal = device.currentState("Nestsmoke")?.value
+    switch(smokeVal) {
+    	case "warn":
+        	return getImgBase64(getTestImg("smoke_warn.png"), "png")
+        	break
+        case "emergency":
+        	return getImgBase64(getTestImg("smoke_emergency.png"), "png")
+        	break
+        default:
+        	return getImgBase64(getTestImg("smoke_clear.png"), "png")
+        	break
+    }
+}
+
+def getImgBase64(url,type) {
+	def params = [ 
+        uri: url,
+       	contentType: 'image/$type'
+    ]
+    try {
+		httpGet(params) { resp ->
+			if(resp.data) {
+            	def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+    			int size = 2048
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                   	bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+            	String s = buf?.encodeBase64()
+            	//log.debug "resp: ${s}"
+                return s ? "data:image/${type};base64,${s.toString()}" : null
+			}
+        }	
+    }
+	catch (ex) {
+    	log.error "getImageBytes Exception: $ex"
+    }
+}
+def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
+def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
+
 def getInfoHtml() { 
+	def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" : 
+    		"<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
+    def coImg = "<td><img class='alarmImg' src=\"${getCarbonImg()}\"></td>"
+    def smokeImg = "<td><img class='alarmImg' src=\"${getSmokeImg()}\"></td>"
 	renderHTML {
     	head {
         	"""
             <style type="text/css">
                  .flat-table {
                   width: 100%;
-                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  font-family: 'Lucida Grande';
+                  src: url(https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Fonts/lucidagrande.ttf);
                   border: none;
                   border-radius: 3px;
                   -webkit-border-radius: 3px;
@@ -496,16 +575,13 @@ def getInfoHtml() {
                 .flat-table th,
                 .flat-table td {
                   box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
+                  padding: 4px;
                 }
-
+				
                 .flat-table th {
-                  font-weight: bold;
                   -webkit-font-smoothing: antialiased;
-                  padding: 1px;
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
-                  font-size: 14px;
-                  border-radius: 2px;
                   -webkit-border-radius: 2px;
                   -moz-border-radius: 2px;
                   background: #00a1db;
@@ -513,7 +589,6 @@ def getInfoHtml() {
 
                 .flat-table td {
                   color: grey;
-                  padding: 2px;
                   text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
                   text-align: center;
                 }
@@ -522,47 +597,94 @@ def getInfoHtml() {
                   -webkit-transition: background 0.3s, box-shadow 0.3s;
                   -moz-transition: background 0.3s, box-shadow 0.3s;
                   transition: background 0.3s, box-shadow 0.3s;
+                  vertical-align: top;
                 }
-               
-               .datetime {
-                  font-size:13px;
+                
+                .img-table {
+                  width: 100%;
+                  height: 100%;
+                }
+                
+                .img-table tr {
+                  text-align: center;
+                }
+                .h40 {
+                  width: 39.99%;
+                  font-weight: bold;
+                  font-size: 3.4vmin;
+                }
+                .h20 {
+                  width: 19.99%;
+                  font-weight: bold;
+                  font-size: 3.4vmin;
+                }
+                .r40 {
+                  width: 39.99%;
+                  font-size: 3.6vmin;
+                }
+                .r20 {
+                  width: 19.99%;
+                  font-size: 3.6vmin;
+                }
+                .rowLong {
+                  font-size: 3.3vmin;
+                }
+                .datetime {
+                  font-size: 3.3vmin;
+                }
+                .battImg {
+                  width:50px; height:25px;
+                }
+                .alarmImg {
+                  vertical-align: top;
+                  width:125px; height:125px;
                 }
             </style>
            	"""
         }
         body {
         	"""
+            <table class="img-table">
+              <tbody>
+                <tr>
+                  $coImg
+                  $smokeImg
+                </tr>
+              </tbody>
+            </table>
             <table class="flat-table">
               <thead>
-                <th>Network Status</th>
-                <th>Debug</th>
-                <th>API Status</th>
+                <th class="h40">Network Status</th>
+                <th class="h20">Battery</th>
+                <th class="h40">API Status</th>
               </thead>
                 <tbody>
                   <tr>
-                    <td>${state?.onlineStatus.toString()}</td>
-                    <td>${state?.debugStatus}</td>
-                   <td>${state?.apiStatus}</td>
+                    <td class="r40">${state?.onlineStatus.toString()}</td>
+                    <td class="r20">${battImg}</td>
+                    <td class="r40">${state?.apiStatus}</td>
                   </tr>
-                 </tbody>
+            	  <tr>
+                    <th class="h40" width=33.33%>Firmware Version</th>
+                    <th class="h20">Debug</th>
+                    <th class="h40">Device Type</th>
+              	  </tr>
+                  <td class="r40">v${state?.softwareVer.toString()}</td>
+                  <td class="r20">${state?.debugStatus}</td>
+                  <td class="rowLong">${state?.devTypeVer.toString()}</td>
+                </tbody>
              </table>
-            <table class="flat-table">
-              <thead>
-                   <th>Firmware Version</th>
-                   <th>Device Type</th>
-              </thead>
+         	 <table class="flat-table">
+               <thead>
+                 <th class="h40">Nest Last Checked-In</th>
+                 <th class="h40">Data Last Received</th>
+               </thead>
               <tbody>
                 <tr>
-                  <td>${state?.softwareVer.toString()}</td>   
-                  <td>${state?.devTypeVer.toString()}</td>
-                </tr>
-        			<tr>
-                <th>Nest Last Checked-In</th>
-                <th>Data Last Received</th>
-              </tr>
                   <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
                   <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
-               </tbody>
+                </tr>
+              </tbody>
             </table>
             
             """

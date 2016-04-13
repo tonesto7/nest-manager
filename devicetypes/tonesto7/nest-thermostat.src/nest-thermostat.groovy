@@ -31,7 +31,7 @@ def devVer() { return "2.0.0"}
 metadata {
 	definition (name: "Nest Thermostat", namespace: "tonesto7", author: "Anthony S.") {
 		capability "Actuator"
-        capability "Polling"
+        //capability "Polling"
 		capability "Relative Humidity Measurement"
         capability "Refresh"
         capability "Sensor"
@@ -202,7 +202,7 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state "default", label:'${currentValue}'
 		}
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 3)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 4)
         
 		main( tileMain() )
 		details( tileSelect() )
@@ -1261,14 +1261,16 @@ def getImgBase64(url,type) {
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getInfoHtml() {
-	def leafVal =  state?.hasLeaf ? "<td><img src=\"${getImgBase64(getImg("nest_leaf_75.gif"), "gif")}\" style=width:20px; height:20px;></td>" : "<td>No Leaf</td>"
+	def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" : 
+    				"<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
 	renderHTML {
     	head {
         	"""
             <style type="text/css">
                 .flat-table {
                   width: 100%;
-                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  font-family: 'Lucida Grande';
+                  src: url(https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Fonts/lucidagrande.ttf);
                   border: none;
                   border-radius: 3px;
                   -webkit-border-radius: 3px;
@@ -1278,12 +1280,10 @@ def getInfoHtml() {
                 .flat-table th,
                 .flat-table td {
                   box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
-                  padding: 2px;
-                  font-size: 14px;
+                  padding: 5px;
                 }
 
                 .flat-table th {
-                  font-weight: bold;
                   -webkit-font-smoothing: antialiased;
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
@@ -1302,50 +1302,81 @@ def getInfoHtml() {
                   -webkit-transition: background 0.3s, box-shadow 0.3s;
                   -moz-transition: background 0.3s, box-shadow 0.3s;
                   transition: background 0.3s, box-shadow 0.3s;
+                  vertical-align: top;
                 }
 
-				.datetime {
-                  font-size:13px;
+                .h40 {
+                  width: 39.99%;
+                  font-weight: bold;
+                  font-size: 3.2vmax;
+                }
+
+                .h20 {
+                  width: 19.99%;
+                  font-weight: bold;
+                  font-size: 3.5vmax;
+                }
+
+                .r40 {
+                  width: 39.99%;
+                  font-size: 3.8vmax;
+                }
+
+                .r20 {
+                  width: 19.99%;
+                  font-size: 3.8vmax;
+                }
+
+                .rowLong {
+                  font-size: 3.58vmax;
+                }
+
+                .datetime {
+                  font-size: 3.2vmax;
+                }
+                .leafImg {
+                  width: 25px;
+                  height: 25px;
                 }
             </style>
            	"""
         }
         body {
         	"""
-              <table class="flat-table">
-                <thead>
-                  <th> Network Status</th>
-                  <th>Leaf</th>
-                  <th>API Status</th>
-                </thead>
-                   <tbody>
-                     <tr>
-                       <td>${state?.onlineStatus.toString()}</td>
-                       	 $leafVal
-                         <td>${state?.apiStatus}</td>
-                       </tr>
-                       <tr>
-                         <th>Firmware Version</th>
-                         <th>Debug</th>
-                         <th>Device Type</th>
-                      </tr>
-                        <td>${state?.softwareVer.toString()}</td>
-                        <td>${state?.debugStatus}</td>
-                        <td>${state?.devTypeVer.toString()}</td>
-                    </tbody>
+             <table class="flat-table">
+               <thead>
+                 <th class="h40">Network Status</th>
+                 <th class="h20">Leaf</th>
+                 <th class="h40">API Status</th>
+               </thead>
+                 <tbody>
+                   <tr>
+                     <td class="r40">${state?.onlineStatus.toString()}</td>
+               	  	 <td class="r20">${leafImg}</td>
+                     <td class="r40">${state?.apiStatus}</td>
+                   </tr>
+                   <tr>
+                     <th class="h40">Firmware Version</th>
+                     <th class="h20">Debug</th>
+                     <th class="h40">Device Type</th>
+                   </tr>
+                   <td class="r40">${state?.softwareVer.toString()}</td>
+                   <td class="r20">${state?.debugStatus}</td>
+                   <td class="rowLong">${state?.devTypeVer.toString()}</td>
+                 </tbody>
             </table>
             <table class="flat-table">
               <thead>
-                <th>Nest Checked-In</th>
-                <th>Data Last Received</th>
+                <th class="h40">Nest Checked-In</th>
+                <th class="h40">Data Last Received</th>
               </thead>
               <tbody>
-                  <tr>
+                <tr>
                   <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
                   <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
-                  </tr>
-                </tbody>
-              </table>
+                </tr>
+              </tbody>
+             </table>
             """
         }
     }

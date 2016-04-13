@@ -24,6 +24,9 @@
 // TODO: Need to update Copyright
 
 import java.text.SimpleDateFormat
+import org.apache.commons.codec.binary.Base64
+import java.io.FileInputStream
+import java.io.ByteArrayOutputStream
 
 preferences {  }
 
@@ -56,7 +59,7 @@ metadata {
 		htmlTile(name:"weatherHtml", action: "getWeatherHtml2", width: 6, height: 6)
         
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
+        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
             		backgroundColors: getTempColors() )
 
         }
@@ -136,6 +139,7 @@ def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
 	if(!results) {
+    	state.results = results
         state.tempUnit = getTemperatureScale()
         state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
     	debugOnEvent(parent?.settings?.childDebug)
@@ -144,6 +148,7 @@ def generateEvent(Map results) {
    	}
     lastUpdatedEvent()
     getWeatherConditions()
+    getWeatherForecast()
  	return null
 }
 
@@ -227,6 +232,12 @@ def getTemp() {
 	catch (e) { return 0 }
 }
 
+def getCurWeather() { 
+	try { return state.curWeather } 
+	catch (e) { return 0 }
+}
+
+
 def getHumidity() { 
 	try { return device.currentValue("humidity") } 
 	catch (e) { return 0 }
@@ -241,7 +252,7 @@ def getWeatherConditions() {
     def cur = parent?.getWData()
     if(cur) {
         state.curWeather = cur
-        //log.debug "cur: $cur"
+       // log.debug "cur: $cur"
         state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
         state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
         state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
@@ -257,6 +268,14 @@ def getWeatherConditions() {
         illuminanceEvent(estimateLux(state.curWeatherIcon))
 
         Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
+    }
+}
+
+def getWeatherForecast() {
+    def cur = parent?.getWForecastData()
+    if(cur) {
+        state.curForecast = cur
+        //log.debug "cur: $cur"
     }
 }
 
@@ -311,7 +330,7 @@ private estimateLux(weatherIcon) {
                 lux = 10
         }
 
-        lux
+       return lux
 }
 
 
@@ -363,34 +382,43 @@ def log(message, level = "trace") {
     return null // always child interface call with a return value
 }
 
-def getWeatherHtml() { 
-	renderHTML {
-    	head {
-        	"""
-            <style type="text/css">
-            	#header { 
-                  font-size: 1.5em; font-weight: bold;
-                  text-align: center;
-                }
-                #weather { 
-                  font-size: 1em; 
-                  text-align: center;
-                }
-            </style>
-           	"""
-        }
-        body {
-        	"""
-            	<div class="container">
-                  <div id="header">Current Weather Conditions</div>
-                  <div id="weather">
-               	    Temp: ${getTemp()} </br> 
-                    Humidity: ${getHumidity()}% </br>
-            	    <img src="${state?.curWeather?.current_observation?.icon_url}">
-               	  </div>
-            	</div>
-            """
-        }
+def getImgBase64(url, type) {
+	def params = [ 
+        uri: url,
+       	contentType: 'image/$type'
+    ]
+    try {
+	httpGet(params) { resp ->
+	   if(resp.data) {
+               def respData = resp?.data
+               ByteArrayOutputStream bos = new ByteArrayOutputStream()
+               int len
+    	       int size = 1024
+               byte[] buf = new byte[size]
+               while ((len = respData.read(buf, 0, size)) != -1)
+                   bos.write(buf, 0, len)
+               buf = bos.toByteArray()
+               String s = buf?.encodeBase64()
+               //log.debug "resp: ${s}"
+               return s ? "data:image/${type};base64,${s.toString()}" : null
+	    }
+        }	
+    }
+	catch (ex) {
+    	log.error "getImageBytes Exception: $ex"
+    }
+}
+
+def getWeatherIcon(weatherIcon) {
+  def url = "https://icons.wxug.com/i/c/v4/" + state?.curWeather?.current_observation?.icon + ".svg"
+ 	return getImgBase64(url, "svg+xml")
+}
+
+def getFeelslike() {
+	if ( state?.tempUnit == "C" ) {
+    	return "${state?.curWeather?.current_observation?.feelslike_c}°C"
+    } else {
+    	return "${state?.curWeather?.current_observation?.feelslike_f}°F"
     }
 }
 
@@ -398,29 +426,90 @@ def getWeatherHtml2() {
 	renderHTML {
     	head {
         	"""
-            <style type="text/css">
-            	#header { 
-                  font-size: 1.5em; font-weight: bold;
-                  text-align: center;
+          <style type="text/css">
+            body {
+              font-family: 'Lato', Calibri, Arial, sans-serif;
+            }
+
+            #header {
+              font-size: 1.5em;
+              font-weight: bold;
+              text-align: center;
+              background: #00a1db;
+              color: #f5f5f5;
+            }
+
+            #weatherInfo {
+              text-align: left;
+            }
+			#leftData {
+            	width:25%;
+                float:left;
+              }
+            #city {
+            	font-size: 3vw;
                 }
-                #weather { 
-                  font-size: 1em; 
-                  text-align: center;
-                }
-            </style>
+            
+            #temp {
+    		  font-size: 10vw;
+            }
+
+            #data {
+              font-size: 3vw;
+              float: right;
+              width: 30%
+            }
+           
+
+            #weatherIcon {
+              float: left;
+              padding-left: 5%;
+              padding-right:5%;
+              width: 25%;
+            }
+            
+           #dataDump {
+              float: left;
+              clear: left;
+            }
+
+        </style>
            	"""
         }
         body {
         	"""
-            	<div class="container">
-                  <div id="header">Current Weather Conditions</div>
-                  <div id="weather">
-               	    Temp: ${getTemp()} </br> 
-                    Humidity: ${getHumidity()}% </br>
-            	    <img src="${state?.curWeather?.current_observation?.icon_url}">
-               	  </div>
-            	</div>
-            """
+            <div class="container">
+  <div id="header">Current Weather Conditions</div>
+  <div id="weatherInfo">
+  <div id="leftData">
+  	<div id="city"> ${state?.curWeather?.current_observation?.observation_location.city} </div>
+    <div id="temp">
+      ${getTemp()}
+    </div>
+  </div>
+
+    <div id="weatherIcon">
+      <img src="${getWeatherIcon()}">
+    </div>
+    
+    <div id="data">
+      Feels Like: ${getFeelslike()} <br>
+      Humidity: ${state?.curWeather?.current_observation?.relative_humidity}<br>
+      Wind: ${state?.curWeather?.current_observation?.wind_string} <br>
+      Lux: <br>
+      Sunrise: <br>
+      Sunset: 
+    </div>
+    <div id="dataDump">
+    <br>
+    RESULTS:<br>
+    ${getCurWeather()}
+    </div>
+  </div>
+
+
+</div>
+	"""
         }
     }
 }
