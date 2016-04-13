@@ -37,7 +37,8 @@ def devVer() { return "1.2.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
-		capability "Polling"
+		//capability "Polling"
+		capability "Sensor"
 		capability "Battery"
 		capability "Smoke Detector"
 		capability "Carbon Monoxide Detector"
