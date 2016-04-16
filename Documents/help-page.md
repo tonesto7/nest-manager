@@ -32,3 +32,7 @@
 
 ### *[Custom Commands...](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/rule-machine-cmds.html)*
 
+## FAQ:
+
+### *[FAQ...](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nm-faq.html)*
+

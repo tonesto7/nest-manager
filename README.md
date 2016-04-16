@@ -4,16 +4,16 @@
 This is the "***unofficial***" SmartThings user created SmartApp and Device handlers.
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 
 
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
 
 ### The Devices Types
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_protect.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/weather_device.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
 
 ## Author
 * @tonesto7
 
 ## Contributors 
-* @desertBlade
+* @desertblade
 * @E_sch
 
 ## Version Info

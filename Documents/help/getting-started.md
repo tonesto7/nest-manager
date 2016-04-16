@@ -4,7 +4,7 @@
 #### 1. Logging In and Selecting Your Devices
 * Click on ___Nest Login___
 
-	<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/login_page_trimmed.jpg" width="330" height="500">
+	<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/login_page.jpg" width="330" height="500">
 
 * Click on __Continue__
 
@@ -28,7 +28,7 @@
 
 ___(FYI: Only one location per Manager Install is supported at this time)___
 
-   <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst_trimmed.jpg" width="350" height="500">
+   <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="350" height="500">
 
 
 * Once the location is selected you will see two inputs with a count of thermostats and protects that were discovered.

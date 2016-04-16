@@ -259,6 +259,8 @@ def getWeatherConditions() {
         state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
         state.curWeatherCond = cur?.current_observation?.weather.toString()
         state.curWeatherIcon = cur?.current_observation?.icon.toString()
+		state.zipCode = cur?.current_observation?.display_location.zip.toString()
+      
 		
         def curTemp = (state?.tempUnit == "C") ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
         def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
@@ -422,6 +424,46 @@ def getFeelslike() {
     }
 }
 
+def getLux() {
+	return estimateLux(state?.curWeather?.current_observation?.icon)
+}
+
+private localDate(timeZone) {
+	def df = new SimpleDateFormat("yyyy-MM-dd")
+	df.setTimeZone(TimeZone.getTimeZone(timeZone))
+	df.format(new Date())
+}
+
+private get(feature) {
+	getWeatherFeature(feature, "${ state?.curWeather?.current_observation.display_location.zip}")
+}
+
+def getSunriseSunset() {
+		// Sunrise / sunset
+		def a = get("astronomy")?.moon_phase
+		def today = localDate("GMT${state.curWeather?.current_observation?.local_tz_offset}")
+
+    		def ltf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
+         
+		ltf.setTimeZone(TimeZone.getTimeZone("GMT${state.curWeather?.current_observation?.local_tz_offset}"))
+
+    def utf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    utf.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+		def sunriseDate = ltf.parse("${today} ${a.sunrise.hour}:${a.sunrise.minute}")
+		def sunsetDate = ltf.parse("${today} ${a.sunset.hour}:${a.sunset.minute}")
+
+        def tf = new java.text.SimpleDateFormat("h:mm a")
+        tf.setTimeZone(TimeZone.getTimeZone("GMT${state.curWeather?.current_observation?.local_tz_offset}"))
+        def localSunrise = "${tf.format(sunriseDate)}"
+        def localSunset = "${tf.format(sunsetDate)}"
+      
+		def sunriseSunset = "<b>Sunrise:</b> ${localSunrise} <br> <b>Sunset: </b> ${localSunset} <br>"
+   	
+   return sunriseSunset
+}
+
+
 def getWeatherHtml2() { 
 	renderHTML {
     	head {
@@ -432,7 +474,7 @@ def getWeatherHtml2() {
             }
 
             #header {
-              font-size: 1.5em;
+              font-size: 4vw;
               font-weight: bold;
               text-align: center;
               background: #00a1db;
@@ -443,35 +485,46 @@ def getWeatherHtml2() {
               text-align: left;
             }
 			#leftData {
-            	width:25%;
+            	width:50%;
                 float:left;
+                clear: left;
               }
             #city {
-            	font-size: 3vw;
+            	font-size: 6vw;
+                width:100%;
+                text-align: center;
+                border-bottom:2px solid #00a1db;
                 }
             
             #temp {
-    		  font-size: 10vw;
+    		  font-size: 9vw;
+              border-bottom:2px solid #00a1db;
             }
 
             #data {
-              font-size: 3vw;
-              float: right;
-              width: 30%
+              font-size: 4vw;
+              padding: 5px;
             }
            
 
             #weatherIcon {
-              float: left;
-              padding-left: 5%;
-              padding-right:5%;
-              width: 25%;
+              float: right;
+              clear: right;
+              width: 50%;
+              font-size: 6vw;
+              text-align: right;
             }
             
            #dataDump {
               float: left;
               clear: left;
             }
+            
+           hr {
+     		background: #00a1db; 
+     		width: 100%; 
+     		height: 1px;
+		  }	
 
         </style>
            	"""
@@ -481,31 +534,28 @@ def getWeatherHtml2() {
             <div class="container">
   <div id="header">Current Weather Conditions</div>
   <div id="weatherInfo">
+    	<div id="city"> ${state?.curWeather?.current_observation?.observation_location.full} </div>
   <div id="leftData">
-  	<div id="city"> ${state?.curWeather?.current_observation?.observation_location.city} </div>
     <div id="temp">
       ${getTemp()}
     </div>
-  </div>
-
-    <div id="weatherIcon">
-      <img src="${getWeatherIcon()}">
+       <div id="data">
+          <b>Feels Like:</b> ${getFeelslike()} <br>
+          <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+         <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+          <b>Visibility:</b> ${state.curWeather?.current_observation?.visibility_mi} Miles<br>
+          <b>Lux:</b> ${getLux()}<br>
+     		${getSunriseSunset()}
+          <b>Wind:</b> ${state?.curWeather?.current_observation?.wind_string} <br>
     </div>
     
-    <div id="data">
-      Feels Like: ${getFeelslike()} <br>
-      Humidity: ${state?.curWeather?.current_observation?.relative_humidity}<br>
-      Wind: ${state?.curWeather?.current_observation?.wind_string} <br>
-      Lux: <br>
-      Sunrise: <br>
-      Sunset: 
     </div>
-    <div id="dataDump">
-    <br>
-    RESULTS:<br>
-    ${getCurWeather()}
-    </div>
+
+<div id="weatherIcon">
+      <img src="${getWeatherIcon()}"> <br>
+      <b>${state.curWeatherCond}</b>
   </div>
+    
 
 
 </div>
