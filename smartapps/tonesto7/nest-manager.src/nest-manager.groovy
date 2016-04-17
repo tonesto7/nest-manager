@@ -82,9 +82,9 @@ def authPage() {
 
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
 
-    if(!atomicState?.accessToken) { getAccessToken() } 
-    if(!atomicState?.preReqTested && !atomicState?.isInstalled) { preReqCheck() }
-    if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
+    getAccessToken()
+    preReqCheck()
+    deviceHandlerTest()
         
     if (!atomicState?.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
@@ -1116,7 +1116,7 @@ def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients
 
 def updateWebStuff(now = false) {
     //log.trace "updateWebStuff..."
-    if (getLastWebUpdSec() > (1800)) {
+    if (!atomicState?.appData || getLastWebUpdSec() > (1800)) {
         if(now) {
             getWebFileData()
         } else {
@@ -1745,7 +1745,7 @@ def deviceHandlerTest() {
 
 def preReqCheck() {
     //log.trace "preReqCheckTest()"
-    if(atomicState?.preReqTested) { return true }
+    //if(atomicState?.preReqTested) { return true }
     if(!location?.timeZone || !location?.zipCode) { 
         atomicState.preReqTested = false
         LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true) 
