@@ -1442,8 +1442,8 @@ def getNestPresId() {
     def d3 = getChildDevice(dni)
     if(d3) { return dni }
     else { 
-        if(atomicState?.structure) {
-            dni = "NestPres${atomicState.structure}" // old name 2
+        if(atomicState?.structures) {
+            dni = "NestPres${atomicState.structures}" // old name 2
             d3 = getChildDevice(dni)
             if(d3) { return dni }
         }
@@ -1464,8 +1464,8 @@ def getNestWeatherId() {
     def d4 = getChildDevice(dni)
     if(d4) { return dni }
     else { 
-        if(atomicState?.structure) {
-            dni = "NestWeather${atomicState.structure}" // old name 2
+        if(atomicState?.structures) {
+            dni = "NestWeather${atomicState.structures}" // old name 2
             d4 = getChildDevice(dni)
             if(d4) { return dni }
         }
