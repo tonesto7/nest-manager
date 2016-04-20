@@ -166,8 +166,8 @@ def authPage() {
                     if (stats?.size() > 0) { 
                         input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
                                 image: getAppImg("thermostat_icon.png")) 
-                        atomicState.thermostats =  thermostats ? statState(thermostats) : null
                     }
+                    atomicState.thermostats =  thermostats ? statState(thermostats) : null
                     if (coSmokes.size() > 0) { 
                         input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes], 
                                 image: getAppImg("protect_icon.png")) 
@@ -279,14 +279,12 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
-    atomicState.isInstalled = true
 }
 
 def updated() {
     log.debug "Updated with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has updated settings...")
-    if(!atomicState?.isInstalled) { atomicState?.isInstalled = true }
 }
 
 def uninstalled() {
@@ -313,6 +311,9 @@ def initialize() {
     if (addRemoveDevices()) { // if we changed devices, reset queues and polling
         atomicState.cmdQlist = []
     }
+    if(thermostats || protects || presDevice || weatherDevice) {
+        atomicState?.isInstalled = true 
+    } else { atomicState.isInstalled = false }
     subscriber()
     setPollingState()
     runIn(20, "stateCleanup", [overwrite: true])
@@ -374,7 +375,6 @@ def setPollingState() {
             schedule("${random_int} ${random_dint}/${timgcd} * * * ?", poll)  // this runs every timgcd minutes
             poll(true)
         }
-        //if(!atomicState?.isInstalled) { poll(true) }
     }
 }
 
@@ -1409,42 +1409,6 @@ def coState(val) {
         }
     }
     return protects
-}
-
-def custStatState(val) {
-    def stats = [:]
-    def tstats = getNestThermostats()
-    tstats.each { stat ->
-        def statId = getNestTstatDni(stat)
-        def statData = getNestTstatLabel(stat?.value)
-        //log.debug "stat: $statId | data: $statData"
-        val.each { st ->
-            if(statId == st) {
-                def adni = [statId].join('.')
-                stats[adni] = statData
-            }
-        }
-    }
-    log.debug "custStatState: $stats"
-    return stats
-}
-
-def custCoState(val) {
-    def prots = [:]
-    def nProts = getNestProtects()
-    nProts.each { prot ->
-        def protId = getNestProtDni(prot)
-        def protData = getNestProtLabel(prot?.value)
-        log.debug "stat: $protId | data: $protData"
-        val.each { pt ->
-            if(protId == pt) {
-                def adni = [protId].join('.')
-                prots[adni] = protData
-            }
-        }
-    }
-    log.debug "custCoState: $prots"
-    return prots
 }
 
 def getThermostatDisplayName(stat) {
