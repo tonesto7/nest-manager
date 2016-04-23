@@ -252,9 +252,13 @@ def custWeatherPage() {
 
             href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
                     description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode or 'pws:station_id'", required: false, defaultValue: getNestZipCode(), submitOnChange: true,
+            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: getNestZipCode(), submitOnChange: true,
                     image: getAppImg("weather_icon_grey.png"))
             paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+            atomicState.custLocStr = custLocStr
+            atomicState.lastWeatherUpdDt = 0
+            atomicState?.lastForecastUpdDt = 0
+            updateWebStuff()
         }
     }
 }
@@ -287,11 +291,11 @@ def prefsPage() {
                 atomicState.exLogs = []
             }
         }
-        if(atomicState?.weatherDevice) {
-            section("Weather Settings:") {
-                href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-            }
-        }
+        //if(atomicState?.weatherDevice) {
+            //section("Weather Settings:") {
+                //href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+            //}
+        //}
         section("Nest Login:") {
             href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
         }
@@ -2316,7 +2320,7 @@ def stateCleanup() {
     // this must be run standalone, and exit after running as the cleanup occurs on exit
     def clnCnt = 0
     def clnValues = ["pollValue", "pollStrValue","pollWaitVal", "tempChgWaitVal", "cmdDelayVal", "testedDhInst", "missedPollNotif", "updNotif", "updChildOnNewOnly",
-                     "disAppIcons", "showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ" , "recentSendCmd"  , "currentWeather" , "altNames" ]
+                     "disAppIcons", "showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ" , "recentSendCmd"  , "currentWeather" , "altNames", "locstr" ]
     clnValues?.each { item ->
         if(atomicState?."$item") { state.remove("$item"); clnCnt = clnCnt+1 }
     }
@@ -2618,7 +2622,7 @@ def devPrefPage() {
         }
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
-                paragraph "This will show 'Auto' while the location is 'Away'.\nFYI: Disabling will prevent Low/High Temp adjustments until the location returns to 'Home' again."
+                paragraph "This will show 'Auto' while the location is 'Away'."
                 input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("list_icon.png")
             }
@@ -2636,7 +2640,8 @@ def devPrefPage() {
         }
         if(atomicState?.weatherDevice) {
             section("Weather Device:") {
-                paragraph "Nothing to see here yet!!!"
+                href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                //paragraph "Nothing to see here yet!!!"
             }
         }
         if((thermostats || protects || presDevice || weatherDevice)) {
