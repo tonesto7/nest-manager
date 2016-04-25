@@ -1,38 +1,38 @@
-# <img src="https://github.com/tonesto7/nest-manager/raw/master/Images/App/help_icon.png" width="48" height="48"> Nest Manager Help Page 
+#<img src="https://github.com/tonesto7/nest-manager/raw/master/Images/App/help_icon.png" width="48" height="48"> Nest Manager Help Page 
 
 
-### Getting Started Instruction
-
-#### *[Getting Started...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/getting-started.html)*
-
+______
+### Getting Up and Running
+#### [Getting Started...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/getting-started.html)
+______
 ### <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png" width="32" height="32"> Troubleshooting:
 
-#### *[Diagnostics...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/diagnostics.html)*
-#### *[Logging...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/logging.html)*
+#### [Smart-App Diagnostics...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/diagnostics.html)
 
-### <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png" width="32" height="32"> Notifications:
+#### [Smart-App and Device Logging...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/logging.html)
+_____
+### <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png" width="32" height="32"> Push Notifications:
 
-#### *[Notifications](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/notifications.html)*
+#### [App & Push Notifications](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/notifications.html)
+_____
+### <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png" width="32" height="32"> Device Preferences:
 
-### <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png" width="32" height="32"> Customizing Preferences:
+#### [Device Polling & Timing...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/polling-timing.html)
 
-#### *[Polling & Timing...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/polling-timing.html)*
-
-#### *[Device Options...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/device-preferences.html)*
-
+#### [Device Customization Options...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/device-preferences.html)
+_____
 ### <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png" width="32" height="32"> Automation Info:
 
-#### *[Nest Automations](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-automations.html)*
-
+#### [Nest Automations](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-automations.html)
+_____
 ### Sending Nest Commands:
+#### [Nest Commands Details...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html)
+_____
+### Custom Commands:
 
-#### *[Nest Commands...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html)*
+#### [Custom Commands for Rule Machine...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/rule-machine-cmds.html)
+_____
+### F.A.Q.:
 
-### Rule Machine Custom Commands:
-
-#### *[Custom Commands...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/rule-machine-cmds.html)*
-
-### FAQ:
-
-#### *[FAQ...](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nm-faq.html)*
+#### [Frequent Questions...](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nm-faq.html)
 

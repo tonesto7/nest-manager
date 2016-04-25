@@ -1,6 +1,6 @@
 # Nest Manager (Unofficial)
 
-***There were a ton of changes to the core code so we can't guarantee that their won't be an issue updating the code directly from v1.  Once you update it is important that you open the smart app and press done to clean up old variables and switch to the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any apps or routines they are under. Then remove the nest manager smartapp and start over.***
+#####IMPORTANT: ***There were a ton of changes to the core code so we can't guarantee that you will not have any issues when updating the code directly from v1.1.  Once you update to code it is very important that you open the Nest Manager smart-app and press 'Done' to clean up old variables and switch to using the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any Apps, Routines, or Rules they are being used with, and then remove the Nest Manager smart-app and start over fresh.***
 
 ### Nest Manager App
 This is the "***unofficial***" SmartThings user created SmartApp and Device handlers.
@@ -78,16 +78,13 @@ __Latest Device Versions:__
  * Since there is only a single poll for all devices, updates are more often
  * The devices look great :smile:
 
-
-## Disadvantages
- * The level of info available through the Official API is very limited compared to the hacked version currently available.
-
-
 ## 3rd-Party SmartApp Compatibility (Confirmed)
- * Keep Me Cozy (I & II) (link)
- * [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119)
- * SmartThings Routines
- * [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204)
+ * [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) @Mike_Maxwell 
+ * [SmartTiles](http://smarttiles.click/) @625alex 
+ * [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204) @bravenel 
+ * Keep Me Cozy (I & II) (link) 
+ * Routines
+
  
 ## Installation
 

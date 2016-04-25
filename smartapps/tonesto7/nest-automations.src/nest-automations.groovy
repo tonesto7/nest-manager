@@ -25,9 +25,14 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.0.0" }
-def appVerDate() { "4-21-2016" }
+def appVersion() { "1.0.1" }
+def appVerDate() { "4-22-2016" }
 def appVerInfo() {
+    
+    "V1.0.1 (Apr 22nd, 2016)\n" +
+    "Updated: Cleaned up code \n" + 
+    "Added: Links to in-app help pages. \n" +
+    "Added: Ability to use presence to set Nest home/away...\n\n" +
     
     "V1.0.0 (Apr 21st, 2016)\n" +
     "Added... Everything is new...\n\n" +
@@ -63,21 +68,29 @@ def mainPage() {
             def senTypeUsed = getUseNightSensor() ? senNightDesc : senDayDesc
             def extSenDesc = isExtSenConfigured() ? 
                 "${senEnabDesc}Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}${extTstatStatus}\n${senTypeUsed}${senSetTemps}${senRuleType}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
-            href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc, state: extSenDesc, image: imgIcon("remote_sensor_icon.png")
+            href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc, state: extSenDesc, image: getAppImg("remote_sensor_icon.png")
         }
         section("Turn Off Thermostat when a Door Window is Opened:") {
             def qOpt = (wcModes || wcDays || (wcStartTime && wcStopTime)) ? "Schedule Options Selected...\n" : ""
             def desc = (wcContacts && wcTstat) ? "${wcTstat.label}\nwith (${wcContacts ? wcContacts.size() : 0}) Contact(s)\n${qOpt}\nTap to Modify..." : "Tap to Configure..."
-            href "wcPage", title: "Configure Sensors to Watch...", description: desc, image: imgIcon("open_window.png")
+            href "wcPage", title: "Configure Sensors to Watch...", description: desc, image: getAppImg("open_window.png")
         }
         section("Turn On/Off Thermostat based on Outside temps:") {
             def qOpt = (exModes || exDays || (exStartTime && exStopTime)) ? "Schedule Options Selected...\n" : ""
             def desc = (!exUseWeather && exTemp && exTstat) ? ("${exTstat?.label}\nwith External Temp Sensor\n${qOpt}\nTap to Modify...") : (exUseWeather ? "${exTstat?.label}\nwith External Weather\n${qOpt}\nTap to Modify..." : "Tap to Configure...")
-            href "extTempsPage", title: "Turn off based on External Temps...", description: desc, image: imgIcon("external_temp_icon.png")
+            href "extTempsPage", title: "Turn off based on External Temps...", description: desc, image: getAppImg("external_temp_icon.png")
         }
         section("Set Nest Presence Based on ST Modes:") {
-            def presDesc = (awayModes || homeModes) ? "${homeModes ? "Home: $homeModes" : ""}${awayModes ? "\n\nAway: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
-            href "modePresPage", title: "Mode Automations", description: presDesc, image: imgIcon("mode_automation_icon.png")
+            def nLocDesc = "Nest Location: ${getNestLocPres().toString().capitalize()}"
+            def nModeDesc = (!modePresSensor && (awayModes || homeModes)) ? "${homeModes ? "Home Modes: $homeModes" : ""}${awayModes ? "\nAway Modes: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
+            def nPresDesc = modePresSensor ? "Presence Sensor Active...\nPresence is: ${modePresSensor?.currentPresence}" : ""
+            def nPresDelayDesc = useModePresSensorDelay ? "Delay: ${getLongTimeEnumLabel(modePresSensorDelayVal)}" : "" 
+            href "modePresPage", title: "Mode Automations", description: "${nLocDesc}\n${(modePresSensor ? "${nPresDesc}\n${nPresDelayDesc}" : nModeDesc)}", image: getAppImg("mode_automation_icon.png")
+        }
+        
+        section("Help and Instructions:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
      }
 }
@@ -147,8 +160,9 @@ def subscriber() {
         extSenEvtEval()
     }
     
-    if(homeModes || awayModes) { subscribe(location, "mode", modeWatcher, [filterEvents: false]) }
-    if(wcContacts) { subscribe(wcContacts, "contact", wcContactEvt) }
+    if (homeModes || awayModes) { subscribe(location, "mode", modeWatcher, [filterEvents: false]) }
+    if (modePresSensor) { subscribe(modePresSensor, "presence", modePresenceEvt) }
+    if (wcContacts && wcTstat) { subscribe(wcContacts, "contact", wcContactEvt) }
     if(!exUseWeather && exTemp) { subscribe(exTemp, "temperature", exTempEvt, [filterEvents: false]) }
 }
 
@@ -178,25 +192,30 @@ def extSensorPage() {
         def dupTstat = extSenTstatDuplication()
         def tStatHeatSp = getTstatSetpoint(extSenTstat, "heat")
         def tStatCoolSp = getTstatSetpoint(extSenTstat, "cool")
+        def tStatMode = extSenTstat ? extSenTstat?.currentThermostatMode : "unknown"
         def tStatTemp = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"
         def locMode = location?.mode
-        def setTempsReq = (extSenRuleType in [ "Heat", "Cool", "Heat_Cool", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false
+        
+        def coolTempsReq = (extSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false
+        def heatTempsReq = (extSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false
+        
         section("Select the Allowed (Rule) Action Type:") {
-            if(!extSenRuleType) { paragraph "(Rule) Actions will be used to determine what actions are taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
-                        " out the temperatures in your home in an attempt to make it more comfortable..."
+            if(!extSenRuleType) { 
+                paragraph "(Rule) Actions will be used to determine what actions are taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
+                          " out the temperatures in your home in an attempt to make it more comfortable...", image: getAppImg("instruct_icon.png")
             }
-            input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true, image: imgIcon("rule_icon.png"))
+            input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true, image: getAppImg("rule_icon.png"))
         }
         if(extSenRuleType) {
             section("Choose a Thermostat... ") {
-                input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("thermostat_icon.png")
+                input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
                 if(dupTstat) {
-                    paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: imgIcon("error_icon.png")
+                    paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
                 }
                 if(extSenTstat) { 
                     setTstatCapabilities()
-                    paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}", image: " "
-                    input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: imgIcon("thermostat_icon.png")
+                    paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}\nCurrent Mode: $tStatMode", image: getAppImg("instruct_icon.png")
+                    input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: getAppImg("thermostat_icon.png")
                     if(extSenTstatsMirror && !dupTstat) { 
                         extSenTstatsMirror?.each { t ->
                             paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
@@ -204,86 +223,88 @@ def extSensorPage() {
                     }
                 }
             }
-            section("Choose Temperature Sensor(s) to use instead of the Thermostat's...") {
+            def dSenStr = !extSensorNight ? "Remote" : "Daytime"
+            section("Choose $dSenStr Sensor(s) to use instead of the Thermostat's...") {
                 def dSenReq = (((extSensorNight && !extSensorDay) || !extSensorNight) && extSenTstat) ? true : false
-                input "extSensorDay", "capability.temperatureMeasurement", title: "Default (Daytime) Temp Sensors...", submitOnChange: true, required: dSenReq,
-                        multiple: true, image: imgIcon("temperature_icon.png")
+                input "extSensorDay", "capability.temperatureMeasurement", title: "$dSenStr Temp Sensors", submitOnChange: true, required: dSenReq,
+                        multiple: true, image: getAppImg("temperature_icon.png")
                 if(extSensorDay) {
-                    if(extSenModeDuplication()) {
-                        paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: imgIcon("error_icon.png")
-                    }
-                    if(!extSenUseSunAsMode) {
-                        input "extSensorDayModes", "mode", title: "Daytime (Default) Modes...", multiple: true, submitOnChange: true, required: ((!extSenUseSunAsMode && (extSensorNight && extSensorNightModes)) ? true : false),
-                                image: imgIcon("mode_icon.png")
-                    }
-                    input "extSenHeatTempDay", "decimal", title: "Desired Day Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: setTempsReq, image: imgIcon("heat_icon.png")
-                    input "extSenCoolTempDay", "decimal", title: "Desired Day Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: setTempsReq, image: imgIcon("cool_icon.png")
-
-                    def tmpVal = "Daytime Sensor Temp${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
+                    def tempStr = !extSensorNight ? "" : "Day "
+                    input "extSenHeatTempDay", "decimal", title: "Desired ${tempStr}Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: heatTempsReq, image: getAppImg("heat_icon.png")
+                    input "extSenCoolTempDay", "decimal", title: "Desired ${tempStr}Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: coolTempsReq, image: getAppImg("cool_icon.png")
+                    //paragraph " ", image: " "
+                    def tmpVal = "$dSenStr Sensor Temp${(extSensorDay?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
                     if(extSensorDay.size() > 1) {
-                        href "extSenShowTempsPage", title: "View Daytime Sensor Temps...", description: "${tmpVal}", image: " "
-                        paragraph "When multiple sensors are selected the temp will be returned as the average of those sensors combined.", image: imgIcon("i_icon.png")
-                    } else { paragraph "${tmpVal}", image: " " }
-                }
-            }
-            if(extSensorDay && extSensorNight) {
-                section("Use Sunrise/Sunset Instead of Modes to Determine Day/Night Sensors:") {
-                    input "extSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: imgIcon("sunrise_icon.png")
+                        href "extSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                        //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
+                    } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
                 }
             }
             if(extSensorDay && (!setTempsReq || (setTempsReq && extSenHeatTempDay && extSenCoolTempDay))) {
-                section("(Optional) Choose Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
-                    input "extSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", submitOnChange: true, required: false, multiple: true, image: imgIcon("temperature_icon.png")
+                section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
+                    input "extSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
                     if(extSensorNight) {
-                        if(extSenModeDuplication()) {
-                            paragraph "Duplicate Mode(s) found under the Day or Evening Sensor.  Please Correct", image: imgIcon("error_icon.png")
-                        }
-                        if(!extSenUseSunAsMode) {
-                            input "extSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: ((extSensorNight && !extSenUseSunAsMode) ? true : false),
-                                    image: imgIcon("mode_icon.png")
-                        }
-                        input "extSenHeatTempNight", "decimal", title: "Desired Evening Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && setTempsReq) ? true : false), image: imgIcon("heat_icon.png")
-                        input "extSenCoolTempNight", "decimal", title: "Desired Evening Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && setTempsReq) ? true : false), image: imgIcon("cool_icon.png")
-                        
-                        def tmpVal = "Evening Sensor Temp${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
+                        input "extSenHeatTempNight", "decimal", title: "Desired Evening Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && heatTempsReq) ? true : false), image: getAppImg("heat_icon.png")
+                        input "extSenCoolTempNight", "decimal", title: "Desired Evening Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && coolTempsReq) ? true : false), image: getAppImg("cool_icon.png")
+                        //paragraph " ", image: " "
+                        def tmpVal = "Evening Sensor Temp${(extSensorNight?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
                         if(extSensorNight.size() > 1) {
-                            href "extSenShowTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: " "
-                            paragraph "When multiple Sensors are selected the Temp will be returned as the average of those sensors combined.", image: imgIcon("i_icon.png")
-                        } else { paragraph "${tmpVal}", image: " " }
+                            href "extSenShowTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                            //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
+                        } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
+                    }
+                }
+            }
+            if(extSensorDay && extSensorNight) {
+                section("Day/Evening Detection Options:") {
+                    input "extSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("sunrise_icon.png")
+                    if(!extSenUseSunAsMode && !extSenModeDuplication()) {
+                        def modesReq = (!extSenUseSunAsMode && (extSensorDay && extSensorNight)) ? true : false
+                        input "extSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
+                        input "extSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
+                    } else {
+                        paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: getAppImg("error_icon.png")
                     }
                 }
             }
             if(extSenTstat && (extSensorDay || extSensorNight)) {
                 if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                     section("Fan Settings:") {
-                        paragraph "The Fan Runtime can be adjusted under your nest account.  The Default Time is 15 minutes.", image: " "
-                        input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true, image: imgIcon("delay_time_icon.png")
+                        paragraph "The default fan runtime is 15 minutes.\nThis can be adjusted under your nest account.", image: getAppImg("instruct_icon.png")
+                        input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     }
                 }
                 section("(Optional) Use Motion Sensors to Evaluate Temps:") {
-                    input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: imgIcon("motion_icon.png")
+                    input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
                     if(extMotionSensors) {
                         paragraph "Motion State: (${isMotionActive(extMotionSensors) ? "Active" : "Not Active"})", image: " "
-                        input "extMotionSensorModes", "mode", title: "Only evaluate Motion in these Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
-                        input "extMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true, image: imgIcon("delay_time_icon.png")
+                        input "extMotionSensorModes", "mode", title: "Only evaluate Motion in these Modes...", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
+                        input "extMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     }
                 }
-                section ("Settings:") {
-                    input "extTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: imgIcon("temp_icon.png")
+                section ("Optional Settings:") {
+                    paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
+                    input "extTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                     if(extSenRuleType != "Circ") {
-                        input "extTempChgDegrees", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: imgIcon("temp_icon.png")
+                        paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
+                        input "extTempChgDegrees", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                     }
-                    input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
-                    input "extSenEvalWait", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: imgIcon("delay_time_icon.png")
+                    input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
+                    input "extSenEvalWait", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: getAppImg("delay_time_icon.png")
                 }
             }
         }
         if (isExtSenConfigured()) {
             section("Enable or Disable Remote Sensor Once Configured...") {
-                input (name: "extSenEnabled", type: "bool", title: "Enable Remote Sensor Automation?", required: false, defaultValue: true, submitOnChange: true, image: imgIcon("switch_icon.png"))
+                input (name: "extSenEnabled", type: "bool", title: "Enable Remote Sensor Automation?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png"))
                 state?.extSenEnabled = extSenEnabled ? true : false
             }
         } else { state?.extSenEnabled = false }
+        
+        section("Help and Instructions:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+        }
     }
 }
 
@@ -414,23 +435,24 @@ def extSenRuleName() {
 def extSenShowTempsPage() {
     dynamicPage(name: "extSenShowTempsPage", uninstall: false) {
         if(extSensorDay) { 
-            section("Day Sensor Temps:") {
+            def dSenStr = !extSensorNight ? "Remote" : "Daytime"
+            section("$dSenStr Sensor Temps:") {
                 extSensorDay?.each { t ->
-                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
+                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}", image: getAppImg("temperature_icon.png")
                 }
             }
-            section("Average Temp of Day Sensors:") {
-                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
+            section("Average Temp of $dSenStr Sensors:") {
+                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}", image: getAppImg("instruct_icon.png")
             }
         }
         if(extSensorNight) { 
             section("Night Sensor Temps:") {
                 extSensorNight?.each { t ->
-                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
+                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}", image: getAppImg("temperature_icon.png")
                 }
             }
             section("Average Temp of Night Sensors:") {
-                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
+                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}", image: getAppImg("instruct_icon.png")
             }
         }
     }
@@ -465,7 +487,7 @@ private extSenEvtEval() {
         return 
     } 
     else { 
-    	atomicState?.lastExtSenEval = getDtNow()
+        atomicState?.lastExtSenEval = getDtNow()
         if (state?.extSenEnabled && modesOk(extSenModes) && (extSensorDay || extSensorNight) && extSenTstat && getExtModeOk()) {
             def threshold = !extTempDiffDegrees ? 0 : extTempDiffDegrees.toDouble()
             def chgTempVal = !extTempChgDegrees ? 0 : extTempChgDegrees.toDouble()
@@ -700,43 +722,47 @@ def wcPage() {
         section("When These Contacts are open, Turn Off this Thermostat") {
             def req = (wcContacts || wcTstat) ? true : false
             input name: "wcContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
-                    image: imgIcon("contact_icon.png")
+                    image: getAppImg("contact_icon.png")
             input name: "wcTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
-                    image: imgIcon("thermostat_icon.png")
+                    image: getAppImg("thermostat_icon.png")
             if(wcTstat) {
                 input name: "wcTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-                    image: imgIcon("thermostat_icon.png")
+                    image: getAppImg("thermostat_icon.png")
             }
         }
         if(wcContacts && wcTstat) {
             section("Only During these Days, Times, or Modes:") {
                 def timeReq = (wcStartTime || wcStopTime) ? true : false
                 input "wcStartTime", "time", title: "Start time", submitOnChange: true, required: timeReq, 
-                        image: imgIcon("start_time_icon.png")
+                        image: getAppImg("start_time_icon.png")
                 input "wcStopTime", "time", title: "Stop time", submitOnChange: true, required: timeReq,
-                        image: imgIcon("stop_time_icon.png")
+                        image: getAppImg("stop_time_icon.png")
 
                 input "wcModes", "mode", title: "Only with These Modes...", multiple: true, submitOnChange: true, required: false,
-                        image: imgIcon("mode_icon.png")
+                        image: getAppImg("mode_icon.png")
                 input "wcDays", "enum", title: "Only on certain days of the week", multiple: true, required: false, submitOnChange: true,
                         options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                        image: imgIcon("day_calendar_icon.png")
+                        image: getAppImg("day_calendar_icon.png")
             }
             section("Delay Values:") {
-                input name: "wcOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
-                        image: imgIcon("delay_time_icon.png")
+                input name: "wcOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
 
                 input "restModeOnClose", "bool", title: "Restore Previous mode after Closed?", required: false, defaultValue: false, submitOnChange: true,
-                        image: imgIcon("restore_icon.png")
+                        image: getAppImg("restore_icon.png")
                 if(restModeOnClose) {
-                    input name: "wcOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
-                        image: imgIcon("delay_time_icon.png")
+                    input name: "wcOnDelay", type: "enum", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
                 }
             }
             section("Notifications:") {
                 input "sendPushOnWc", "bool", title: "Send Push Notifications on Changes?", required: false, defaultValue: true, submitOnChange: true,
-                        image: imgIcon("notification_icon.png")
+                        image: getAppImg("notification_icon.png")
             }
+        }
+        section("Help and Instructions:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -757,22 +783,22 @@ def wcTimeOk() {
     } catch (ex) { LogAction("wcTimeOk Exception: ${ex}", "error", true, true) }
 }
 
-def getWcContactsOk() { return !wcContacts.currentState("contact").value.contains("open") ? true : false }
+def getWcContactsOk() { return wcContacts?.currentState("contact")?.value.contains("open") ? false : true }
 def watchContactOk() { return (!wcContacts && !wcTstat) ? false : true }
 def wcScheduleOk() { return (modesOk(wcModes) && daysOk(wcDays) && wcTimeOk()) ? true : false }
 def getWcOpenDtSec() { return !state?.wcOpenDt ? 100000 : GetTimeDiffSeconds(state?.wcOpenDt).toInteger() }
 def getWcCloseDtSec() { return !state?.wcCloseDt ? 100000 : GetTimeDiffSeconds(state?.wcCloseDt).toInteger() }
-def getWcOffDelayVal() { return !wcOffDelay ? 360 : (wcOffDelay.toInteger() * 60) }
-def getWcOnDelayVal() { return !wcOnDelay ? 360 : (wcOnDelay.toInteger() * 60) }
+def getWcOffDelayVal() { return !wcOffDelay ? 300 : (wcOffDelay.toInteger()) }
+def getWcOnDelayVal() { return !wcOnDelay ? 300 : (wcOnDelay.toInteger()) }
 
 def wcCheck() {
     log.trace "wcCheck..."
     def curMode = wcTstat.currentState("thermostatMode").value.toString()
     if(getWcContactsOk()) {
-        if(curMode.equals("off") && restModeOnClose && state?.wcTurnedOff == true) {
-            if(getWcCloseDtSec() >= (getWcOnDelayVal().toInteger() - 2)) {
+        if(curMode == "off" && restModeOnClose && state?.wcTurnedOff) {
+            if(getWcCloseDtSec() >= (getWcOnDelayVal()?.toInteger() - 2)) {
                 def lastMode = state?.wcRestoreMode ?: curMode
-                if(!state?.wcRestoreMode.equals(curMode)) {
+                if(!state?.wcRestoreMode?.equals(curMode)) {
                     if(lastMode) {
                         if(setTstatMode(wcTstat, lastMode)) {
                             state.wcTurnedOff = false
@@ -795,12 +821,12 @@ def wcCheck() {
     }
     
     if (!getWcContactsOk()) {
-        if(!curMode.equals("off")) {
+        if(curMode != "off") {
             if(getWcOpenDtSec() >= (getWcOffDelayVal().toInteger() - 2)) {
                 log.debug "!getWcContactsOk..."
                 if(restModeOnClose) { 
                     state.wcRestoreMode = curMode
-                    log.debug "restoreToMode Set to: ${state?.wcRestoreMode}"
+                    log.debug "restoreToMode Set to: ${atomicState?.wcRestoreMode}"
                 }
                 log.debug("Selected Contacts are Open turning off ${wcTstat}")
                 state.wcTurnedOff = true
@@ -821,68 +847,21 @@ def wcCheck() {
 }
 
 def wcContactEvt(evt) {
-    //log.debug "watchContactEvt: ${evt.value}"
-    def schedOff = false
-    def schedOn = false
-    def curMode = wcTstat.currentState("thermostatMode").value.toString()
-    def conVal = evt.value.toString()
-    def wcOk = getWcContactsOk()
-    state?.wcState = (evt.value == "closed") ? "closed" : "open"
+    log.debug "watchContactEvt: ${evt?.value}"
+    def curMode = wcTstat?.currentThermostatMode.toString()
     if(wcScheduleOk()) {
-        if (conVal == "open" && !curMode == "off") {
-            state.wcOpenDt = getDtNow()
+        if (!getWcContactsOk() && curMode != "off") {
+            state?.wcOpenDt = getDtNow()
             log.debug "wcContactEvt() | Scheduling Thermostat OFF in (${getWcOffDelayVal()} seconds)..."
-            runIn(getWcOffDelayVal().toInteger(), "wcCheck", [overwrite: true]) 
+            runIn(getWcOffDelayVal()?.toInteger(), "wcCheck", [overwrite: true]) 
         }
-        else if(conVal == "closed" && (restModeOnClose && curMode == "off" && state?.wcTurnedOff == true)) {
+        else if(getWcContactsOk() && (restModeOnClose && curMode == "off" && state?.wcTurnedOff == true)) {
             state.wcCloseDt = getDtNow()
             log.debug "wcContactEvt() | Scheduling Thermostat ON in (${getWcOnDelayVal()} seconds)..."
-            runIn(getWcOnDelayVal().toInteger(), "wcCheck", [overwrite: true])
+            runIn(getWcOnDelayVal()?.toInteger(), "wcCheck", [overwrite: true])
         }
     }
 }
-
-/********************************************************************************  
-|                			MODE AUTOMATION CODE	     						|
-*********************************************************************************/
-def modePresPage() {
-    dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
-        section("Change Nest Presence with ST Modes:") {
-            input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
-                    image: imgIcon("mode_home_icon.png")
-            input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
-                    image: imgIcon("mode_away_icon.png")
-        }
-    }
-}
-
-def modeWatcher(evt) { 
-    log.debug "modeWatcher: $evt.value"
-    checkNestPresMode() 
-}
-
-def checkNestPresMode() { 
-    def curMode = location.mode.toString()
-    if (homeModes) {
-        homeModes?.each { m ->
-            if(m?.toString() == curMode) { 
-                LogAction("The mode ($location.mode) has triggered Nest 'Home'", "info", true)
-                parent?.setStructureAway(null, false) 
-            }
-         }  
-    } 
-       if (awayModes) {
-        awayModes?.each { m ->
-            if(m?.toString() == curMode) { 
-                LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
-                parent?.setStructureAway(null, true) 
-            }
-        }
-    }
-}    
-
-def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
-
 
 /********************************************************************************  
 |                			External Temp AUTOMATION CODE	     				|
@@ -893,63 +872,67 @@ def extTempsPage() {
         section("When External Temp reaches Turn Off this Thermostat when the Local Weather temp goes above a certain threshold.  ") {
             def req = ((exUseWeather || (!exUseWeather && exTemp)) || Tstat) ? true : false
             input "exUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: req, defaultValue: false, submitOnChange: true,
-                    image: imgIcon("weather_icon.png")
+                    image: getAppImg("weather_icon.png")
             if(exUseWeather){
                 getExtConditions()
                 def tmpVal = (location?.temperatureScale == "C") ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
                 paragraph "Current Weather Temp: $tmpVal", image: " "
                 input name: "locZipcode", type: "number", title: "Custom ZipCode (Default is Hub Loction)?", submitOnChange: true, required: false,
-                        image: imgIcon("location_icon.png")
+                        image: getAppImg("location_icon.png")
                 
                 input name: "weatherRfrshVal", type: "number", title: "Update Weather (in Minutes)?", default: 5, submitOnChange: true, required: false,
-                        image: imgIcon("start_time_icon.png")
+                        image: getAppImg("start_time_icon.png")
             }
             if(!exUseWeather) {
                 input "exTemp", "capability.temperatureMeasurement", title: "Which Temperature Sensors?", submitOnChange: true, multiple: false, required: req, 
-                        image: imgIcon("temperature_icon.png")
+                        image: getAppImg("temperature_icon.png")
                 if(exTemp) {
                     def tmpVal = "${exTemp?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
                     paragraph "Current Sensor Temp: ${tmpVal}", image: " "
                 }
             }
             input name: "exTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
-                    image: imgIcon("thermostat_icon.png")
+                    image: getAppImg("thermostat_icon.png")
             if(exTstat) {
                 def tmpVal = "${exTstat?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
                     paragraph "Current Thermostat Temp: ${tmpVal}", image: " "
                 input name: "exTempDiffVal", type: "number", title: "When Inside Temp is within this many Degrees of External Temp?", range: "-30..30", default: 0, submitOnChange: true, required: false,
-                        image: imgIcon("temp_icon.png")
+                        image: getAppImg("temp_icon.png")
             }
         }
         if((exUseWeather || exTemp) && exTstat) {
             section("Only During these Days, Times, or Modes:") {
                 def timeReq = (exStartTime || exStopTime) ? true : false
                 input "exStartTime", "time", title: "Start time", submitOnChange: true, required: timeReq, 
-                                image: imgIcon("start_time_icon.png")
+                                image: getAppImg("start_time_icon.png")
                 input "exStopTime", "time", title: "Stop time", submitOnChange: true, required: timeReq,
-                                image: imgIcon("stop_time_icon.png")
+                                image: getAppImg("stop_time_icon.png")
 
                 input "exModes", "mode", title: "Only with These Modes...", multiple: true, submitOnChange: true, required: false,
-                                image: imgIcon("mode_icon.png")
+                                image: getAppImg("mode_icon.png")
                 input "exDays", "enum", title: "Only on certain days of the week", multiple: true, required: false, submitOnChange: true,
                                 options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                                image: imgIcon("day_calendar_icon.png")
+                                image: getAppImg("day_calendar_icon.png")
             }
             section("Delay Values:") {
-                input name: "exOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
-                                image: imgIcon("delay_time_icon.png")
+                input name: "exOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                                image: getAppImg("delay_time_icon.png")
 
                 input "exRestoreMode", "bool", title: "Restore Previous Mode when Temp goes below Threshold?", required: false, defaultValue: false, submitOnChange: true,
-                                image: imgIcon("restore_icon.png")
+                                image: getAppImg("restore_icon.png")
                 if(exRestoreMode) {
-                    input name: "exOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
-                                image: imgIcon("delay_time_icon.png")
+                    input name: "exOnDelay", type: "enum", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                                image: getAppImg("delay_time_icon.png")
                 }
             }
             section("Notifications:") {
                 input "sendPushOnEx", "bool", title: "Send Push Notifications on Changes?", required: false, defaultValue: true, submitOnChange: true,
-                                image: imgIcon("notification_icon.png")
+                                image: getAppImg("notification_icon.png")
             }
+        }
+        section("Help and Instructions:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -1005,8 +988,8 @@ def exTimeOk() {
 def exScheduleOk() { return (modesOk(exModes) && daysOk(exDays) && exTimeOk()) ? true : false }
 def getExTempGoodDtSec() { return !state?.exTempGoodDt ? 100000 : GetTimeDiffSeconds(state?.exTempGoodDt).toInteger() }
 def getExTempBadDtSec() { return !state?.exTempBadDt ? 100000 : GetTimeDiffSeconds(state?.exTempBadDt).toInteger() }
-def getExOffDelayVal() { return !exOffDelay ? 360 : (exOffDelay.toInteger() * 60) }
-def getExOnDelayVal() { return !exOnDelay ? 360 : (exOnDelay.toInteger() * 60) }
+def getExOffDelayVal() { return !exOffDelay ? 300 : (exOffDelay.toInteger()) }
+def getExOnDelayVal() { return !exOnDelay ? 300 : (exOnDelay.toInteger()) }
 def getExWeatherRefreshVal() { return !weatherRfrshVal ? 1 : (weatherRfrshVal.toInteger()) }
 
 def exCheck() {
@@ -1052,10 +1035,10 @@ def exCheck() {
 }
 
 def exTempEvt(evt) {
-    log.debug "exTempEvt: ${evt.value}"
+    log.debug "exTempEvt: ${evt?.value}"
     def schedOff = false
     def schedOn = false
-    def curMode = exTstat.currentState("thermostatMode").value.toString()
+    def curMode = exTstat?.currentState("thermostatMode").value.toString()
     def exOk = getExTempOk()
     log.debug "exOk: $exOk"
     if(exScheduleOk()) {
@@ -1106,9 +1089,131 @@ def setTstatMode(tstat, mode) {
 }
 
 
+/********************************************************************************  
+|                			MODE AUTOMATION CODE	     						|
+*********************************************************************************/
+def modePresPage() {
+    dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
+        if(!modePresSensor) {
+            section("Set Nest Presence with ST Modes:") {
+                input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
+                        image: getAppImg("mode_home_icon.png")
+                input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
+                        image: getAppImg("mode_away_icon.png")
+            }
+        }
+        section("Set Nest Presence Via Presence Sensor:") {
+            paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
+            input "modePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: true, submitOnChange: true, required: false,
+                    image: getAppImg("presence_icon.png")
+            if(modePresSensor) {
+                if (modePresSensor.size() > 1) {
+                    paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", getAppImg("instruct_icon.png")
+                }
+                paragraph "Presence State: ${modePresSensor.currentPresence}", image: " "
+                input (name: "useModePresSensorDelay", type: "bool", title: "Delay Changes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
+                if(useModePresSensorDelay) {
+                    input "modePresSensorDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                }
+            }
+        }
+        section("Help and Instructions:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+        }
+    }
+}
+
+def modeWatcher(evt) { 
+    log.debug "modeWatcher: $evt"
+    if(!modePresSensor) {
+        checkNestPresMode()
+    } 
+}
+
+def modePresenceEvt(evt) {
+    log.debug "modePresenceEvt: [${evt?.displayName}] is (${evt?.value})"
+    def curNestPres = (getNestLocPres() == "home") ? "present" : "not present"
+    if((evt?.value.toString() != curNestPres) ? true : false) {
+        if(useModePresSensorDelay) {
+            runIn(modePresSensorDelayVal.toInteger(), "setNestModeWithPresence", [overwrite: true])
+        } else {
+            setNestModeWithPresence()
+        }
+    }
+}
+
+def setNestModeWithPresence() {
+    try {
+        if(modePresSensor) {
+            if(getModePresSenAway()) {
+                LogAction("The selected Presence device(s) No Longer Present setting Nest 'Away'", "info", true)
+                parent?.setStructureAway(null, true) 
+            } else {
+                LogAction("A selected Presence device(s) Present setting Nest 'Home'", "info", true)
+                parent?.setStructureAway(null, false) 
+            }
+        }
+    } catch (ex) {
+        LogAction("setNestModeWithPresence() Exception: $ex", "error", true)
+    }
+}
+
+def checkNestPresMode() { 
+    try {
+        def curMode = location.mode.toString()
+        if (homeModes) {
+            homeModes?.each { m ->
+                if(m?.toString() == curMode) { 
+                    LogAction("The mode ($location.mode) has triggered Nest 'Home'", "info", true)
+                    parent?.setStructureAway(null, false) 
+                }
+            }  
+        } 
+        if (awayModes) {
+            awayModes?.each { m ->
+                if(m?.toString() == curMode) { 
+                    LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
+                    parent?.setStructureAway(null, true) 
+                }
+            }
+        }
+    } catch (ex) {
+        LogAction("checkNestPresMode() Exception: $ex", "error", true)
+    }
+}    
+
+def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
+
+def getModePresSenAway() {
+    if(modePresSensor) {
+        def pres = modePresSensor?.find { it?.currentPresence == "present" }
+        return !pres ? true : false
+    }
+}
+
+def getNestLocPres() {
+    if(!parent?.locationPresence()) { return null }
+    else {
+        return parent?.locationPresence()
+    }
+}
+
 /************************************************************************************************
 |									LOGGING AND Diagnostic										|
 *************************************************************************************************/
+
+def getLongTimeEnumLabel(val) {
+    def result = "unknown"
+    if(val) {
+        longTimeEnum().each { item ->
+            if(item?.key.toString() == val?.toString()) { 
+                result = item?.value
+            }
+        }
+    } 
+    return result
+}
 
 def LogTrace(msg) { if(parent?.advAppDebug) { Logger(msg, "trace") } }
 
@@ -1149,7 +1254,7 @@ def Logger(msg, type) {
 /******************************************************************************  
 *                			Keep These Methods				                  *
 *******************************************************************************/
-def imgIcon(imgName, on = null) 	{ return (!parent?.settings?.disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/$imgName" : "" }
+def getAppImg(imgName, on = null) { return (!parent?.settings?.disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
                             
 private debugStatus() { return state?.appDebug ? "On" : "Off" } //Keep this
 private childDebugStatus() { return state?.childDebug ? "On" : "Off" } //Keep this
@@ -1231,6 +1336,7 @@ private def appName() 		{ "Nest Automations${appDevName()}" }
 private def appAuthor() 	{ "Anthony S." }
 private def appParent() 	{ "tonesto7:Nest Manager${appDevName()}" }
 private def appNamespace() 	{ "tonesto7" }
+private def gitBranch()     { "master" }
 private def appDevType()    { false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{ }

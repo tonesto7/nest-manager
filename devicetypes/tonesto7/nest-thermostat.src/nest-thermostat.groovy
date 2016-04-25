@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.0"}
+def devVer() { return "2.0.1"}
 
 // for the UI
 metadata {
@@ -477,7 +477,7 @@ def temperatureEvent(Double tempVal) {
 
 def heatingSetpointEvent(Double tempVal) {
     def temp = device.currentState("heatingSetpoint")?.value.toString()
-    if(!state?.can_heat || (getHeatTemp() == 0) || (getHvacMode == "off")) { 
+    if(tempVal.toInteger() == 0 || !state?.can_heat || (getHvacMode == "off")) { 
         if(temp != "") { clearHeatingSetpoint() }
     } else {
         def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
@@ -493,7 +493,7 @@ def heatingSetpointEvent(Double tempVal) {
 
 def coolingSetpointEvent(Double tempVal) {
     def temp = device.currentState("coolingSetpoint")?.value.toString()
-    if(!state?.can_cool || (getCoolTemp() == 0) || (getHvacMode == "off")) { 
+    if(tempVal.toInteger() == 0 || !state?.can_cool || (getHvacMode == "off")) { 
         if(temp != "") { clearCoolingSetpoint() }
     } else {
         def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
@@ -1293,8 +1293,7 @@ def getInfoHtml() {
             <style type="text/css">
                 .flat-table {
                   width: 100%;
-                  font-family: 'Lucida Grande';
-                  src: url(https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Fonts/lucidagrande.ttf);
+                  font-family: 'San Francisco', 'Roboto', 'Arial';
                   border: none;
                   border-radius: 3px;
                   -webkit-border-radius: 3px;

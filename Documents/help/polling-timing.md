@@ -9,9 +9,9 @@ There are two calls made:
 
 ##### *FWIW: As of version 2.0 we are now using Cron scheduling to perform Device and Location Polls.* 
 
-#### If you are tinkering with the Devices modes and temps a lot the API has an arbitrary rate limiting system in place.  Once you are rate limited it will block any calls for 60 seconds to 15 minutes.  In everyday use this should not be an issue.
+#### If you are tinkering with the Devices modes and temps a lot Nest's API has rate limiting system in place.  Once you are rate limited it will block any calls for 60 seconds to 60 minutes.  In everyday use this should not be an issue.
 
-For more info on Nest's Rate Limiting visit [here](https://developer.nest.com/documentation/cloud/data-rate-limits/)
+For more info on Nest Manager and Nest's Rate Limiting visit [Nest Commands...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html)
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_2.png" width="281" height="500">
 

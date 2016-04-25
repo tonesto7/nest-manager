@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.0.0" }
+def devVer() { return "1.0.1" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -39,10 +39,27 @@ metadata {
         command "refresh"
         command "log"
         
-        attribute "lastConnection", "string"
         attribute "apiStatus", "string"
         attribute "debugOn", "string"
         attribute "devTypeVer", "string"
+        attribute "lastUpdatedDt", "string"
+
+        attribute "localSunrise", "string"
+        attribute "localSunset", "string"
+        attribute "city", "string"
+        attribute "timeZoneOffset", "string"
+        attribute "weather", "string"
+        attribute "wind", "string"
+        attribute "windDir", "string"
+        attribute "weatherIcon", "string"
+        attribute "forecastIcon", "string"
+        attribute "feelsLike", "string"
+        attribute "percentPrecip", "string"
+        attribute "alert", "string"
+        attribute "alertKeys", "string"
+        attribute "sunriseDate", "string"
+        attribute "sunsetDate", "string"
+
     }
 
     simulator { }
@@ -134,8 +151,9 @@ def generateEvent(Map results) {
     }
     lastUpdatedEvent()
     getWeatherAstronomy()
-    getWeatherConditions()
     getWeatherForecast()
+    getWeatherConditions()
+    getWeatherAlerts()
     return null
 }
 
@@ -169,8 +187,8 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
-        def lastDt = "${tf?.format(now)}"
+    tf.setTimeZone(location?.timeZone)
+    def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()
     if(!lastUpd.equals(lastDt?.toString())) {
@@ -205,12 +223,14 @@ def illuminanceEvent(illum) {
     } else { Logger("Illuminance is (${illum}) | Original State: (${cur})") }
 }
 
-def temperatureEvent(Double tempVal) {
+def temperatureEvent(Double tempVal, Double feelsVal) {
     def temp = device.currentState("temperature")?.value.toString()
     def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+    def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
     if(!temp.equals(rTempVal.toString())) {
         log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
         sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+        sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
     } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -239,19 +259,44 @@ def getWeatherConditions() {
     if(cur) {
         state.curWeather = cur
         //log.debug "cur: $cur"
-        state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
-        state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
+        state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f)
+        state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c)
+        state.curFeelsTemp_f = Math.round(cur?.current_observation?.feelslike_f as Double)
+        state.curFeelsTemp_c = Math.round(cur?.current_observation?.feelslike_c as Double)
         state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
         state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
         state.curWeatherCond = cur?.current_observation?.weather.toString()
         state.curWeatherIcon = cur?.current_observation?.icon.toString()
         state.zipCode = cur?.current_observation?.display_location.zip.toString()
-        def curTemp = (state?.tempUnit == "C") ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
-        def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
-        state.curWeatherTemp = curWeatherTemp
-        temperatureEvent(curTemp)
+        state.curWeatherTemp = ( wantMetric() ) ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
+        def curTemp = ( wantMetric() ) ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
+        temperatureEvent( ( wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f), 
+                     ( wantMetric() ? state?.curFeelsTemp_c : state?.curFeelsTemp_f) )
         humidityEvent(state?.curWeatherHum)
         illuminanceEvent(estimateLux(state.curWeatherIcon))
+        sendEvent(name: "weather", value: cur?.current_observation?.weather)
+        sendEvent(name: "weatherIcon", value: state.curWeatherIcon, displayed:false)
+        def wspeed = 0.0
+        def wgust = 0.0
+        if (wantMetric()) {
+            wspeed = Math.round(cur?.current_observation?.wind_kph as float)
+            wgust = Math.round(cur?.current_observation?.wind_gust_kph as float)
+            sendEvent(name: "wind", value: wspeed as String, unit: "KPH")
+            wspeed += " KPH"
+            wgust += " KPH"
+        } else {
+            wspeed = Math.round(cur?.current_observation?.wind_mph as float)
+            wgust = Math.round(cur?.current_observation?.wind_gust_mph as float)
+            sendEvent(name: "wind", value: wspeed as String, unit: "MPH")
+            wspeed += " MPH"
+            wgust += " MPH"
+        }
+        def wdir = cur?.current_observation?.wind_dir
+        sendEvent(name: "windDir", value: wdir)
+        state.windStr = "From the ${wdir} at ${wspeed} Gusting to ${wgust}"
+        sendEvent(name: "timeZoneOffset", value: cur?.current_observation?.local_tz_offset)
+        def cityValue = "${cur?.current_observation?.display_location.city}, ${cur?.current_observation?.display_location.state}"
+        sendEvent(name: "city", value: cityValue)
 
         Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
     }
@@ -262,6 +307,13 @@ def getWeatherForecast() {
     if(cur) {
         state.curForecast = cur
         //log.debug "cur: $cur"
+        def f1 = cur?.forecast?.simpleforecast?.forecastday
+        if (f1) {
+            def icon = f1[0].icon
+            def value = f1[0].pop as String // as String because of bug in determining state change of 0 numbers
+            sendEvent(name: "percentPrecip", value: value, unit: "%")
+            sendEvent(name: "forecastIcon", value: icon, displayed: false)
+        }
     }
 }
 
@@ -271,7 +323,65 @@ def getWeatherAstronomy() {
         state.curAstronomy = cur
         //log.debug "cur: $cur"
         getSunriseSunset()
+        sendEvent(name: "localSunrise", value: state.localSunrise, descriptionText: "Sunrise today is at ${state.localSunrise}")
+        sendEvent(name: "localSunset", value: state.localSunset, descriptionText: "Sunset today at is ${state.localSunset}")
     }
+}
+
+def getWeatherAlerts() {
+    def cur = parent?.getWAlertsData()
+    if(cur) {
+        state.curAlerts = cur
+        //log.debug "cur: $cur"
+        def alerts = cur?.alerts
+        def newKeys = alerts?.collect{it.type + it.date_epoch} ?: []
+      //log.debug "${device.displayName}: newKeys: $newKeys"
+      //log.trace device.currentState("alertKeys")
+        def oldKeys = device.currentState("alertKeys")?.jsonValue
+      //log.debug "${device.displayName}: oldKeys: $oldKeys"
+
+        def noneString = "no current weather alerts"
+        if (!newKeys && oldKeys == null) {
+                sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
+                sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
+                state.walert = noneString
+        }
+        else if (newKeys != oldKeys) {
+                if (oldKeys == null) {
+                        oldKeys = []
+                }
+                sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
+
+                def newAlerts = false
+                alerts.each {alert ->
+                        if (!oldKeys.contains(alert.type + alert.date_epoch)) {
+                                def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
+                                sendEvent(name: "alert", value: pad(alert.description), descriptionText: msg)
+                                newAlerts = true
+                                state.walert = pad(alert.description) // msg
+                        }
+                }
+
+                if (!newAlerts && device.currentValue("alert") != noneString) {
+                        sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
+                        state.walert = noneString
+                }
+        }
+    }
+}
+
+private pad(String s, size = 25) {
+        def n = (size - s.size()) / 2
+        if (n > 0) {
+                def sb = ""
+                n.times {sb += " "}
+                sb += s
+                n.times {sb += " "}
+                return sb
+        }
+        else {
+                return s
+        }
 }
 
 private estimateLux(weatherIcon) {
@@ -407,7 +517,7 @@ def getWeatherIcon(weatherIcon) {
 }
 
 def getFeelslike() {
-    if ( state?.tempUnit == "C" ) {
+    if ( wantMetric() ) {
         return "${state?.curWeather?.current_observation?.feelslike_c}°C"
     } else {
         return "${state?.curWeather?.current_observation?.feelslike_f}°F"
@@ -415,7 +525,7 @@ def getFeelslike() {
 }
 
 def getVisibility() {
-    if ( state?.tempUnit == "C" ) {
+    if ( wantMetric() ) {
         return "${state.curWeather?.current_observation?.visibility_km} km"
     } else {
         return "${state.curWeather?.current_observation?.visibility_mi} Miles"
@@ -463,7 +573,7 @@ def getWeatherHtml() {
         head {
             """ <style type="text/css">
                 body {
-                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  font-family: 'San Francisco', 'Roboto', 'Arial';
                 }
 
                 #header {
@@ -539,7 +649,9 @@ def getWeatherHtml() {
                   <b>Visibility:</b> ${getVisibility()} <br>
                   <b>Lux:</b> ${getLux()}<br>
                   <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-                  <b>Wind:</b> ${state?.curWeather?.current_observation?.wind_string} <br>
+                  <b>Wind:</b> ${state?.windStr} <br>
+                  <b>Alert:</b> ${state?.walert} <br>
+                  <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} <br>
                 </div>
               </div>
 
