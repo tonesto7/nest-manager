@@ -65,7 +65,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 12)
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 6)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
@@ -340,7 +340,7 @@ def getWeatherAlerts() {
         def oldKeys = device.currentState("alertKeys")?.jsonValue
       //log.debug "${device.displayName}: oldKeys: $oldKeys"
 
-        def noneString = ""
+        def noneString = "no current weather alerts"
         if (!newKeys && oldKeys == null) {
                 sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
                 sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
@@ -568,21 +568,6 @@ def getSunriseSunset() {
     state.localSunset = localSunset
 }
 
-def forecastDay(day) {
-
-	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"> <br>"
-    def forecastTxt = ""
-    
-    if ( wantMetric() ) {
-         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
-    } else {
-         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
-    }
-
-	return dayName + forecastImage + forecastTxt
- }
-
 def getWeatherHtml() { 
     renderHTML {
         head {
@@ -596,14 +581,6 @@ def getWeatherHtml() {
                   font-weight: bold;
                   text-align: center;
                   background: #00a1db;
-                  color: #f5f5f5;
-                }
-                
-                #alert {
-                  font-size: 4vw;
-                  font-weight: bold;
-                  text-align: center;
-                  background: #B74C4C;
                   color: #f5f5f5;
                 }
 
@@ -626,30 +603,13 @@ def getWeatherHtml() {
 
                 #temp {
                   font-size: 9vw;
+                  border-bottom: 2px solid #00a1db;
                   text-align: center;
-                  width:80%;
-                  float: right; 
                 }
 
                 #data {
                   font-size: 4vw;
                   padding: 5px;
-                }
-                
-                #forecast {
-               		border-top: 2px solid #00a1db;
-                    clear: left;
-                    padding: 5px;
-                }
-                
-                #day {
-                	width:30%;
-                    float: left;        
-               }
-               
-               #station {
-               	float: right;
-                clear:right;
                 }
 
                 #weatherIcon {
@@ -659,18 +619,6 @@ def getWeatherHtml() {
                   //height: 256px;
                   font-size: 6vw;
                   text-align: center;
-                }
-                
-                #condition {
-                    border-top: 2px solid #00a1db;
-              	 	float: right;
-               		clear:right;
-                    padding-bottom: 5px;
-                }
-
-                
-               .icon {
-                	width:75%;
                 }
 
                 #dataDump {
@@ -683,11 +631,6 @@ def getWeatherHtml() {
                   width: 100%;
                   height: 1px;
                 }
-                
-                .r33 {
-                  width: 33%;
-                  vertical-align: top;
-                }
               
               </style>
                """
@@ -697,45 +640,27 @@ def getWeatherHtml() {
             <div class="container">
               <div id="header">Current Weather Conditions</div>
               <div id="weatherInfo">
-              <div id="alert">${state?.walert}</div>
               <div id="city"> ${state?.curWeather?.current_observation?.display_location.full} </div>
               <div id="leftData">
                 <div id="data">
                   <b>Feels Like:</b> ${getFeelslike()} <br>
-                  <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
                   <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
                   <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
                   <b>Visibility:</b> ${getVisibility()} <br>
                   <b>Lux:</b> ${getLux()}<br>
                   <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
                   <b>Wind:</b> ${state?.windStr} <br>
+                  <b>Alert:</b> ${state?.walert} <br>
+                  <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} <br>
                 </div>
               </div>
 
             <div id="weatherIcon">
-              <img src="${getWeatherIcon()}" class="icon"> <br>
+              <img src="${getWeatherIcon()}"> <br>
               <div id="temp">${getTemp()}</div>
-              <div id ="condition">${state.curWeatherCond}</div>
+              <b>${state.curWeatherCond}</b>
             </div>
           </div>
-          
-          <table id="forecast">
-          	 <tbody>
-				<tr>
-                	<td class="r33">${forecastDay(0)}</td>
-                    <td class="r33">${forecastDay(1)}</td>
-                    <td class="r33">${forecastDay(2)}</td>
-                </tr>
-                <tr>
-                	<td class="r33">${forecastDay(3)}</td>
-                    <td class="r33">${forecastDay(4)}</td>
-                    <td class="r33">${forecastDay(5)}</td>
-                </tr>
-          	</table>
-      		
-                       <div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div>
-         
-</div>
           """
         }
     }
