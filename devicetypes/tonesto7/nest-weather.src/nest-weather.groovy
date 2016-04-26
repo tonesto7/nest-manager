@@ -649,8 +649,8 @@ def getWeatherHtml() {
                }
                
                #station {
-               	float: right;
-                clear:right;
+               	float:right;
+                clear:left;
                 }
 
                 #weatherIcon {
@@ -688,6 +688,8 @@ def getWeatherHtml() {
                 .r33 {
                   width: 33%;
                   vertical-align: top;
+                  font-size: 3vw;
+                  padding: 3px;
                 }
               
               </style>
