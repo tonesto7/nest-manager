@@ -340,7 +340,7 @@ def getWeatherAlerts() {
         def oldKeys = device.currentState("alertKeys")?.jsonValue
       //log.debug "${device.displayName}: oldKeys: $oldKeys"
 
-        def noneString = "no current weather alerts"
+        def noneString = ""
         if (!newKeys && oldKeys == null) {
                 sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
                 sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
@@ -572,7 +572,7 @@ def getSunriseSunset() {
 def forecastDay(day) {
 
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"> <br>"
+    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
     def forecastTxt = ""
     
     if ( wantMetric() ) {
@@ -643,6 +643,8 @@ def getWeatherHtml() {
                     padding: 5px;
                 }
                 
+                #forecastHead
+                
                 #day {
                 	width:30%;
                     float: left;        
@@ -690,6 +692,7 @@ def getWeatherHtml() {
                   vertical-align: top;
                   font-size: 3vw;
                   padding: 3px;
+                  text-align:center;
                 }
               
               </style>
