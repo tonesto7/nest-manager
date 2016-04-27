@@ -36,7 +36,7 @@ preferences {
 def devVer() { return "2.0.0" }
 
 metadata {
-    definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
+    definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
         //capability "Polling"
         capability "Sensor"
         capability "Battery"
@@ -564,8 +564,7 @@ def getInfoHtml() {
             <style type="text/css">
                  .flat-table {
                   width: 100%;
-                  font-family: 'Lucida Grande';
-                  src: url(https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Fonts/lucidagrande.ttf);
+                  font-family: 'San Francisco', 'Roboto', 'Arial';
                   border: none;
                   border-radius: 3px;
                   -webkit-border-radius: 3px;
@@ -690,3 +689,7 @@ def getInfoHtml() {
         }
     }
 }
+
+private def textDevName()   { "Nest Protect${appDevName()}" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }

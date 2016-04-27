@@ -5,27 +5,27 @@
   "versions": {
     "app": {
       "type": "rel",
-      "ver": "1.1.2"
+      "ver": "2.0.3"
     },
     "autoapp": {
       "type": "rel",
-      "ver": "1.0.0"
+      "ver": "1.1.0"
     },
     "thermostat": {
       "type": "rel",
-      "ver": "1.1.3"
+      "ver": "2.0.2"
     },
     "protect": {
       "type": "rel",
-      "ver": "1.1.1"
+      "ver": "2.0.0"
     },
     "presence": {
       "type": "rel",
-      "ver": "1.1.1"
+      "ver": "2.0.0"
     },
     "weather": {
       "type": "rel",
-      "ver": "1.0.0"
+      "ver": "1.1.0"
     }
   },
   "updater": {

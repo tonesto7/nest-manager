@@ -324,36 +324,49 @@ There are two calls made: </p>
 <li>The other is all Device data for the Location</li>
 </ul>
 
-<h4 id="toc_2">If you are tinkering with the Devices modes and temps a lot the API has an arbitrary rate limiting system in place.  Once you are rate limited it will block any calls for 60 to 120 seconds.  In everyday use this should not be an issue.</h4>
+<h5 id="toc_2"><em>FWIW: As of version 2.0 we are now using Cron scheduling to perform Device and Location Polls.</em></h5>
+
+<h4 id="toc_3">If you are tinkering with the Devices modes and temps a lot the API has an arbitrary rate limiting system in place.  Once you are rate limited it will block any calls for 60 seconds to 15 minutes.  In everyday use this should not be an issue.</h4>
 
 <p>For more info on Nest&#39;s Rate Limiting visit <a href="https://developer.nest.com/documentation/cloud/data-rate-limits/">here</a></p>
 
-<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_1.png" width="281" height="500"></p>
+<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_2.png" width="281" height="500"></p>
 
 <hr>
 
-<h4 id="toc_3">1. Device Poll Rate</h4>
+<h4 id="toc_4">1. Device Poll Rate</h4>
 
 <p>This is the value used when scheduling the next refresh of Device data from the API.</p>
 
 <ul>
-<li><em>The default value is every minute</em></li>
+<li><em>The default value is 3 minutes</em></li>
 </ul>
 
 <hr>
 
-<h4 id="toc_4">2. Location Poll Rate</h4>
+<h4 id="toc_5">2. Location Poll Rate</h4>
 
 <p>This is the value used when scheduling the next refresh of Location data from the API.</p>
 
 <ul>
 <li><em>The default value is every 3 minutes</em></li>
-<li>The lowest I would set this would be 120 seconds.<br></li>
+<li>The lowest I would set this would be 2 minutes.<br></li>
 </ul>
 
 <hr>
 
-<h4 id="toc_5">3. Forced Refresh Limit</h4>
+<h4 id="toc_6">3. Weather Poll Rate</h4>
+
+<p>This is the value used when scheduling the next refresh of Locations Weather data from the API.</p>
+
+<ul>
+<li><em>The default value is every 15 minutes</em></li>
+<li>It is not recommended to set at a value lower than 5 minutes<br></li>
+</ul>
+
+<hr>
+
+<h4 id="toc_7">4. Forced Refresh Limit</h4>
 
 <p>This is the value is the Delay used when using Refresh or App Touch button. Basically it&#39;s how much time needs to pass before it will force a refresh of the data.</p>
 
@@ -363,7 +376,7 @@ There are two calls made: </p>
 
 <hr>
 
-<h4 id="toc_6">4. Manual Temp Change Delay</h4>
+<h4 id="toc_8">5. Manual Temp Change Delay</h4>
 
 <p>This is the the Delay used when changing temp manually from thermostat device. This allows you to hit the change buttons in succession and after the final tap the delay is used before sending the command to Nest.</p>
 
@@ -373,23 +386,23 @@ There are two calls made: </p>
 
 <hr>
 
-<h4 id="toc_7">Only Update Children on New Data</h4>
+<h4 id="toc_9">Only Update Children on New Data</h4>
 
-<p>There is a toggle that will allow you to set the poller to only update child devices when new/changed data is received from the Nest API.  This is here to reduce the load slightly on SmartThings.</p>
+<p>There is a toggle that will allow you to set the poll to only update child devices when new/changed data is received from the Nest API.  This is here to reduce the load slightly on SmartThings.</p>
 
 <ul>
-<li><em>The default value is Off</em></li>
+<li><em>The default value is On</em></li>
 </ul>
 
 <hr>
 
-<h4 id="toc_8">Advanced Polling Options</h4>
+<h4 id="toc_10">Advanced Polling Options</h4>
 
 <p>This <strong><em>Should Only</em></strong> be used if are experiencing Polling issues.  The selected devices events are used to determine if a scheduled poll was missed and reschedule it.</p>
 
-<h5 id="toc_9">Please select as FEW devices as possible!</h5>
+<h5 id="toc_11">Please select as FEW devices as possible!</h5>
 
-<h5 id="toc_10">More devices will not necessarily make for better polling!</h5>
+<h5 id="toc_12">More devices will not necessarily make for better polling!</h5>
 
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_2.png" width="281" height="500"></p>
 

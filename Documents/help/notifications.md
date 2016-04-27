@@ -14,7 +14,7 @@ Notifications allows you to receive a message when a certain action occurs.
 #### Quiet Time
 If notifications are active.  It will not send them during the times and days selected.
 
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_quiet_page.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/App/notif_quiet_page.png" width="281" height="500">
 
 * You can also use Modes to activate quiet time
 * *The Start/Stop Time options available are:* 

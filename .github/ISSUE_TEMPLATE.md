@@ -6,7 +6,7 @@
 - [ ] That _OAuth_ is Enabled for the SmartApp under the IDE.
 - [ ] The SmartApp and Device are using the latest version.
 - [ ] You have reviewed the Readme for potential fixes.
-- [ ] That the Device Types have be _Published for You_.
+- [ ] That the Device Types have been _Published for You_.
 
 
 ## About Your Setup:
@@ -37,3 +37,4 @@
 ## Context
 <!--- How has this issue affected you? What are you trying to accomplish? -->
 <!--- Providing context helps us come up with a solution that is most useful in the real world -->
+Please include a copy of your log under the IDE if possible>>>

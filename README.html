@@ -292,12 +292,13 @@ img {
 </head>
 <body>
 <h1>Nest Manager (Unofficial)</h1>
+<h5>IMPORTANT: <strong><em>There were a ton of changes to the core code so we can't guarantee that you will not have any issues when updating the code directly from v1.1.  Once you update to code it is very important that you open the Nest Manager smart-app and press 'Done' to clean up old variables and switch to using the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any Apps, Routines, or Rules they are being used with, and then remove the Nest Manager smart-app and start over fresh.</em></strong></h5>
 <h3>Nest Manager App</h3>
 <p>This is the &quot;<strong><em>unofficial</em></strong>&quot; SmartThings user created SmartApp and Device handlers.
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. </p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"></p>
 <h3>The Devices Types</h3>
-<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_protect.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/weather_device.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
+<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
 <h2>Author</h2>
 <ul>
 <li>@tonesto7</li>
@@ -321,18 +322,48 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Nest Weather Device - <strong><em>v1.0.0</em></strong></li>
 </ul>
 <h2>What's New</h2>
-<h3>New Child Automation</h3>
+<ul>
+<li><strong>NEW</strong>: In-app HTML help pages</li>
+<li><strong>NEW</strong>: All new polling logic (Also switched to Cron scheduling)</li>
+<li><strong>NEW</strong>: Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest. (Thanks @E_sch)</li>
+<li><strong>NEW</strong>: Custom device naming during new device installs. </li>
+<li><strong>UPDATED</strong>:Fresh device tile designs :smile: (These may cause some controversy and be asked to be reverted back) (On first load of the device it may take a few seconds to render the tiles)</li>
+<li><strong>NEW</strong>: Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary. (Thanks @desertblade)</li>
+<li><strong>NEW</strong>: Nest Automation Child (BETA) app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and remote sensor support.   </li>
+<li>
+<p><strong>UPDATED</strong>: Much more transparent error handling during the install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.<br />
+It performs tests on the following:</p>
+<ul>
+<li>Verify's that OAuth is enabled for the SmartApp</li>
+<li>The Device Handlers are installed and published</li>
+<li>That your SmartThings account contains a proper Zip-Code.</li>
+<li>When uninstalling it will notify you that it can't remove the devices because they are being used by other apps/routines.  
+</li>
+</ul>
+</li>
+<li>
+<p>There are also way to many subtle changes to list.</p>
+</li>
+</ul>
 <h2>Links</h2>
 <h4><a href="https://github.com/tonesto7/nest-manager/issues">GitHub Project Issues Link</a></h4>
 <h4><a href="https://community.smartthings.com/t/release-nest-manager/">SmartThings Community Forum Link</a></h4>
 <h4><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html">Projects Help Page</a></h4>
+<h4><a href="http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html">SmartThings IDE GitHub Integration Instructions</a></h4>
 <h2>Things to Know</h2>
 <ul>
-<li><strong>This is still technically in BETA so you may experience issues!!!</strong></li>
-<li>This app <strong>DOES NOT</strong> support Nest Cams and I don't have any to test</li>
-<li>At this moment the app will only support <strong>One</strong> location and the Thermostats and Protects within</li>
-<li><em>The token used with this application is using my 'Works for Nest' distribution <em>appId</em> and <em>secret</em>.  It's an older one which allows 1000 user before I will need to certify with Nest.</em>
-<strong>I do not have the ability to see any of your data or who is even using the token</strong></li>
+<li><strong>This is still technically in still in post-BETA so you may experience issues!!!</strong></li>
+<li>This app <strong><em>DOES NOT</em></strong> support Nest Cams <strong>currently</strong> mainly because I don't have any to test</li>
+<li>Each install of this SmartApp will only support <strong>One</strong> location/structure and the Thermostats and Protects within</li>
+<li>This version uses a new token which when we are ready to support it will allow access to Nest cams without needing to completely re-install everything. </li>
+<li><em>The token used with this application is using my 'Works for Nest' distribution <em>appId</em> and <em>secret</em>.  It's an older one which allows 1000 individual user logins before I will need to certify with Nest.</em>
+ <strong>I do not have the ability to see any of your data or who is even using the token</strong></li>
+<li>
+<p>Devices that use html tile will not refresh with going out of the device and back in again.</p>
+</li>
+<li>
+<p><strong><em>There were a ton of changes to the core code so we can't guarantee there won't issue updating the code directly.  Once you update it is important that you open the smart app and press done to clean up old variables and switch to the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any apps or routines they are under. Then remove the nest manager smartapp and start over.</em></strong></p>
+</li>
 </ul>
 <h2>Advantages</h2>
 <ul>
@@ -344,41 +375,47 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Since there is only a single poll for all devices, updates are more often</li>
 <li>The devices look great :smile:</li>
 </ul>
-<h2>Disadvantages</h2>
+<h2>3rd-Party SmartApp Compatibility (Confirmed)</h2>
 <ul>
-<li>The level of info available through the Official API is very limited compared to the hacked version currently available.</li>
-</ul>
-<h2>Works With</h2>
-<ul>
+<li><a href="https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119">Keenect</a> @Mike_Maxwell </li>
+<li><a href="http://smarttiles.click/">SmartTiles</a> @625alex </li>
+<li><a href="https://community.smartthings.com/t/rule-machine-version-1-9-released/43204">Rule Machine (Rules and Custom Commands)</a> @bravenel </li>
+<li>Keep Me Cozy (I &amp; II) (link) </li>
 <li>Routines</li>
-<li>Rule Machine (Rules)</li>
-<li>Rule Machine (Custom Commands)</li>
-</ul>
-<h2>Future Items</h2>
-<ul>
-<li>Switching app to parent-child app to support multiple locations and allow creation of other child apps that perform various automation tasks.</li>
 </ul>
 <h2>Installation</h2>
 <h3>Method 1: (Recommended)</h3>
 <p><em>Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices.</em></p>
 <p>If you don't already have Git Integration setup please visit <strong><em><a href="http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html">GitHub Integration Instructions</a></em></strong></p>
-<h4>The Nest Manager and Nest Automation Apps</h4>
+<h4>The Nest Manager and Nest Automations Apps</h4>
 <ul>
 <li>Go to &quot;<strong>My SmartApps</strong>&quot; in the IDE</li>
 <li>Click on &quot;<strong>Settings</strong>&quot;</li>
 <li>Click on &quot;<strong>Add New Repository</strong>&quot;</li>
-<li>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></li>
-<li>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager</em></strong> </li>
-<li>Check the box next to <strong><em>nest-manager</em></strong> and <strong><em>nest-automations</em></strong> then click &quot;<strong>Execute Update</strong>&quot;</li>
-<li>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </li>
 <li>
-<p>Click on the <strong><em>Nest Automation</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
+<p>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></p>
+<h5>Nest Manager</h5>
+</li>
+<li>
+<p>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager (master)</em></strong> </p>
+</li>
+<li>Check the box next to <strong><em>nest-manager</em></strong> and then check &quot;<strong>publish<strong>&quot; then click &quot;</strong>Execute Update</strong>&quot;</li>
+<li>
+<p>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </p>
+<h5>Nest Automations</h5>
+</li>
+<li>
+<p>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager (master)</em></strong> </p>
+</li>
+<li>Check the box next to <strong><em>nest-automations</em></strong> and then check &quot;<strong>publish<strong>&quot; then click &quot;</strong>Execute Update</strong>&quot;</li>
+<li>
+<p>Click on the <strong><em>Nest Automations</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
 <h3><em>You will also need to Enable OAuth under the Nest Manager app preferences in the IDE</em></h3>
 </li>
 </ul>
 <h4>The Presence, Protect, Thermostat and Weather Device Handlers</h4>
 <ul>
-<li>Go to My Device Types in the IDE (Not necessary if you added repository for the app)</li>
+<li>Go to &quot;<strong>My Device Handlers</strong>&quot; in the IDE (Not necessary if you added repository for the app)</li>
 <li>Click on &quot;<strong>Settings</strong>&quot;</li>
 <li>Click on <strong>Add new repository</strong></li>
 <li>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></li>
@@ -431,8 +468,9 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Choose <strong>Structure</strong></li>
 <li>Choose <strong>Thermostats</strong></li>
 <li>Choose <strong>Protects</strong></li>
-<li>Choose <em>Use Nest as Presence Device</em> (Optional)</li>
-<li>Choose <em>Use Nest as Presence Device</em> (Optional)</li>
+<li>Choose <em>Add Presence Device</em> (Optional)</li>
+<li>Choose <em>Add Weather Device</em> (Optional)</li>
+<li>Modify any preferences you would like (Optional)</li>
 <li>Tap on &quot;<strong>Done</strong>&quot;</li>
 </ul>
 <h2>Issues and Troubleshooting</h2>
@@ -453,6 +491,11 @@ This feature will help you to view and export the logs (<em>also see the tip bel
 <ul>
 <li>We love new ideas so please head on over to github and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.</li>
 <li>There is a Google Form that will allow you to vote for the newest features. <strong><em><a href="https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform">Voting Form</a></em></strong></li>
+</ul>
+<hr />
+<h3>Donations</h3>
+<ul>
+<li>While donations are very much appreciated they are not expected or required.  If you feel the need to do so :smile: here is the <strong><em><a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=2CJEVN439EAWS">donation link</a></em></strong></li>
 </ul>
 <hr />
 <h3>Nest API Documentation</h3>

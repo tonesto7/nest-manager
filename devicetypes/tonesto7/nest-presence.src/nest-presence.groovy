@@ -4,7 +4,6 @@
  *	Author: Anthony S. (@tonesto7)
  *  
  *
- 
  * Copyright (C) 2016 Ben W, Anthony S.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -28,11 +27,11 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.1" }
+def devVer() { return "2.0.0" }
 
 // for the UI
 metadata {
-	definition (name: "Nest Presence", namespace: "tonesto7", author: "DesertBlade") {
+	definition (name: "${textDevName()}", namespace: "tonesto7", author: "DesertBlade") {
 
         capability "Presence Sensor"
         capability "Sensor"
@@ -162,7 +161,7 @@ def presenceEvent(presence) {
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
    		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
-		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
+		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
    		state?.present = (pres == "present") ? true : false
     } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
@@ -262,3 +261,7 @@ def log(message, level = "trace") {
     }            
     return null // always child interface call with a return value
 }
+
+private def textDevName()   { "Nest Presence${appDevName()}" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
