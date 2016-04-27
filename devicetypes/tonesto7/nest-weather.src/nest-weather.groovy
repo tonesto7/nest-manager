@@ -578,19 +578,24 @@ def getSunriseSunset() {
 
 
 def forecastDay(day) {
-
-	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
     def forecastTxt = ""
     
     if ( wantMetric() ) {
-         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
+         forecastTxt = forecastTxt + "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
     } else {
-         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
+         forecastTxt = forecastTxt + "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
     }
 
-	return dayName + forecastImage + forecastTxt
+	return forecastTxt
  }
+ 
+ def forecastHeader(day) {
+
+	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
+    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
+   
+   return dayName + forecastImage 
+  }
  
 def getWeatherHtml() { 
     renderHTML {
@@ -651,7 +656,6 @@ def getWeatherHtml() {
                     padding: 5px;
                 }
                 
-                #forecastHead
                 
                 #day {
                 	width:30%;
@@ -695,13 +699,21 @@ def getWeatherHtml() {
                   height: 1px;
                 }
                 
-                .r33 {
+               .r33 {
                   width: 33%;
                   vertical-align: top;
                   font-size: 3vw;
                   padding: 3px;
-                  text-align:center;
                 }
+                
+                th {
+         	      	text-align: center;
+                   }
+                
+                td {
+         	      	text-align: left;
+                   }
+              
               
               </style>
                """
@@ -736,9 +748,19 @@ def getWeatherHtml() {
           <table id="forecast">
           	 <tbody>
 				<tr>
-                	<td class="r33">${forecastDay(0)}</td>
+                	<th class="r33">${forecastHeader(0)}</th>
+                    <th class="r33">${forecastHeader(1)}</th>
+                    <th class="r33">${forecastHeader(2)}</th>
+                </tr>
+                <tr>
+                    <td class="r33">${forecastDay(0)}</td>
                     <td class="r33">${forecastDay(1)}</td>
                     <td class="r33">${forecastDay(2)}</td>
+                 </tr>
+                 <tr>
+                	<th class="r33">${forecastHeader(3)}</th>
+                    <th class="r33">${forecastHeader(4)}</th>
+                    <th class="r33">${forecastHeader(5)}</th>
                 </tr>
                 <tr>
                 	<td class="r33">${forecastDay(3)}</td>
