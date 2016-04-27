@@ -211,4 +211,3 @@ _______
  To view the json returned from the API just get your authToken from the SmartApp state data and add it to this Url
  
  *https://developer-api.nest.com/devices?auth=__yourAuthTokenHere__*
- 

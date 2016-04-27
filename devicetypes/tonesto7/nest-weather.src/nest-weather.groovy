@@ -578,7 +578,6 @@ def getSunriseSunset() {
 
 
 def forecastDay(day) {
-
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
     def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
     def forecastTxt = ""
@@ -589,9 +588,9 @@ def forecastDay(day) {
          forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
     }
 
-	return dayName + forecastImage + forecastTxt
- }
- 
+	return  dayName + forecastImage + forecastTxt
+}
+
 def getWeatherHtml() { 
     renderHTML {
         head {
@@ -633,13 +632,6 @@ def getWeatherHtml() {
                   border-bottom: 2px solid #808080;
                 }
 
-                #temp {
-                  font-size: 9vw;
-                  text-align: center;
-                  width:80%;
-                  float: right; 
-                }
-
                 #data {
                   font-size: 4vw;
                   padding: 5px;
@@ -649,9 +641,9 @@ def getWeatherHtml() {
                		border-top: 2px solid #00a1db;
                     clear: left;
                     padding: 5px;
+                    
                 }
                 
-                #forecastHead
                 
                 #day {
                 	width:30%;
@@ -668,8 +660,8 @@ def getWeatherHtml() {
                   clear: right;
                   width: 47%;
                   //height: 256px;
-                  font-size: 6vw;
-                  text-align: center;
+             
+        
                 }
                 
                 #condition {
@@ -677,6 +669,15 @@ def getWeatherHtml() {
               	 	float: right;
                		clear:right;
                     padding-bottom: 5px;
+                    font-size: 6vw;
+                }
+                
+                #temp {
+                  font-size: 9vw;
+                  text-align: right;
+                  width:80%;
+                  	float: right;
+               		clear:right;
                 }
 
                 
@@ -695,14 +696,14 @@ def getWeatherHtml() {
                   height: 1px;
                 }
                 
-                .r33 {
+               .r33 {
                   width: 33%;
                   vertical-align: top;
                   font-size: 3vw;
                   padding: 3px;
-                  text-align:center;
+                  text-align: center;
                 }
-              
+                
               </style>
                """
         }
@@ -736,10 +737,10 @@ def getWeatherHtml() {
           <table id="forecast">
           	 <tbody>
 				<tr>
-                	<td class="r33">${forecastDay(0)}</td>
+					<td class="r33">${forecastDay(0)}</td>
                     <td class="r33">${forecastDay(1)}</td>
                     <td class="r33">${forecastDay(2)}</td>
-                </tr>
+                 </tr>
                 <tr>
                 	<td class="r33">${forecastDay(3)}</td>
                     <td class="r33">${forecastDay(4)}</td>
