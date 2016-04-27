@@ -581,13 +581,13 @@ def forecastDay(day) {
     def forecastTxt = ""
     
     if ( wantMetric() ) {
-         forecastTxt = forecastTxt + "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
+         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
     } else {
-         forecastTxt = forecastTxt + "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
+         forecastTxt ="${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
     }
 
 	return forecastTxt
- }
+}
  
  def forecastHeader(day) {
 
@@ -595,7 +595,7 @@ def forecastDay(day) {
     def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
    
    return dayName + forecastImage 
-  }
+}
  
 def getWeatherHtml() { 
     renderHTML {
