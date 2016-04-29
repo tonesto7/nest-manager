@@ -37,8 +37,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.4" }
-def appVerDate() { "4-28-2016" }
+def appVersion() { "2.0.5" }
+def appVerDate() { "4-29-2016" }
 def appVerInfo() {
     "V1.0.4 (Apr 28th, 2016)\n" +
     "Fixed: Very minor bug fixes\n" +
@@ -159,9 +159,16 @@ def authPage() {
             def structs = getNestStructures()
             def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
             LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
-            section("Select your Location:") {
-                input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs],
+            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
+                section("Your Location:") {
+                paragraph "${structs[atomicState?.structures]}",
+                            image: getAppImg("nest_structure_icon.png")
+                }
+            } else {
+                section("Select your Location:") {
+                    input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs],
                             image: getAppImg("nest_structure_icon.png"))
+                }
             }
 
             if (structures) {
@@ -1421,16 +1428,24 @@ def getNestStructures() {
                 def strucId = struc?.key
                 def strucData = struc?.value
 
-                atomicState?.structures = strucId
-
                 def dni = [strucData?.structure_id].join('.')
                 struct[dni] = strucData?.name.toString()
 
-                if ((strucData?.structure_id == settings?.structures) || !settings?.structures) {
+                if (strucData?.structure_id == settings?.structures) {
                     thisstruct[dni] = strucData?.name.toString()
+                } else {
+                    if (atomicState?.structures) {
+                        if (strucData?.structure_id == atomicState?.structures) {
+                            thisstruct[dni] = strucData?.name.toString()
+                        }
+                    } else {
+                        if (!settings?.structures) {
+                            thisstruct[dni] = strucData?.name.toString()
+                        }
+                    }
                 }
             }
-            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice) {  // if devices are configured, you cannot change the structure until they are removed
+            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
                 struct = thisstruct
             }
             if (ok2PollDevice()) { getApiData("dev") }
@@ -1631,6 +1646,7 @@ def addRemoveDevices(uninst = null) {
     //log.trace "addRemoveDevices..."
     def retVal = false
     try {
+        def inusedevs = []
         def tstats
         def nProtects
         def devsCrt = 0
@@ -1648,6 +1664,7 @@ def addRemoveDevices(uninst = null) {
                     } else {
                         LogAction("Found: ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
                     }
+                    inusedevs += dni.key
                     return d
                 }
             }
@@ -1664,6 +1681,7 @@ def addRemoveDevices(uninst = null) {
                     } else {
                         LogAction("Found: ${d2.displayName} with (Id: ${dni.key}) already exists", "debug", true)
                     }
+                    inusedevs += dni.key
                     return d2
                 }
             }
@@ -1682,6 +1700,7 @@ def addRemoveDevices(uninst = null) {
                     } else {
                         LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
                     }
+                    inusedevs += dni
                     //return d3
                 } catch (ex) {
                     LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true)
@@ -1697,11 +1716,14 @@ def addRemoveDevices(uninst = null) {
                         def d4Label = getNestWeatherLabel()
                         d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${d4Label}"])
                         d4.take()
+                        atomicState?.lastWeatherUpdDt = null
+                        atomicState?.lastForecastUpdDt = null
                         devsCrt = devsCrt + 1
                         LogAction("Created: ${d4.displayName} with (Id: ${dni})", "debug", true)
                     } else {
                         LogAction("Found: ${d4.displayName} with (Id: ${dni}) already exists", "debug", true)
                     }
+                    inusedevs += dni
                     //return d4
                 } catch (ex) {
                     LogAction("Nest Weather Device Type is Likely not installed/published", "warn", true)
@@ -1715,7 +1737,7 @@ def addRemoveDevices(uninst = null) {
             if(devsCrt > 0) {
                 LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s), ${presCnt} Presence Device and ${weathCnt} Weather Device", "debug", true)
             }
-         }
+        }
 
         if(uninst) {
             atomicState.thermostats = []
@@ -1724,31 +1746,17 @@ def addRemoveDevices(uninst = null) {
             atomicState.weatherDevice = false
         }
 
-        def delete
-        if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) {
-            delete = getAllChildDevices()
-        } else {
-            if (!atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) {
-                delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) }
-            }
-            else if (!atomicState?.thermostats && !atomicState?.presDevice && !atomicState?.weatherDevice) {
-                delete = getChildDevices().findAll { !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) }
-            }
-            else if (!atomicState?.presDevice) {
-                delete = getChildDevices().findAll { it?.deviceNetworkId == getNestPresId() }
-            }
-            else if (!atomicState?.weatherDevice) {
-                atomicState?.curWeather = null
-                atomicState?.curForecast = null
-                atomicState?.curAstronomy = null
-                atomicState?.curAlerts = null
-                delete = getChildDevices().findAll { it?.deviceNetworkId == getNestWeatherId() }
-            }
-            else {
-                 delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) && !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) &&
-                        !getNestPresId().toString().contains(it?.deviceNetworkId) && !getNestWeatherId().toString().contains(it?.deviceNetworkId) }
-            }
+        if (!atomicState?.weatherDevice) {
+            atomicState?.curWeather = null
+            atomicState?.curForecast = null
+            atomicState?.curAstronomy = null
+            atomicState?.curAlerts = null
         }
+
+        def delete
+        LogAction("inusedevs: ${inusedevs}", "debug", true)
+        delete = getChildDevices().findAll { !inusedevs?.toString()?.contains(it?.deviceNetworkId) }
+
         if(delete?.size() > 0) {
             LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true)
             delete.each { deleteChildDevice(it.deviceNetworkId) }
