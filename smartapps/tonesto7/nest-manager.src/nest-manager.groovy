@@ -1662,7 +1662,7 @@ def getNestPresLabel() {
 
 def getNestWeatherLabel() {
     def devt = appDevName()
-    def wLbl = custLocStr ? custLocStr.toString() : "${location?.zipCode}"
+    def wLbl = custLocStr ? custLocStr.toString() : "${getStZipCode()}"
     def defName = "Nest Weather${devt} (${wLbl})"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
     if(atomicState?.custLabelUsed) {
@@ -2590,7 +2590,7 @@ def quietTimeOk() {
         def strtTime = null
         def stopTime = null
         def now = new Date()
-        def sun = getSunriseAndSunset(zipCode: zipCode)
+        def sun = getSunriseAndSunset() // current based on geofence, previously was: def sun = getSunriseAndSunset(zipCode: zipCode)
         if(qStartTime && qStopTime) {
             if(qStartInput == "sunset") { strtTime = sun.sunset }
             else if(qStartInput == "sunrise") { strtTime = sun.sunrise }
