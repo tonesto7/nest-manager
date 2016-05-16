@@ -3,7 +3,6 @@
  *	Author: Anthony S. (@tonesto7)
  *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
  *
- *
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -25,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.1" }
+def devVer() { return "1.1.2" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -147,7 +146,8 @@ def generateEvent(Map results) {
     if(!results) {
         state.results = results
         state.tempUnit = getTemperatureScale()
-        state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
         debugOnEvent(parent?.settings?.childDebug)
         apiStatusEvent(parent?.apiIssues())
         deviceVerEvent()
@@ -162,6 +162,14 @@ def generateEvent(Map results) {
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
+}
+
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
 }
 
 def deviceVerEvent() {
@@ -190,7 +198,7 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-    tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()
