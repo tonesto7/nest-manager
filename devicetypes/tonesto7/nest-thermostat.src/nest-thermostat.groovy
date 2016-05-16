@@ -2,7 +2,7 @@
  *  Nest Thermostat
  *	Author: Anthony S. (@tonesto7)
  *	Contributor: Ben W. (@desertBlade) & Eric S. (@E_Sch)
- 
+ *
  * Based off of the EcoBee thermostat under Templates in the IDE 
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.3"}
+def devVer() { return "2.0.4"}
 
 // for the UI
 metadata {
@@ -291,6 +291,7 @@ def generateEvent(Map results) {
       Logger("------------START OF API RESULTS DATA-------------", "warn")
     if(results) {
         state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
         debugOnEvent(parent.settings?.childDebug)
         tempUnitEvent(getTemperatureScale())
         canHeatCool(results?.can_heat, results?.can_cool)
@@ -380,6 +381,14 @@ def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
 
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
+}
+
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
     def pubVer = parent?.latestTstatVer().ver.toString()
@@ -406,7 +415,7 @@ def lastCheckinEvent(checkin) {
     //log.trace "lastCheckinEvent()..."
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
     def lastChk = device.currentState("lastConnection")?.value
     state?.lastConnection = lastConn?.toString()
@@ -420,7 +429,7 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()
