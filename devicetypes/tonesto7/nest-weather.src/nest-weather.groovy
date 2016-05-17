@@ -717,6 +717,14 @@ def getWeatherHtml() {
                   width: 48%;
                 }
                 
+              	.r100{
+                  width: 100%;
+                  vertical-align: top;
+                  font-size: 3vw;
+                  padding: 3px;
+                  text-align: center;
+                }
+                
         .alertModal, .forecastModal {
             position: fixed;
             font-family: 'San Francisco', 'Roboto', 'Arial';
@@ -837,10 +845,16 @@ def getWeatherHtml() {
                   <tr>
                    <td class="r33">${forecastDay(6)}</td>
                    <td class="r33">${forecastDay(7)}</td>
-                   <td class="r33"><div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div></td>
                  </tr>
                </table>
-               
+                <table class="r100">
+                <tbody>
+                 <tr>
+                 	<td class="r100">
+                      <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id}
+      				</td>
+                 </tr>
+                 </table>
         
                <div id="openModal" class="alertModal">
 					<div>
