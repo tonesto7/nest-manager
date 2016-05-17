@@ -2,7 +2,7 @@
  *  Nest Thermostat
  *	Author: Anthony S. (@tonesto7)
  *	Contributor: Ben W. (@desertBlade) & Eric S. (@E_Sch)
- 
+ *
  * Based off of the EcoBee thermostat under Templates in the IDE 
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.2"}
+def devVer() { return "2.0.4"}
 
 // for the UI
 metadata {
@@ -126,16 +126,16 @@ metadata {
                     backgroundColors: getTempColors())
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
-            state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_off_icon.png")
-            state("heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_icon.png")
-            state("cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_cool_icon.png")
-            state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
+            state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/off_icon.png")
+            state("heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_icon.png")
+            state("cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/cool_icon.png")
+            state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-            state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
-            state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
-            state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
-            state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
+            state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+            state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+            state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+            state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
             state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
             state("updating", label:"Working", icon: "st.secondary.secondary")
         }
@@ -288,9 +288,10 @@ def refresh() {
 
 def generateEvent(Map results) {
     //Logger("generateEvents Parsing data ${results}")
-      Logger("-------------------------------------------------------------------", "warn")
+      Logger("------------START OF API RESULTS DATA-------------", "warn")
     if(results) {
         state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
         debugOnEvent(parent.settings?.childDebug)
         tempUnitEvent(getTemperatureScale())
         canHeatCool(results?.can_heat, results?.can_cool)
@@ -301,7 +302,7 @@ def generateEvent(Map results) {
         humidityEvent(results?.humidity.toString())
         operatingStateEvent(results?.hvac_state.toString())
         fanModeEvent(results?.fan_timer_active.toString())
-        lastCheckinEvent(results?.last_connection)
+        if(results?.last_connection) { lastCheckinEvent(results?.last_connection) }
         softwareVerEvent(results?.software_version.toString())
         onlineStatusEvent(results?.is_online.toString())
         deviceVerEvent()
@@ -380,6 +381,14 @@ def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
 
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
+}
+
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
     def pubVer = parent?.latestTstatVer().ver.toString()
@@ -406,7 +415,7 @@ def lastCheckinEvent(checkin) {
     //log.trace "lastCheckinEvent()..."
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
     def lastChk = device.currentState("lastConnection")?.value
     state?.lastConnection = lastConn?.toString()
@@ -420,7 +429,7 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()

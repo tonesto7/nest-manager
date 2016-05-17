@@ -33,7 +33,7 @@ preferences {
             ])
 }
 
-def devVer() { return "2.0.0" }
+def devVer() { return "2.0.3" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -73,54 +73,46 @@ metadata {
             
     tiles(scale: 2) {
         multiAttributeTile(name:"alarmState", type:"generic", width:6, height:4) {
-              tileAttribute("device.alarmState", key: "PRIMARY_CONTROL") {
+            tileAttribute("device.alarmState", key: "PRIMARY_CONTROL") {
                 attributeState("default", label:'--', icon: "st.unknown.unknown.unknown")
                 attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
                 attributeState("smoke-warning", label:"SMOKE!\nWARNING", icon:"st.alarm.smoke.smoke", backgroundColor:"#e8d813")
                 attributeState("smoke-emergency", label:"SMOKE!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13")
                 attributeState("co-warning", label:"CO!\nWARNING!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e8d813")
-                  attributeState("co-emergency", label:"CO!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e86d13")
-                /*attributeState("ok", label:"", backgroundColor:"#44B621",
-                    icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/alarm_clear.png")
-                attributeState("smoke-warning", label:"", backgroundColor:"#e8d813",
-                    icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_warn.png")
-                attributeState("smoke-emergency", label:"", backgroundColor:"#e8d813",
-                    icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_emergency.png")
-                attributeState("co-warning", label:"", backgroundColor:"#e86d13",
-                    icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_warn.png")
-                  attributeState("co-emergency", label:"", backgroundColor:"#e86d13",
-                    icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_emergency.png")*/
-              }
-              tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
+                attributeState("co-emergency", label:"CO!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e86d13")
+            }
+            tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
                 attributeState("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-                attributeState("ok", label: "Battery: OK", backgroundColor: "#44B621")
-                attributeState("replace", label: "Battery: REPLACE!", backgroundColor: "#e86d13")
-              }
+                attributeState("ok", label: "Battery: OK", backgroundColor: "#44B621", 
+                	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_ok_v.png")
+                attributeState("replace", label: "Battery: REPLACE!", backgroundColor: "#e86d13", 
+                	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_low_v.png")
+            }
         }
         standardTile("main2", "device.alarmState", width: 2, height: 2) {
             state("default", label:'--', icon: "st.unknown.unknown.unknown")
             state("ok", label:"clear", backgroundColor:"#44B621",
-                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/alarm_clear.png")
+                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/alarm_clear.png")
             state("smoke-warning", label:"SMOKE!\nWARNING", backgroundColor:"#e8d813",
-                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_warn.png")
+                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
             state("smoke-emergency", label:"SMOKE!", backgroundColor:"#e8d813",
-                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_emergency.png")
+                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
             state("co-warning", label:"CO!\nWARNING!", backgroundColor:"#e86d13",
-                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_warn.png")
-              state("co-emergency", label:"CO!", backgroundColor:"#e86d13",
-                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_emergency.png")
-          }
+                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
+            state("co-emergency", label:"CO!", backgroundColor:"#e86d13",
+                icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
+        }
         standardTile("smoke", "device.Nestsmoke", width: 2, height: 2) {
             state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_clear.png")
-            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_warn.png")
-            state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/smoke_emergency.png")
+            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_clear.png")
+            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
+            state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
         }
         standardTile("carbonMonoxide", "device.NestcarbonMonoxide", width: 2, height: 2){
             state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_clear.png")
-            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_warn.png")
-            state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/co_emergency.png")
+            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_clear.png")
+            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
+            state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
         }
          standardTile("batteryState", "device.batteryState", width: 2, height: 2){
             state("default", label:'unknown')
@@ -221,6 +213,7 @@ def generateEvent(Map results) {
     
     if(results) {	
         state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
         state?.showProtActEvts = !parent?.settings?.showProtActEvts ? true : false
         lastCheckinEvent(results?.last_connection)
         lastTestedEvent(results?.last_manual_test_time)
@@ -241,6 +234,14 @@ def generateEvent(Map results) {
     return null
 }
 
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
+}
+
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
     def pubVer = parent?.latestProtVer().ver.toString()
@@ -256,8 +257,8 @@ def deviceVerEvent() {
 def lastCheckinEvent(checkin) {
     def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
-       def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
+    tf.setTimeZone(getTimeZone())
+    def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
     def lastChk = device.currentState("lastConnection")?.value
     state?.lastConnection = lastConn?.toString()
     if(!lastChk.equals(lastConn?.toString())) {
@@ -270,7 +271,7 @@ def lastTestedEvent(dt) {
     def lastTstVal = device.currentState("lastTested")?.value
     def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
     state?.lastTested = lastTest
     if(!lastTstVal.equals(lastTest?.toString())) {
@@ -312,8 +313,8 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
-       def lastDt = "${tf?.format(now)}"
+    tf.setTimeZone(getTimeZone())
+    def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()
     if(!lastUpd.equals(lastDt?.toString())) {
@@ -417,7 +418,7 @@ def testingStateEvent(test) {
 
  def alarmStateEvent(coState, smokeState) {
     def testVal = device.currentState("isTesting")?.value
-     def alarmState = ""
+    def alarmState = ""
 
     def stvalStr = "detected"
     if (state?.testMode || testVal) { stvalStr = "tested"  }
@@ -428,15 +429,15 @@ def testingStateEvent(test) {
         sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
     } else if (coState == "emergency" ) {
         alarmState = "co-emergency"
-           sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-           sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-       } else if (smokeState == "warning" ) {
+        sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+        sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+    } else if (smokeState == "warning" ) {
         alarmState = "smoke-warning"
         sendEvent( name: 'Nestsmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-         sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )    
+        sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )    
     } else if (coState == "warning" ) {
         alarmState = "co-warning"
-           sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+        sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
         sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
     } else {
         alarmState = "ok"
@@ -635,7 +636,7 @@ def getInfoHtml() {
                 }
                 .alarmImg {
                   vertical-align: top;
-                  width:90px; height:90px;
+                  width:60px; height:60px;
                 }
             </style>
                """

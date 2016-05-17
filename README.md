@@ -1,15 +1,20 @@
 # Nest Manager (Unofficial)
 
-#####IMPORTANT: ***There were a ton of changes to the core code so we can't guarantee that you will not have any issues when updating the code directly from v1.1.  Once you update to code it is very important that you open the Nest Manager smart-app and press 'Done' to clean up old variables and switch to using the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any Apps, Routines, or Rules they are being used with, and then remove the Nest Manager smart-app and start over fresh.***
+#####IMPORTANT: **There were a ton of changes to the core code so we can't guarantee that you will not have any issues when updating the code directly from v1.1.  Once you update to code it is very important that you open the Nest Manager smart-app and press 'Done' to clean up old variables and switch to using the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any Apps, Routines, or Rules they are being used with, and then remove the Nest Manager smart-app and start over fresh.**
 
 ### Nest Manager App
 This is the "***unofficial***" SmartThings user created SmartApp and Device handlers.
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 
 
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
+
+### Nest Automations App
+This is an addon Child-SmartApp that allows you to creat different types of automations for your HVAC systems.
+
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/automation_start.png" width="281" height="500">
 
 ### The Devices Types
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
 
 ## Author
 * @tonesto7
@@ -21,15 +26,15 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v2.0.0*__
-* Nest Automations - __*v1.0.0*__
+* Nest Manager - __*v2.0.8*__
+* Nest Automations - __*v1.2.2*__
 
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v2.0.0*__
-* Nest Protect Device - __*v2.0.0*__
-* Nest Thermostat Device - __*v2.0.0*__
-* Nest Weather Device - __*v1.0.0*__
+* Nest Presence Device - __*v2.0.2*__
+* Nest Protect Device - __*v2.0.2*__
+* Nest Thermostat Device - __*v2.0.3*__
+* Nest Weather Device - __*v1.1.1*__
 
 ## What's New
  * **NEW**: In-app HTML help pages
