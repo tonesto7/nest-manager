@@ -530,7 +530,9 @@ def getImgBase64(url, type) {
 
 def getCSS(){
 
-def uri = "https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+
+//"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
 //https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
 //https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css
 	    def params = [ 
@@ -612,7 +614,7 @@ def forecastDay(day) {
     def forecastImageLink = "<a href=\"#${day}\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
     def forecastTxt = ""
     
-    def modalHead = "<div id=\"${day}\" class=\"forecastModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
+    def modalHead = "<div id=\"${day}\" class=\"bottomModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
     def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
 	def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\">"
     
@@ -697,7 +699,7 @@ def getWeatherHtml() {
                  </tr>
                  </table>
         
-               <div id="openModal" class="alertModal">
+               <div id="openModal" class="topModal">
 					<div>
                         <a href="#close" title="Close" class="close">X</a>
                         <h2>Special Message</h2>
