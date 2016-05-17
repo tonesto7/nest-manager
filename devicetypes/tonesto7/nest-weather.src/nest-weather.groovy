@@ -67,7 +67,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 12)
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 9)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
@@ -374,7 +374,8 @@ def getWeatherAlerts() {
                                 def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
                                 sendEvent(name: "alert", value: pad(alert.description), descriptionText: msg)
                                 newAlerts = true
-                                state.walert = pad(alert.description) // msg
+                                state.walert = pad(alert.description) // description
+                                state.walertMessage = pad(alert.message) // message
                         }
                 }
 
@@ -587,16 +588,22 @@ def getSunriseSunset() {
 
 def forecastDay(day) {
     def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
+    def forecastImageLink = "<a href=\"#${day}\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
     def forecastTxt = ""
     
+    def modalHead = "<div id=\"${day}\" class=\"forecastModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
+    def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
+	def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\">"
+    
     if ( wantMetric() ) {
-         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
+         forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
     } else {
-         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
+         forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}</p>"
     }
+    
+    def modalClose = "</div> </div>"
 
-    return  dayName + forecastImage + forecastTxt
+    return  dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
 }
 
 def getWeatherHtml() { 
@@ -615,8 +622,8 @@ def getWeatherHtml() {
                   color: #f5f5f5;
                 }
 
-                #alert {
-                  font-size: 4vw;
+                #alert, #alert a {
+                  font-size: 6vw;
                   font-weight: bold;
                   text-align: center;
                   background: #B74C4C;
@@ -657,8 +664,7 @@ def getWeatherHtml() {
                 }
 
                 #station {
-                  float: right;
-                  clear: left;
+  					padding:auto;
                 }
 
                 #weatherIcon {
@@ -710,6 +716,73 @@ def getWeatherHtml() {
                 .r50 {
                   width: 48%;
                 }
+                
+        .alertModal, .forecastModal {
+            position: fixed;
+            font-family: 'San Francisco', 'Roboto', 'Arial';
+            font-size: 3vw;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: rgba(0,161,219,0.4);
+            z-index: 99999;
+            opacity:0;
+            -webkit-transition: opacity 400ms ease-in;
+            -moz-transition: opacity 400ms ease-in;
+            transition: opacity 400ms ease-in;
+            pointer-events: none;
+        }
+
+        .alertModal:target, .forecastModal:target {
+            opacity:1;
+            pointer-events: auto;
+        }
+
+        .alertModal > div {
+            width: 65%;
+            position: relative;
+            margin: 10% auto;
+            padding: 5px 20px 13px 20px;
+            border-radius: 10px;
+            background: #fff;
+            background: -moz-linear-gradient(#fff, #999);
+            background: -webkit-linear-gradient(#fff, #999);
+            background: -o-linear-gradient(#fff, #999);
+        }
+        
+         .forecastModal > div {
+            width: 65%;
+            position: relative;
+            margin:  75% auto;
+            padding: 5px 20px 13px 20px;
+            border-radius: 10px;
+            background: #fff;
+            background: -moz-linear-gradient(#fff, #999);
+            background: -webkit-linear-gradient(#fff, #999);
+            background: -o-linear-gradient(#fff, #999);
+        }
+
+        .close {
+            background: #606061;
+            color: #FFFFFF;
+            line-height: 25px;
+            position: absolute;
+            right: -12px;
+            text-align: center;
+            top: -10px;
+            width: 24px;
+            text-decoration: none;
+            font-weight: bold;
+            -webkit-border-radius: 12px;
+            -moz-border-radius: 12px;
+            border-radius: 12px;
+            -moz-box-shadow: 1px 1px 3px #000;
+            -webkit-box-shadow: 1px 1px 3px #000;
+            box-shadow: 1px 1px 3px #000;
+        }
+
+		.close:hover { background: #00d9ff; }
               </style>
                """
         }
@@ -718,7 +791,7 @@ def getWeatherHtml() {
               <div class="container">
               <div id="header">Current Weather Conditions</div>
               <div id="weatherInfo">
-              <div id="alert">${state?.walert}</div>
+              <div id="alert"><a href="#openModal">${state?.walert}</a></div>
               <div id="city"> ${state?.curWeather?.current_observation?.display_location.full} </div>
               <div id="leftData">
               <table>
@@ -761,9 +834,21 @@ def getWeatherHtml() {
                    <td class="r33">${forecastDay(4)}</td>
                    <td class="r33">${forecastDay(5)}</td>
                  </tr>
+                  <tr>
+                   <td class="r33">${forecastDay(6)}</td>
+                   <td class="r33">${forecastDay(7)}</td>
+                   <td class="r33"><div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div></td>
+                 </tr>
                </table>
-              
-             <div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div>
+               
+        
+               <div id="openModal" class="alertModal">
+					<div>
+                        <a href="#close" title="Close" class="close">X</a>
+                        <h2>Special Message</h2>
+                        <p>${state?.walertMessage} </p>
+                    </div>
+                </div>
           </div>
           """
         }
