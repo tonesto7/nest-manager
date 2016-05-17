@@ -301,6 +301,19 @@ img {
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_prefs_page_2.png" width="281" height="500"></p>
 <p><strong>The <strong>Send Notifications to</strong> input will not be shown for users whose accounts do not have contact book enabled.  If you don't have it you can't enable it until SmartThings activates the feature again. If the Contact book is still not available.  You will see a toggle that will allow sending Push Messages instead of selecting individual users.</strong></p>
 <hr />
+<h4>Enable Contact-Book Option on SmartThings Account</h4>
+<p>This is not the official method and is consider a hack.  This will not cause any harm.</p>
+<ul>
+<li>Log into the IDE </li>
+<li>Browse to <a href="https://graph.api.smartthings.com/account/list">https://graph.api.smartthings.com/account/list</a></li>
+<li>Click on the link for the Name of your account</li>
+<li>In you're web browsers URL bar you will see <code>https://graph.api.smartthings.com/account/show/%My_Unique_ID%</code></li>
+<li>Just replace the <code>account/show</code> section with <code>contact</code></li>
+<li>So it looks like this <code>https://graph.api.smartthings.com/contact/%My_Unique_ID%</code></li>
+<li>Select +New Contact or Either of the Import Buttons to proceed.</li>
+<li>All that you need to do is add one contact to your account for it to be enabled. From there you can then managed the contacts from the Mobile App under the Slide out settings menu.</li>
+</ul>
+<hr />
 <h4>Quiet Time</h4>
 <p>If notifications are active.  It will not send them during the times and days selected.</p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/App/notif_quiet_page.png" width="281" height="500"></p>
@@ -332,6 +345,8 @@ The wait before sending another value is the time that must pass before being no
 <li><strong><em>The custom values allowed are between (30-84600) seconds</em></strong></li>
 </ul>
 <hr />
+<h4>Custom Automation App Notifications</h4>
+<p>As of v1.1.0 of the Automations app you can select individual recipients for the different automations.</p>
 
 </body>
 </html>

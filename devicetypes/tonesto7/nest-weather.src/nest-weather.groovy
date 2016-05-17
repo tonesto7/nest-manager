@@ -3,7 +3,6 @@
  *	Author: Anthony S. (@tonesto7)
  *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
  *
- *
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -25,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.0.1" }
+def devVer() { return "1.1.2" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -50,11 +49,14 @@ metadata {
         attribute "timeZoneOffset", "string"
         attribute "weather", "string"
         attribute "wind", "string"
+        attribute "windgust", "string"
         attribute "windDir", "string"
         attribute "weatherIcon", "string"
         attribute "forecastIcon", "string"
         attribute "feelsLike", "string"
         attribute "percentPrecip", "string"
+        attribute "uvindex", "string"
+        attribute "visibility", "string"
         attribute "alert", "string"
         attribute "alertKeys", "string"
         attribute "sunriseDate", "string"
@@ -65,7 +67,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 6)
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 12)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
@@ -78,7 +80,7 @@ metadata {
             state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
         }
         standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
-            state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
+            state "default", action:"refresh.refresh", icon:"st.secondary.refresh-icon"
         }
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
@@ -144,7 +146,8 @@ def generateEvent(Map results) {
     if(!results) {
         state.results = results
         state.tempUnit = getTemperatureScale()
-        state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
         debugOnEvent(parent?.settings?.childDebug)
         apiStatusEvent(parent?.apiIssues())
         deviceVerEvent()
@@ -159,6 +162,14 @@ def generateEvent(Map results) {
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
+}
+
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
 }
 
 def deviceVerEvent() {
@@ -187,7 +198,7 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-    tf.setTimeZone(location?.timeZone)
+    tf.setTimeZone(getTimeZone())
     def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()
@@ -281,13 +292,17 @@ def getWeatherConditions() {
         if (wantMetric()) {
             wspeed = Math.round(cur?.current_observation?.wind_kph as float)
             wgust = Math.round(cur?.current_observation?.wind_gust_kph as float)
+            sendEvent(name: "visibility", value: cur?.current_observation?.visibility_km, unit: "km")
             sendEvent(name: "wind", value: wspeed as String, unit: "KPH")
+            sendEvent(name: "windgust", value: wgust as String, unit: "KPH")
             wspeed += " KPH"
             wgust += " KPH"
         } else {
             wspeed = Math.round(cur?.current_observation?.wind_mph as float)
             wgust = Math.round(cur?.current_observation?.wind_gust_mph as float)
+            sendEvent(name: "visibility", value: cur?.current_observation?.visibility_mi, unit: "miles")
             sendEvent(name: "wind", value: wspeed as String, unit: "MPH")
+            sendEvent(name: "windgust", value: wgust as String, unit: "MPH")
             wspeed += " MPH"
             wgust += " MPH"
         }
@@ -298,6 +313,7 @@ def getWeatherConditions() {
         def cityValue = "${cur?.current_observation?.display_location.city}, ${cur?.current_observation?.display_location.state}"
         sendEvent(name: "city", value: cityValue)
 
+        sendEvent(name: "uvindex", value: cur?.current_observation?.UV)
         Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
     }
 }
@@ -340,7 +356,7 @@ def getWeatherAlerts() {
         def oldKeys = device.currentState("alertKeys")?.jsonValue
       //log.debug "${device.displayName}: oldKeys: $oldKeys"
 
-        def noneString = "no current weather alerts"
+        def noneString = ""
         if (!newKeys && oldKeys == null) {
                 sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
                 sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
@@ -568,6 +584,21 @@ def getSunriseSunset() {
     state.localSunset = localSunset
 }
 
+
+def forecastDay(day) {
+    def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
+    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
+    def forecastTxt = ""
+    
+    if ( wantMetric() ) {
+         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}"
+    } else {
+         forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
+    }
+
+    return  dayName + forecastImage + forecastTxt
+}
+
 def getWeatherHtml() { 
     renderHTML {
         head {
@@ -584,12 +615,20 @@ def getWeatherHtml() {
                   color: #f5f5f5;
                 }
 
+                #alert {
+                  font-size: 4vw;
+                  font-weight: bold;
+                  text-align: center;
+                  background: #B74C4C;
+                  color: #f5f5f5;
+                }
+
                 #weatherInfo {
                   text-align: left;
                 }
 
                 #leftData {
-                  width: 50%;
+                  width: 98%;
                   float: left;
                   clear: left;
                 }
@@ -601,24 +640,52 @@ def getWeatherHtml() {
                   border-bottom: 2px solid #808080;
                 }
 
-                #temp {
-                  font-size: 9vw;
-                  border-bottom: 2px solid #00a1db;
-                  text-align: center;
-                }
-
                 #data {
                   font-size: 4vw;
                   padding: 5px;
                 }
 
-                #weatherIcon {
+                #forecast {
+                  border-top: 2px solid #00a1db;
+                  clear: left;
+                  padding: 5px;
+                }
+
+                #day {
+                  width: 30%;
                   float: left;
-                  clear: right;
-                  width: 47%;
-                  //height: 256px;
-                  font-size: 6vw;
+                }
+
+                #station {
+                  float: right;
+                  clear: left;
+                }
+
+                #weatherIcon {
                   text-align: center;
+                }
+
+                #condition {
+                  border-top: 2px solid #00a1db;
+                  text-align: center;
+                  width: 80%;
+                  padding-bottom: 5px;
+                  margin-left: auto;
+                  margin-right: auto;
+                  font-size: 6vw;
+                }
+
+                #temp {
+                  font-size: 9vw;
+                  text-align: center;
+                  margin-left: auto;
+                  margin-right: auto;
+                }
+
+                .icon {
+                  margin-left: auto;
+                  margin-right: auto;
+                  width: 70%;
                 }
 
                 #dataDump {
@@ -631,35 +698,72 @@ def getWeatherHtml() {
                   width: 100%;
                   height: 1px;
                 }
-              
+
+                .r33 {
+                  width: 33%;
+                  vertical-align: top;
+                  font-size: 3vw;
+                  padding: 3px;
+                  text-align: center;
+                }
+
+                .r50 {
+                  width: 48%;
+                }
               </style>
                """
         }
         body {
             """
-            <div class="container">
+              <div class="container">
               <div id="header">Current Weather Conditions</div>
               <div id="weatherInfo">
+              <div id="alert">${state?.walert}</div>
               <div id="city"> ${state?.curWeather?.current_observation?.display_location.full} </div>
               <div id="leftData">
-                <div id="data">
-                  <b>Feels Like:</b> ${getFeelslike()} <br>
-                  <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
-                  <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-                  <b>Visibility:</b> ${getVisibility()} <br>
-                  <b>Lux:</b> ${getLux()}<br>
-                  <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-                  <b>Wind:</b> ${state?.windStr} <br>
-                  <b>Alert:</b> ${state?.walert} <br>
-                  <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} <br>
-                </div>
-              </div>
-
-            <div id="weatherIcon">
-              <img src="${getWeatherIcon()}"> <br>
-              <div id="temp">${getTemp()}</div>
-              <b>${state.curWeatherCond}</b>
-            </div>
+              <table>
+                <tbody>
+                  <tr>
+                    <td class="r50">
+                      <div id="leftData">
+                        <div id="data">
+                          <b>Feels Like:</b> ${getFeelslike()} <br>
+                          <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+                          <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+                          <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+                          <b>Visibility:</b> ${getVisibility()} <br>
+                          <b>Lux:</b> ${getLux()}<br>
+                          <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+                          <b>Wind:</b> ${state?.windStr} <br>
+                        </div>
+                      </div>
+                    </td>
+                  <td class="r50">
+                    <div id="weatherIcon">
+                      <div>
+                        <img src="${getWeatherIcon()}" class="icon"> <br>
+                        <div id="temp">${getTemp()}</div>
+                        <div id ="condition">${state.curWeatherCond}</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+             </table>
+             <table id="forecast">
+               <tbody>
+                 <tr>
+                   <td class="r33">${forecastDay(0)}</td>
+                   <td class="r33">${forecastDay(1)}</td>
+                   <td class="r33">${forecastDay(2)}</td>
+                 </tr>
+                 <tr>
+                   <td class="r33">${forecastDay(3)}</td>
+                   <td class="r33">${forecastDay(4)}</td>
+                   <td class="r33">${forecastDay(5)}</td>
+                 </tr>
+               </table>
+              
+             <div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div>
           </div>
           """
         }

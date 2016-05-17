@@ -9,6 +9,19 @@ Notifications allows you to receive a message when a certain action occurs.
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_prefs_page_2.png" width="281" height="500">
 
 **The __Send Notifications to__ input will not be shown for users whose accounts do not have contact book enabled.  If you don't have it you can't enable it until SmartThings activates the feature again. If the Contact book is still not available.  You will see a toggle that will allow sending Push Messages instead of selecting individual users.**
+_________
+#### Enable Contact-Book Option on SmartThings Account
+This is not the official method and is consider a hack.  This will not cause any harm.
+
+* Log into the IDE 
+* Browse to [https://graph.api.smartthings.com/account/list](https://graph.api.smartthings.com/account/list)
+* Click on the link for the Name of your account
+* In you're web browsers URL bar you will see `https://graph.api.smartthings.com/account/show/%My_Unique_ID%`
+* Just replace the `account/show` section with `contact`
+* So it looks like this `https://graph.api.smartthings.com/contact/%My_Unique_ID%`
+* Select +New Contact or Either of the Import Buttons to proceed.
+* All that you need to do is add one contact to your account for it to be enabled. From there you can then managed the contacts from the Mobile App under the Slide out settings menu.
+
 
 ----------
 #### Quiet Time
@@ -41,3 +54,7 @@ When there is a SmartApp or Device Type code update available.
 * ***The custom values allowed are between (30-84600) seconds***
 
 ----------
+
+#### Custom Automation App Notifications
+
+As of v1.1.0 of the Automations app you can select individual recipients for the different automations.

@@ -13,7 +13,7 @@ There are two calls made:
 
 For more info on Nest Manager and Nest's Rate Limiting visit [Nest Commands...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html)
 
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_2.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_3.png" width="281" height="500">
 
 ----------
 #### 1. Device Poll Rate
@@ -65,4 +65,4 @@ This ***Should Only*** be used if are experiencing Polling issues.  The selected
 ##### Please select as FEW devices as possible! 
 #####More devices will not necessarily make for better polling!
 
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_2.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/poll_prefs_page_3.png" width="281" height="500">
