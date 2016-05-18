@@ -639,18 +639,12 @@ def getWeatherHtml() {
         }
         body {
             """
-              <div class="container">
-              <div id="textBar">Current Weather Conditions</div>
-              <div id="weatherInfo">
-              <div id="alertBar"><a href="#openModal">${state?.walert}</a></div>
-              <div id="header"> ${state?.curWeather?.current_observation?.display_location.full} </div>
-              <div id="leftData">
-              <table>
-                <tbody>
-                  <tr>
-                    <td class="r50">
-                      <div id="leftData">
-                        <div id="data">
+            <div class="container">
+              <div class="textBar">Current Weather Conditions</div>
+              <div class="alertBar"><a href="#openModal">${state?.walert}</a></div>
+              <div class="header"> ${state?.curWeather?.current_observation?.display_location.full} </div>
+                 <div class="row">
+                        <div class="six columns">
                           <b>Feels Like:</b> ${getFeelslike()} <br>
                           <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
                           <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
@@ -659,37 +653,27 @@ def getWeatherHtml() {
                           <b>Lux:</b> ${getLux()}<br>
                           <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
                           <b>Wind:</b> ${state?.windStr} <br>
-                        </div>
                       </div>
-                    </td>
-                  <td class="r50">
-                    <div id="weatherIcon">
-                      <div>
-                        <img src="${getWeatherIcon()}" class="icon"> <br>
+                    <div class="six columns">
+                        <img src="${getWeatherIcon()}"> <br>
                         <div id="temp">${getTemp()}</div>
                         <div id ="condition">${state.curWeatherCond}</div>
-                      </div>
                     </div>
-                  </td>
-                </tr>
-             </table>
-             <table id="forecast">
-               <tbody>
-                 <tr>
-                   <td class="r33">${forecastDay(0)}</td>
-                   <td class="r33">${forecastDay(1)}</td>
-                   <td class="r33">${forecastDay(2)}</td>
-                 </tr>
-                 <tr>
-                   <td class="r33">${forecastDay(3)}</td>
-                   <td class="r33">${forecastDay(4)}</td>
-                   <td class="r33">${forecastDay(5)}</td>
-                 </tr>
-                  <tr>
-                   <td class="r33">${forecastDay(6)}</td>
-                   <td class="r33">${forecastDay(7)}</td>
-                 </tr>
-               </table>
+                  </div>  
+				<div class="row">
+                   <div class="four columns">${forecastDay(0)}</div>
+                   <div class="four columns">${forecastDay(1)}</div>
+                   <div class="four columns">${forecastDay(2)}</div>
+				</div>
+                <div class="row">
+                   <div class="four columns">${forecastDay(3)}</div>
+                   <div class="four columns">${forecastDay(4)}</div>
+                   <div class="four columns">${forecastDay(5)}</div>
+      			 </div>
+                  <div class="row">
+                   <div class="four columns">${forecastDay(6)}</div>
+                   <div class="four columns">${forecastDay(7)}</div>
+   				</div>		
                 <table class="r100">
                 <tbody>
                  <tr>
