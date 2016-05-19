@@ -67,7 +67,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 9)
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 12)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
@@ -529,25 +529,19 @@ def getImgBase64(url, type) {
 }
 
 def getCSS(){
-
-def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
-
-//"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
-//https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
-//https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css
-	    def params = [ 
-        uri: uri,
-           contentType: 'text/css'
+	def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+	//"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+	def params = [ 
+    	uri: uri,
+        contentType: 'text/css'
     ]
     try {
     	httpGet(params)  { resp ->
-        	
-        return resp?.data
-    
+        return resp?.data    
 	}
 }
  catch (ex) {
-        log.error "getImageBytes Exception: $ex"
+        log.error "Failed to load CSS - Exception: $ex"
     }
 }
 
@@ -633,16 +627,16 @@ def getWeatherHtml() {
     renderHTML {
         head {
             """ <style type="text/css">
-				${getCSS()}
-              </style>
+					${getCSS()}
+              	</style>
                """
         }
         body {
             """
             <div class="container">
-              <div class="textBar">Current Weather Conditions</div>
-              <div class="alertBar"><a href="#openModal">${state?.walert}</a></div>
-              <div class="header"> ${state?.curWeather?.current_observation?.display_location.full} </div>
+              <h4>Current Weather Conditions</h4>
+              <h3><a href="#openModal">${state?.walert}</a></he>
+              <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
                  <div class="row">
                         <div class="six columns">
                           <b>Feels Like:</b> ${getFeelslike()} <br>
@@ -655,33 +649,30 @@ def getWeatherHtml() {
                           <b>Wind:</b> ${state?.windStr} <br>
                       </div>
                     <div class="six columns">
-                        <img src="${getWeatherIcon()}"> <br>
-                        <div id="temp">${getTemp()}</div>
-                        <div id ="condition">${state.curWeatherCond}</div>
+                        <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
+                        <h2>${getTemp()}</h2>
+                        <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
                     </div>
                   </div>  
-				<div class="row">
-                   <div class="four columns">${forecastDay(0)}</div>
-                   <div class="four columns">${forecastDay(1)}</div>
-                   <div class="four columns">${forecastDay(2)}</div>
+				<div class="row topBorder">
+                   <div class="centerText four columns">${forecastDay(0)}</div>
+                   <div class="centerText four columns">${forecastDay(1)}</div>
+                   <div class="centerText four columns">${forecastDay(2)}</div>
 				</div>
                 <div class="row">
-                   <div class="four columns">${forecastDay(3)}</div>
-                   <div class="four columns">${forecastDay(4)}</div>
-                   <div class="four columns">${forecastDay(5)}</div>
+                   <div class="centerText four columns">${forecastDay(3)}</div>
+                   <div class="centerText four columns">${forecastDay(4)}</div>
+                   <div class="centerText four columns">${forecastDay(5)}</div>
       			 </div>
                   <div class="row">
-                   <div class="four columns">${forecastDay(6)}</div>
-                   <div class="four columns">${forecastDay(7)}</div>
+                   <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+                   <div class="centerText four columns">${forecastDay(7)}</div>
    				</div>		
-                <table class="r100">
-                <tbody>
-                 <tr>
-                 	<td class="r100">
+				<div class="row topBorder">
+                  <div class="centerText offset-by-three six columns">
                       <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id}
-      				</td>
-                 </tr>
-                 </table>
+                  </div>    
+ 				</div>
         
                <div id="openModal" class="topModal">
 					<div>
