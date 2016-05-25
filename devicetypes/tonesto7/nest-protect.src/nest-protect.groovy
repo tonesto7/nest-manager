@@ -33,7 +33,7 @@ preferences {
             ])
 }
 
-def devVer() { return "2.0.3" }
+def devVer() { return "2.0.4" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -154,7 +154,7 @@ metadata {
             state "true", 	label: 'Debug:\n${currentValue}'
             state "false", 	label: 'Debug:\n${currentValue}'
         }
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml?" + new Date().getTime(), width: 6, height: 5)
         
     main "main2"
     details(["alarmState", "devInfoHtml", "refresh"])
