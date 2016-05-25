@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.4"}
+def devVer() { return "2.0.5"}
 
 // for the UI
 metadata {
@@ -1301,7 +1301,7 @@ def getCSS(){
     ]
     try {
         httpGet(params)  { resp ->
-        return resp?.data    
+        return resp?.data.text
     }
 }
 
@@ -1315,16 +1315,21 @@ def getImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonest
 def getInfoHtml() {
     def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" : 
                     "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
-    renderHTML {
-        head {
-            """
+    def html = """
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta http-equiv="cache-control" content="max-age=0"/>
+            <meta http-equiv="cache-control" content="no-cache"/>
+            <meta http-equiv="expires" content="0"/>
+            <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+            <meta http-equiv="pragma" content="no-cache"/>
+            <meta name="viewport" content="width = device-width, initial-scale=1.0">
+        </head>
+        <body>
             <style type="text/css">
               ${getCSS()}
             </style>
-               """
-        }
-        body {
-            """
              <table>
                <thead>
                  <th>Network Status</th>
@@ -1359,9 +1364,10 @@ def getInfoHtml() {
                 </tr>
               </tbody>
              </table>
-            """
-        }
-    }
+        </body>
+    </html>
+    """
+    render contentType: "text/html", data: html, status: 200
 }
 
 private def textDevName()   { "Nest Thermostat${appDevName()}" }
