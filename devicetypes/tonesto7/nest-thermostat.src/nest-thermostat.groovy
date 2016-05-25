@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.4"}
+def devVer() { return "2.0.5"}
 
 // for the UI
 metadata {
@@ -208,7 +208,7 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
             state "default", label:'${currentValue}'
         }
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 4)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml?" + new Date().getTime(),, refreshInterval: 10, width: 6, height: 4)
         
         main( tileMain() )
         details( tileSelect() )
