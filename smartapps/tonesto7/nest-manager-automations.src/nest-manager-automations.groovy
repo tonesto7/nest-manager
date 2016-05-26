@@ -451,11 +451,6 @@ def isAutoAppInst() {
     return (autoApp > 0) ? true : false
 }
 
-def autoAppInst(Boolean val) {
-    log.debug "${getAutoAppChildName()} is Installed?: ${val}"
-    atomicState.autoAppInstalled = val
-}
-
 def getInstAutoTypesDesc() {
     def remSenCnt = 0
     def conWatCnt = 0
@@ -1053,7 +1048,7 @@ void workQueue() {
         }
     }
 
-    //log.trace("workQueue Run queue: ${qnum}" )
+    log.trace("workQueue Run queue: ${qnum}" )
     if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
     def cmdQueue = atomicState?."cmdQ${qnum}"
     try {
@@ -1185,10 +1180,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
         }
         if (ex.message.contains("Bad Request")) {
-            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
         }
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
         atomicState.apiIssues = true
@@ -2529,8 +2524,8 @@ def stateCleanup() {
     state.remove("tempChgWaitVal")
     state.remove("cmdDelayVal")
     state.remove("testedDhInst")
-    state.remove("sendMissedPollMsg")
-    state.remove("sendAppUpdateMsg")
+    state.remove("missedPollNotif")
+    state.remove("updNotif")
     state.remove("updChildOnNewOnly")
     state.remove("disAppIcons")
     state.remove("showProtAlarmStateEvts")
@@ -2541,6 +2536,7 @@ def stateCleanup() {
     state.remove("altNames")
     state.remove("locstr")
     state.remove("custLocStr")
+    state.remove("autoAppInstalled")
     if (!atomicState?.cmdQlist) {
         state.remove("cmdQ2")
         state.remove("cmdQ3")
@@ -3280,46 +3276,6 @@ def removeAnalyticData(pathVal) {
         }
     }
     return result
-}
-
-/******************************************************************************
-*                Application Help and License Info Variables                  *
-*******************************************************************************/
-//Change This to rename the Default App Name
-
-private def appName() 		{ return "Nest ${parent ? "Automations" : "Manager"}${appDevName()}" }
-private def appAuthor() 	{ "Anthony S." }
-private def appNamespace() 	{ "tonesto7" }
-private def gitBranch()     { "master" }
-private def appDevType()    { false }
-private def appDevName()    { return appDevType() ? " (Dev)" : "" }
-private def appInfoDesc() 	{
-    def cur = atomicState?.appData?.versions?.app?.ver.toString()
-    def ver = (isAppUpdateAvail()) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
-    return "Name: ${textAppName()}\n${ver}\n${textModified()}"
-}
-private def textAppName()   { return "${appName()}" }
-private def textVersion()   { return "Version: ${appVersion()}" }
-private def textModified()  { return "Updated: ${appVerDate()}" }
-private def textAuthor()    { return "${appAuthor()}" }
-private def textNamespace() { return "${appNamespace()}" }
-private def textVerInfo()   { return "${appVerInfo()}" }
-private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
-private def textCopyright() { return "Copyright© 2016 - Anthony S." }
-private def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
-private def textHelp()      { return "" }
-private def textLicense() {
-    return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
-        "you may not use this file except in compliance with the License. "+
-        "You may obtain a copy of the License at"+
-        "\n\n"+
-        "    http://www.apache.org/licenses/LICENSE-2.0"+
-        "\n\n"+
-        "Unless required by applicable law or agreed to in writing, software "+
-        "distributed under the License is distributed on an 'AS IS' BASIS, "+
-        "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "+
-        "See the License for the specific language governing permissions and "+
-        "limitations under the License."
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -4990,4 +4946,44 @@ def getSunTimeState() {
     def sunriseTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunriseTime')).format('h:mm a', tz)
     atomicState.sunsetTm = sunsetTm
     atomicState.sunriseTm = sunriseTm
+}
+
+/******************************************************************************
+*                Application Help and License Info Variables                  *
+*******************************************************************************/
+//Change This to rename the Default App Name
+
+private def appName() 		{ return "Nest ${parent ? "Automations" : "Manager"}${appDevName()}" }
+private def appAuthor() 	{ "Anthony S." }
+private def appNamespace() 	{ "tonesto7" }
+private def gitBranch()     { "master" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
+private def appInfoDesc() 	{
+    def cur = atomicState?.appData?.versions?.app?.ver.toString()
+    def ver = (isAppUpdateAvail()) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
+    return "Name: ${textAppName()}\n${ver}\n${textModified()}"
+}
+private def textAppName()   { return "${appName()}" }
+private def textVersion()   { return "Version: ${appVersion()}" }
+private def textModified()  { return "Updated: ${appVerDate()}" }
+private def textAuthor()    { return "${appAuthor()}" }
+private def textNamespace() { return "${appNamespace()}" }
+private def textVerInfo()   { return "${appVerInfo()}" }
+private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
+private def textCopyright() { return "Copyright© 2016 - Anthony S." }
+private def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
+private def textHelp()      { return "" }
+private def textLicense() {
+    return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
+        "you may not use this file except in compliance with the License. "+
+        "You may obtain a copy of the License at"+
+        "\n\n"+
+        "    http://www.apache.org/licenses/LICENSE-2.0"+
+        "\n\n"+
+        "Unless required by applicable law or agreed to in writing, software "+
+        "distributed under the License is distributed on an 'AS IS' BASIS, "+
+        "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "+
+        "See the License for the specific language governing permissions and "+
+        "limitations under the License."
 }
