@@ -542,7 +542,6 @@ def presenceEvent(presence) {
     def statePres = state?.present
     state?.present = (pres == "present") ? true : false
     state?.nestPresence = newNestPres
-    state?.present = (pres == "present") ? true : false
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
         sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
