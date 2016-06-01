@@ -162,7 +162,7 @@ def generateEvent(Map eventData) {
 
             //reads updates weather data
             getWeatherAstronomy(eventData?.data?.weatAstronomy)
-            getWeatherForecast(eventData?.data?.weatForecase)
+            getWeatherForecast(eventData?.data?.weatForecast)
             getWeatherConditions(eventData?.data?.weatCond)
             getWeatherAlerts(eventData?.data?.weatAlerts)
         }
