@@ -361,6 +361,7 @@ def prefsPage() {
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
             input ("disAppIcons", "bool", title: "Disable App Icons?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
+            atomicState.needChildUpd = true
         }
         section("Nest Login:") {
             href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
@@ -711,6 +712,7 @@ def getApiData(type = null) {
     }
     catch(ex) {
         atomicState.apiIssues = true
+        atomicState.needChildUpd = true
         if(ex instanceof groovyx.net.http.HttpResponseException) {
             if (ex.message.contains("Too Many Requests")) {
                 log.warn "Received '${ex.message}' response code..."
@@ -734,7 +736,7 @@ def updateChildData() {
         def useMt = !useMilitaryTime ? false : true
         def dbg = !childDebug ? false : true
         def nestTz = getNestTimeZone().toString()
-        log.debug "tz: ${nestTz}"
+        //log.debug "tz: ${nestTz}"
         def api = !apiIssues() ? false : true
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
@@ -2873,6 +2875,7 @@ def devPrefPage() {
                 def tempChgWaitValDesc = !tempChgWaitVal ? "Default: 4 Seconds" : tempChgWaitVal
                 input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()],
                     description: tempChgWaitValDesc, submitOnChange: true)
+                atomicState.needChildUpd = true
                 //paragraph "Nothing to see here yet!!!"
             }
         }
@@ -2880,6 +2883,7 @@ def devPrefPage() {
             section("Protect Devices:") {
                 input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Device Activity Feed?", description: "", required: false, defaultValue: true, submitOnChange: true,
                         image: getAppImg("list_icon.png")
+                atomicState.needChildUpd = true
             }
         }
         if(atomicState?.presDevice) {
@@ -2911,6 +2915,7 @@ def debugPrefPage() {
             if (childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
             else { LogAction("Device Debug Logs are Disabled...", "info", false) }
         }
+        atomicState.needChildUpd = true
     }
 }
 
