@@ -934,7 +934,7 @@ def apiVar() {
 def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
     log.trace "sendEvtUpdateToDevice($typeId, $type, $obj, $objVal)..."
     def devId
-    if(obj == apiVar().cmdObj.away) {
+    if(obj == apiVar().cmdObjs.away) {
         def pres = (obJVal?.toString() == "home") ? "present" : "not present"
         def nestPres = (obJVal?.toString() == "home") ? "home" : ((obJVal?.toString() == "auto-away") ? "auto-away" : "away")
         def devIds
