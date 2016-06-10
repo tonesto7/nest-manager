@@ -1289,7 +1289,7 @@ def setHome() {
 ************************************************************************************************/
 
 def getHvacModes() {
-    log.debug "Building Modes list"
+    //log.debug "Building Modes list"
     def modesList = ['off']
     if( state?.can_heat == true ) { modesList.push('heat') }
     if( state?.can_cool == true ) { modesList.push('cool') }
@@ -1300,12 +1300,13 @@ def getHvacModes() {
 
 def changeMode() {
     try {
-        log.debug "changeMode.."
+        //log.debug "changeMode.."
         def currentMode = device.currentState("thermostatMode")?.value
-        def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
+        def lastTriedMode = currentMode ?: "off"
         def modeOrder = getHvacModes()
         def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
         def nextMode = next(lastTriedMode)
+log.trace "changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}"
         setHvacMode(nextMode)
     }
     catch (ex) {
@@ -1330,14 +1331,52 @@ def setHvacMode(nextMode) {
     }
 }
 
+def doChangeMode() {
+    try {
+        def currentMode = device.currentState("thermostatMode")?.value
+        log.debug "doChangeMode()  currentMode:  ${currentMode}"
+        def errflag = true
+        switch(currentMode) {
+            case "auto":
+                if (parent.setHvacMode(this, "heat-cool")) { 
+                    errflag = false
+                }
+                break
+            case "heat":
+                if (parent.setHvacMode(this, "heat")) { 
+                    errflag = false
+                }
+                break
+            case "cool":
+                if (parent.setHvacMode(this, "cool")) { 
+                    errflag = false
+                }
+                break
+            case "off":
+                if (parent.setHvacMode(this, "off")) {
+                    errflag = false
+                }
+                break
+            default:
+                log.warn "doChangeMode Received an Invalid Request: ${currentMode}"
+                break
+        }
+        if (errflag) {
+            log.warn "doChangeMode call to change mode failed: ${currentMode}"
+            refresh()
+        }
+    }
+    catch (ex) {
+        log.error "doChangeMode Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", ex.toString(), "doChangeMode")
+    }
+}
+
 void off() {
     try {
         log.trace "off()..."
-        if (parent.setHvacMode(this, "off")) {
-            hvacModeEvent("off")
-        } else {
-            log.error "Error setting off mode." 
-        }
+        hvacModeEvent("off")
+        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
     }
     catch (ex) {
         log.error "off Exception: ${ex}"
@@ -1350,11 +1389,8 @@ void heat() {
         log.trace "heat()..."
         def curPres = getNestPresence()
         if (curPres == "home") {
-            if (parent.setHvacMode(this, "heat")) { 
-                hvacModeEvent("heat") 
-            } else {
-            log.error "Error setting heat mode." 
-            }
+            hvacModeEvent("heat") 
+            runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
         }
     }
     catch (ex) {
@@ -1373,11 +1409,8 @@ void cool() {
         log.trace "cool()..."
         def curPres = getNestPresence()
         if (curPres == "home") {
-            if (parent.setHvacMode(this, "cool")) { 
-                hvacModeEvent("cool") 
-            } else {
-                log.error "Error setting cool mode." 
-            }
+            hvacModeEvent("cool") 
+            runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
         }
     }
     catch (ex) {
@@ -1390,12 +1423,9 @@ void auto() {
     try {
         log.trace "auto()..."
         def curPres = getNestPresence()
-        if (curPres == "home") {
-            if (parent.setHvacMode(this, "heat-cool")) { 
-                hvacModeEvent("auto") 
-            } else {
-                log.error "Error setting auto mode." 
-            }
+        if (curPres == "home" && ( state?.can_heat == true && state?.can_cool == true ) ) {
+            hvacModeEvent("auto") 
+            runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
         }
     }
     catch (ex) {
