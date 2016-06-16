@@ -167,12 +167,13 @@ def presenceEvent(presence) {
     def pres = (presence == "home") ? "present" : "not present"
     def nestPres = getNestPresence()
     def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+    def statePres = state?.present
+    state?.present = (pres == "present") ? true : false
     state?.nestPresence = newNestPres
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
-        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
+        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
         sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
         sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
-        state?.present = (pres == "present") ? true : false
     } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 

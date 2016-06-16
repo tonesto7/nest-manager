@@ -372,11 +372,11 @@ def batteryStateEvent(batt) {
     def stbattery = (batt == "replace") ? 5 : 100
     def battVal = device.currentState("batteryState")?.value
     def stbattVal = device.currentState("battery")?.value
+    state?.battVal = batt
     if(!battVal.equals(batt) || !stbattVal) {
         log.debug("Battery is: ${batt} | Original State: (${battVal})")
         sendEvent(name:'batteryState', value: batt, descriptionText: "Nest Battery status is: ${batt}", displayed: true, isStateChange: true)
         sendEvent(name:'battery', value: stbattery, descriptionText: "Battery is: ${stbattery}", displayed: true, isStateChange: true)
-        state?.battVal = batt
     } else { Logger("Battery State: (${batt}) | Original State: (${battVal})") }
 }
 

@@ -25,9 +25,12 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.4" }
-def appVerDate() { "5-15-2016" }
+def appVersion() { "1.2.5" }
+def appVerDate() { "5-20-2016" }
 def appVerInfo() {
+    
+    "V1.2.5 (May 20th, 2016)\n" +
+    "Fixed: ScheduleOk bug in external temp and contact automations. \n\n" +
     
     "V1.2.4 (May 15th, 2016)\n" +
     "Updated Timezone selection for users without ST Hub timezones it will use Nest's\n\n" +
@@ -1028,7 +1031,7 @@ def getExtTmpTemperature() {
     return extTemp
 }
 
-def extTmpScheduleOk() { return (isInMode(settings?.extTmpModes) && daysOk(settings?.extTmpDays) && extTmpTimeOk()) ? true : false }
+def extTmpScheduleOk() { return ((!extTmpModes || isInMode(extTmpModes)) && daysOk(settings?.extTmpDays) && extTmpTimeOk()) ? true : false }
 def getExtTmpTempDiffVal() { return !settings?.extTmpDiffVal ? 1.0 : settings?.extTmpDiffVal.toDouble() } 
 def getExtTmpGoodDtSec() { return !atomicState?.extTmpTempGoodDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempGoodDt).toInteger() }
 def getExtTmpBadDtSec() { return !atomicState?.extTmpTempBadDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempBadDt).toInteger() }
@@ -1215,7 +1218,7 @@ def conWatTimeOk() {
 
 def getConWatContactsOk() { return conWatContacts?.currentState("contact")?.value.contains("open") ? false : true }
 def conWatContactOk() { return (!conWatContacts && !conWatTstat) ? false : true }
-def conWatScheduleOk() { return (isInMode(conWatModes) && daysOk(conWatDays) && conWatTimeOk()) ? true : false }
+def conWatScheduleOk() { return ((!conWatModes || isInMode(conWatModes)) && daysOk(conWatDays) && conWatTimeOk()) ? true : false }
 def getConWatOpenDtSec() { return !atomicState?.conWatOpenDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatOpenDt).toInteger() }
 def getConWatCloseDtSec() { return !atomicState?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatCloseDt).toInteger() }
 def getConWatOffDelayVal() { return !conWatOffDelay ? 300 : (conWatOffDelay.toInteger()) }
