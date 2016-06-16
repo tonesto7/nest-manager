@@ -554,140 +554,93 @@ def getImgBase64(url,type) {
 def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
-def getInfoHtml() { 
-    def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" : 
-            "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
-    def coImg = "<td><img class='alarmImg' src=\"${getCarbonImg()}\"></td>"
-    def smokeImg = "<td><img class='alarmImg' src=\"${getSmokeImg()}\"></td>"
-    renderHTML {
-        head {
-            """
-            <style type="text/css">
-                 .flat-table {
-                  width: 100%;
-                  font-family: 'San Francisco', 'Roboto', 'Arial';
-                  border: none;
-                  border-radius: 3px;
-                  -webkit-border-radius: 3px;
-                  -moz-border-radius: 3px;
-                }
-
-                .flat-table th,
-                .flat-table td {
-                  box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
-                  padding: 4px;
-                }
-                
-                .flat-table th {
-                  -webkit-font-smoothing: antialiased;
-                  color: #f5f5f5;
-                  text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
-                  -webkit-border-radius: 2px;
-                  -moz-border-radius: 2px;
-                  background: #00a1db;
-                }
-
-                .flat-table td {
-                  color: grey;
-                  text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
-                  text-align: center;
-                }
-
-                .flat-table tr {
-                  -webkit-transition: background 0.3s, box-shadow 0.3s;
-                  -moz-transition: background 0.3s, box-shadow 0.3s;
-                  transition: background 0.3s, box-shadow 0.3s;
-                }
-                
-                .img-table {
-                  width: 100%;
-                  height: 100%;
-                }
-                
-                .img-table tr {
-                  text-align: center;
-                }
-                .h40 {
-                  width: 39.99%;
-                  font-weight: bold;
-                  font-size: 3.2vmax;
-                }
-                .h20 {
-                  width: 19.99%;
-                  font-weight: bold;
-                  font-size: 3.4vmax;
-                }
-                .r40 {
-                  width: 39.99%;
-                  font-size: 3.6vmax;
-                }
-                .r20 {
-                  width: 19.99%;
-                  font-size: 3.6vmax;
-                }
-                .rowLong {
-                  font-size: 3.2vmax;
-                }
-                .datetime {
-                  font-size: 3.4vmax;
-                }
-                .battImg {
-                  width:30px; height:15px;
-                }
-                .alarmImg {
-                  vertical-align: top;
-                  width:60px; height:60px;
-                }
-            </style>
-               """
+def getCSS(){
+    try {
+        def params = [ 
+            uri: state?.cssUrl.toString(),
+            contentType: 'text/css'
+        ]
+        httpGet(params)  { resp ->
+            return resp?.data.text
         }
-        body {
-            """
-            <table class="img-table">
-              <tbody>
-                <tr>
-                  $coImg
-                  $smokeImg
-                </tr>
-              </tbody>
-            </table>
-            <table class="flat-table">
-              <thead>
-                <th class="h40">Network Status</th>
-                <th class="h20">Battery</th>
-                <th class="h40">API Status</th>
-              </thead>
+    }
+    catch (ex) {
+        log.error "Failed to load CSS - Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", ex.toString(), "getCSS")
+    }
+}
+
+def getInfoHtml() {
+    try {
+        def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" : 
+                "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
+        def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
+        def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
+        def html = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta http-equiv="cache-control" content="max-age=0"/>
+                <meta http-equiv="cache-control" content="no-cache"/>
+                <meta http-equiv="expires" content="0"/>
+                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+                <meta http-equiv="pragma" content="no-cache"/>
+                <meta name="viewport" content="width = device-width, initial-scale=1.0">
+            </head>
+            <body>
+                <style type="text/css">
+                    ${getCSS()}
+                </style>
+                    <div class="row">
+                        <div class="offset-by-two four columns centerText">
+                            $coImg
+                        </div>
+                        <div class="four columns centerText">
+                            $smokeImg
+                        </div>
+                        </div>
+                <table>
+                <thead>
+                    <th>Network Status</th>
+                    <th>Battery</th>
+                    <th>API Status</th>
+                </thead>
+                    <tbody>
+                    <tr>
+                        <td>${state?.onlineStatus.toString()}</td>
+                        <td>${battImg}</td>
+                        <td>${state?.apiStatus}</td>
+                    </tr>
+                    <tr>
+                        <th>Firmware Version</th>
+                        <th>Debug</th>
+                        <th>Device Type</th>
+                    </tr>
+                    <td>v${state?.softwareVer.toString()}</td>
+                    <td>${state?.debugStatus}</td>
+                    <td>${state?.devTypeVer.toString()}</td>
+                    </tbody>
+                </table>
+                <table>
+                <thead>
+                    <th>Nest Last Checked-In</th>
+                    <th>Data Last Received</th>
+                </thead>
                 <tbody>
-                  <tr>
-                    <td class="r40">${state?.onlineStatus.toString()}</td>
-                    <td class="r20">${battImg}</td>
-                    <td class="r40">${state?.apiStatus}</td>
-                  </tr>
-                  <tr>
-                    <th class="h40" width=33.33%>Firmware Version</th>
-                    <th class="h20">Debug</th>
-                    <th class="h40">Device Type</th>
-                  </tr>
-                  <td class="r40">v${state?.softwareVer.toString()}</td>
-                  <td class="r20">${state?.debugStatus}</td>
-                  <td class="rowLong">${state?.devTypeVer.toString()}</td>
+                    <tr>
+                    <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                    <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                    </tr>
                 </tbody>
-             </table>
-              <table class="flat-table">
-               <thead>
-                 <th class="h40">Nest Last Checked-In</th>
-                 <th class="h40">Data Last Received</th>
-               </thead>
-              <tbody>
-                <tr>
-                  <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
-                  <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
-                </tr>
-              </tbody>
-            </table>
-            
-            """
-        }
+                </table>
+            </body>
+        </html>
+        """
+        render contentType: "text/html", data: html, status: 200
+    }
+    catch (ex) {
+        log.error "getInfoHtml Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", ex.toString(), "getInfoHtml")
     }
 }
 
