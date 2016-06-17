@@ -735,6 +735,18 @@ def getInfoHtml() {
                         <td>${battImg}</td>
                         <td>${state?.apiStatus}</td>
                     </tr>
+                    
+                    
+                    </tbody>
+                    </table>
+                    
+                <p class="centerText">
+                	<a href="#openModal" class="button">More info</a>
+                </p>
+                 <div id="openModal" class="topModal">
+                        <div>
+                            <a href="#close" title="Close" class="close">X</a>
+                  <table>
                     <tr>
                         <th>Firmware Version</th>
                         <th>Debug</th>
@@ -743,7 +755,6 @@ def getInfoHtml() {
                     <td>v${state?.softwareVer.toString()}</td>
                     <td>${state?.debugStatus}</td>
                     <td>${state?.devTypeVer.toString()}</td>
-                    </tbody>
                 </table>
                 <table>
                 <thead>
@@ -757,6 +768,9 @@ def getInfoHtml() {
                     </tr>
                 </tbody>
                 </table>
+                </div>
+                    </div>
+                </div>
             </body>
         </html>
         """

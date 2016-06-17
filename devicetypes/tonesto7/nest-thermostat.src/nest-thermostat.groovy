@@ -1685,28 +1685,41 @@ def getInfoHtml() {
                         <td>${leafImg}</td>
                         <td>${state?.apiStatus}</td>
                     </tr>
-                    <tr>
-                        <th>Firmware Version</th>
-                        <th>Debug</th>
-                        <th>Device Type</th>
-                    </tr>
-                    <td>${state?.softwareVer.toString()}</td>
-                    <td>${state?.debugStatus}</td>
-                    <td>${state?.devTypeVer.toString()}</td>
-                    </tbody>
-                </table>
-                <table>
-                <thead>
-                    <th>Nest Checked-In</th>
-                    <th>Data Last Received</th>
-                </thead>
-                <tbody>
-                    <tr>
-                    <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                    <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-                    </tr>
                 </tbody>
                 </table>
+                
+               <p class="centerText">
+                	<a href="#openModal" class="button">More info</a>
+                </p>
+                
+                  <div id="openModal" class="topModal">
+                        <div>
+                            <a href="#close" title="Close" class="close">X</a>
+                          <table>  
+                            <tr>
+                                <th>Firmware Version</th>
+                                <th>Debug</th>
+                                <th>Device Type</th>
+                            </tr>
+                            <td>${state?.softwareVer.toString()}</td>
+                            <td>${state?.debugStatus}</td>
+                            <td>${state?.devTypeVer.toString()}</td>
+                            </tbody>
+                        </table>
+                        <table>
+                        <thead>
+                            <th>Nest Checked-In</th>
+                            <th>Data Last Received</th>
+                        </thead>
+                        <tbody>
+                            <tr>
+                            <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                            <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                            </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </body>
         </html>
         """
