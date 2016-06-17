@@ -292,13 +292,13 @@ img {
 </head>
 <body>
 <h1>Nest Manager (Unofficial)</h1>
-<h5>IMPORTANT: <strong>There were a ton of changes to the core code so we can't guarantee that you will not have any issues when updating the code directly from v1.1.  Once you update to code it is very important that you open the Nest Manager smart-app and press 'Done' to clean up old variables and switch to using the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any Apps, Routines, or Rules they are being used with, and then remove the Nest Manager smart-app and start over fresh.</strong></h5>
+<h5>IMPORTANT: <strong>Nest Automations has been merged into Nest Manager in a way that they are still 2 seperate apps but under one code base.  As such it will require you to remove your existing automations before upgrading.</strong></h5>
 <h3>Nest Manager App</h3>
 <p>This is the &quot;<strong><em>unofficial</em></strong>&quot; SmartThings user created SmartApp and Device handlers.
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. </p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"></p>
 <h3>Nest Automations App</h3>
-<p>This is an addon Child-SmartApp that allows you to creat different types of automations for your HVAC systems.</p>
+<p>This is a Child-SmartApp that allows you to creat different types of automations for your HVAC systems.</p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/automation_start.png" width="281" height="500"></p>
 <h3>The Devices Types</h3>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
@@ -314,40 +314,34 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <h2>Version Info</h2>
 <p><strong>Latest App Version:</strong> </p>
 <ul>
-<li>Nest Manager - <strong><em>v2.0.8</em></strong></li>
-<li>Nest Automations - <strong><em>v1.2.2</em></strong></li>
+<li>Nest Manager - <strong><em>v2.2.0</em></strong></li>
 </ul>
 <p><strong>Latest Device Versions:</strong></p>
 <ul>
-<li>Nest Presence Device - <strong><em>v2.0.2</em></strong></li>
-<li>Nest Protect Device - <strong><em>v2.0.2</em></strong></li>
-<li>Nest Thermostat Device - <strong><em>v2.0.3</em></strong></li>
-<li>Nest Weather Device - <strong><em>v1.1.1</em></strong></li>
+<li>Nest Presence Device - <strong><em>v2.1.0</em></strong></li>
+<li>Nest Protect Device - <strong><em>v2.1.0</em></strong></li>
+<li>Nest Thermostat Device - <strong><em>v2.1.0</em></strong></li>
+<li>Nest Weather Device - <strong><em>v2.1.0</em></strong></li>
 </ul>
 <h2>What's New</h2>
-<ul>
-<li><strong>NEW</strong>: In-app HTML help pages</li>
-<li><strong>NEW</strong>: All new polling logic (Also switched to Cron scheduling)</li>
-<li><strong>NEW</strong>: Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest. (Thanks @E_sch)</li>
-<li><strong>NEW</strong>: Custom device naming during new device installs. </li>
-<li><strong>UPDATED</strong>:Fresh device tile designs :smile: (These may cause some controversy and be asked to be reverted back) (On first load of the device it may take a few seconds to render the tiles)</li>
-<li><strong>NEW</strong>: Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary. (Thanks @desertblade)</li>
-<li><strong>NEW</strong>: Nest Automation Child (BETA) app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and remote sensor support.   </li>
-<li>
-<p><strong>UPDATED</strong>: Much more transparent error handling during the install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.<br />
-It performs tests on the following:</p>
-<ul>
-<li>Verify's that OAuth is enabled for the SmartApp</li>
-<li>The Device Handlers are installed and published</li>
-<li>That your SmartThings account contains a proper Zip-Code.</li>
-<li>When uninstalling it will notify you that it can't remove the devices because they are being used by other apps/routines.  
-</li>
-</ul>
-</li>
-<li>
-<p>There are also way to many subtle changes to list.</p>
-</li>
-</ul>
+<p><strong><em>Manager App:</em></strong>
+ * <strong>New</strong>: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264
+ * <strong>New</strong>: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.
+ * <strong>New</strong>: You can now select devices to send Speech Notifications for Contact Automations.
+ * <strong>New</strong>: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.  <br />
+ * <strong>Added</strong>: You can now use Day,Time,Mode filters in certain Nest Mode Automations.
+ * <strong>Added</strong>: Ability to Disable each automations individually.
+ * <strong>Added</strong>: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts.
+ * <strong>Updated</strong>: There is new install setup now that flows much better and allows display of the important available options better to users.
+ * <strong>Updated</strong>: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly.
+ * <strong>New</strong>: Analytics have been added to the app to share installation data, it will also send generic exception error data.  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics.
+   We will also be putting up a dashboard for users who are nerdy just to see the data mapped out.
+ * <strong>Fixed</strong>: Remote Sensor's Fan circulation should now work like it was intended.
+ * <strong>Fixed</strong>: Nest Log Out function to actually take you back to auth screen after clearing token.
+ * <strong>Added</strong>: View all Apps/Devices state data under diagnostics.
+ * <strong>Other</strong>: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list.</p>
+<p><strong><em>Weather Device:</em></strong>
+ * <strong>Updated</strong> @desertblade remodeled the design to allow for modal popups for weather alerts, and forecast data.</p>
 <h2>Links</h2>
 <h4><a href="https://github.com/tonesto7/nest-manager/issues">GitHub Project Issues Link</a></h4>
 <h4><a href="https://community.smartthings.com/t/release-nest-manager/">SmartThings Community Forum Link</a></h4>
@@ -408,11 +402,10 @@ It performs tests on the following:</p>
 <h5>Nest Automations</h5>
 </li>
 <li>
-<p>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager (master)</em></strong> </p>
+<p>Make sure to Remove all existing automations before upgrading the manager. </p>
 </li>
-<li>Check the box next to <strong><em>nest-automations</em></strong> and then check &quot;<strong>publish<strong>&quot; then click &quot;</strong>Execute Update</strong>&quot;</li>
 <li>
-<p>Click on the <strong><em>Nest Automations</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
+<p>Once all automations are removed please delete the <strong><em>Nest Automations</em></strong> Smart App from the IDE</p>
 <h3><em>You will also need to Enable OAuth under the Nest Manager app preferences in the IDE</em></h3>
 </li>
 </ul>
@@ -444,12 +437,8 @@ It performs tests on the following:</p>
 </ul>
 <h4>The Nest Automations App</h4>
 <ul>
-<li>Go to &quot;<strong>My SmartApps</strong>&quot;</li>
-<li>Click on &quot;<strong>+ New SmartApp</strong>&quot;</li>
-<li>Choose &quot;<strong>From Code</strong>&quot;</li>
-<li>Copy source code from <strong><em>nest-automations.src</em></strong></li>
-<li>Click &quot;<strong>Create</strong>&quot;</li>
-<li>Click on &quot;<strong>Publish</strong>&quot; and &quot;<strong>For me</strong>&quot;</li>
+<li>Make sure to Remove all existing automations before upgrading the manager. </li>
+<li>Once all automations are removed please delete the <strong><em>Nest Automations</em></strong> Smart App from the IDE</li>
 </ul>
 <h4>The Presence, Protect, and Thermostat Device Handlers</h4>
 <ul>

@@ -1,39 +1,46 @@
 {
-  "state": {
-    "stateVarVer": 1
-  },
-  "versions": {
-    "app": {
-      "type": "rel",
-      "ver": "2.0.9"
+    "state": {
+        "stateVarVer": 1
     },
-    "autoapp": {
-      "type": "rel",
-      "ver": "1.2.4"
+    "versions": {
+        "app": {
+            "type": "rel",
+            "ver": "2.0.9"
+        },
+        "autoapp": {
+            "type": "rel",
+            "ver": "1.2.5"
+        },
+        "thermostat": {
+            "type": "rel",
+            "ver": "2.0.4"
+        },
+        "protect": {
+            "type": "rel",
+            "ver": "2.0.3"
+        },
+        "presence": {
+            "type": "rel",
+            "ver": "2.0.3"
+        },
+        "weather": {
+            "type": "rel",
+            "ver": "1.1.2"
+        }
     },
-    "thermostat": {
-      "type": "rel",
-      "ver": "2.0.4"
+    "broadcast": {
+        "msgId": "qhUFNtWY1B",
+        "message": "This is a Test Message for the New Nest Manager Broadcast System!!!.  This Only A Test...",
+        "type": "info"
     },
-    "protect": {
-      "type": "rel",
-      "ver": "2.0.3"
+    "updater": {
+        "updateVer": 1,
+        "updateMsg": "",
+        "updateDesc": "",
+        "updateType": "std"
     },
-    "presence": {
-      "type": "rel",
-      "ver": "2.0.3"
-    },
-    "weather": {
-      "type": "rel",
-      "ver": "1.1.2"
+    "css": {
+        "cssVer": 1,
+        "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     }
-  },
-  "updater": {
-    "ver": 1,
-    "msg": "Update Message Placeholder",
-    "type": "std"
-  },
-  "css": {
-    "css_ver": 1
-  }
 }

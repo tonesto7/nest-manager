@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.3" }
+def devVer() { return "2.1.0" }
 
 // for the UI
 metadata {
@@ -101,139 +101,193 @@ def refresh() {
     poll()
 }
 
-def generateEvent(Map results) {
-    //Logger("generateEvents Parsing data ${results}")
-    Logger("-------------------------------------------------------------------", "warn")
-    //log.debug "results: $results"
-    if(results) {
-        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null 
-        state?.useMilitaryTime = !results?.mt ? false : true
-        debugOnEvent((!results?.debug ? false : true))
-        presenceEvent(results?.pres.toString())
-        apiStatusEvent((!results?.api ? false : true))
-        deviceVerEvent()
+def generateEvent(Map eventData) {
+    //log.trace("generateEvents Parsing data ${eventData}")
+    try {
+        Logger("------------START OF API RESULTS DATA------------", "warn")
+        if(eventData) {
+            state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+            state?.useMilitaryTime = !eventData?.mt ? false : true
+            debugOnEvent(!eventData?.debug ? false : true)
+            presenceEvent(eventData?.pres)
+            apiStatusEvent((!eventData?.apiIssues ? false : true))
+            deviceVerEvent(eventData?.latestVer.toString())
+        }
         lastUpdatedEvent()
+        //This will return all of the devices state data to the logs.
+        //log.debug "Device State Data: ${getState()}"
+        return null
     }
-    return null
+    catch (ex) {
+        log.error "generateEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "generateEvent")
+    }
 }
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
 
-def getTimeZone() {  
-    def tz = null 
-    if (location?.timeZone) { tz = location?.timeZone } 
-    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null } 
-    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." } 
-    return tz 
-} 
+def getDeviceStateData() {
+    return getState()
+}
 
-def deviceVerEvent() {
-    def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestPresVer().ver.toString()
-    def dVer = devVer() ? devVer() : null
-    def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
-    if(curData != newData) {
-        Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
-        sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-    } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
+}
+
+def deviceVerEvent(ver) {
+    try {
+        def curData = device.currentState("devTypeVer")?.value
+        def pubVer = ver ?: null
+        def dVer = devVer() ? devVer() : null
+        def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+        if(curData != newData) {
+            Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
+            sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+        } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
+    }
+    catch (ex) {
+        log.error "deviceVerEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "deviceVerEvent")
+    }
 }
 
 def debugOnEvent(debug) {
-    def val = device.currentState("debugOn")?.value
-    def stateVal = debug ? "On" : "Off"
-    if(!val.equals(stateVal)) {
-        log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
-        sendEvent(name: 'debugOn', value: stateVal, displayed: false)
-    } else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
+    try {
+        def val = device.currentState("debugOn")?.value
+        def stateVal = debug ? "On" : "Off"
+        state.debug = debug ? true : false
+        if(!val.equals(stateVal)) {
+            log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
+            sendEvent(name: 'debugOn', value: stateVal, displayed: false)
+        } else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
+    }
+    catch (ex) {
+        log.error "debugOnEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "debugOnEvent")
+    }
 }
 
 def lastUpdatedEvent() {
-    def now = new Date()
-    def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-    def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-    def lastDt = "${tf?.format(now)}"
-    def lastUpd = device.currentState("lastUpdatedDt")?.value
-    if(!lastUpd.equals(lastDt?.toString())) {
-        Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-        sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+    try {
+        def now = new Date()
+        def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+        def tf = new SimpleDateFormat(formatVal)
+            tf.setTimeZone(getTimeZone())
+        def lastDt = "${tf?.format(now)}"
+        def lastUpd = device.currentState("lastUpdatedDt")?.value
+        if(!lastUpd.equals(lastDt?.toString())) {
+            Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
+            sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+        }
+    }
+    catch (ex) {
+        log.error "lastUpdatedEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "lastUpdatedEvent")
     }
 }
 
 def presenceEvent(presence) {
-    def val = device.currentState("presence")?.value
-    def pres = (presence == "home") ? "present" : "not present"
-    def nestPres = getNestPresence()
-    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
-    state?.nestPresence = newNestPres
-    if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
-        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
-        sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
-        sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
+    try {
+        def val = device.currentState("presence")?.value
+        def pres = (presence == "home") ? "present" : "not present"
+        def nestPres = !device.currentState("nestPresence") ? null : device.currentState("nestPresence")?.value.toString()
+        def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+        def statePres = state?.present
         state?.present = (pres == "present") ? true : false
-    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
+        state?.nestPresence = newNestPres
+        if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
+            log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
+            sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
+            sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
+        } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
+    }
+    catch (ex) {
+        log.error "presenceEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "presenceEvent")
+    }
 }
 
 def apiStatusEvent(issue) {
-    def appStat = device.currentState("apiStatus")?.value
-    def val = issue ? "issue" : "ok"
-    if(!appStat.equals(val)) { 
-        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
-        sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
-    } else { Logger("API Status is: (${val}) | Original State: (${appStat})") }
-}
-
-def getHvacMode() { 
-    try { return device.currentState("thermostatMode")?.value.toString() } 
-    catch (e) { return "unknown" }
+    try {
+        def curStat = device.currentState("apiStatus")?.value
+        def newStat = issue ? "issue" : "ok"
+        state?.apiStatus = newStat
+        if(!curStat.equals(newStat)) { 
+            log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+            sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+        } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
+    }
+    catch (ex) {
+        log.error "apiStatusEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "apiStatusEvent")
+    }
 }
 
 def getNestPresence() { 
-    try { return device.currentState("nestPresence").value.toString() } 
-    catch (e) { return "home" }
+    return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.value.toString()
 }
 
 def getPresence() { 
-    try { return device.currentState("presence").value.toString() } 
-    catch (e) { return "present" }
+    return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
 void setPresence() {
-    log.trace "setPresence()..."
-    def pres = getNestPresence()
-    log.trace "Current Nest Presence: ${pres}"
-    if(pres == "auto-away" || pres == "away") { setHome() }
-    else if (pres == "home") { setAway() }
+    try {
+        log.trace "setPresence()..."
+        def pres = getNestPresence()
+        log.trace "Current Nest Presence: ${pres}"
+        if(pres == "auto-away" || pres == "away") { setHome() }
+        else if (pres == "home") { setAway() }
+    } 
+    catch (ex) {
+        log.error "setPresence Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "setPresence")
+    }
 }
 
 def setAway() {
-    log.trace "setAway()..."
-    parent.setStructureAway(this, "true")
-    presenceEvent("away")
+    try {
+        log.trace "setAway()..."
+        parent.setStructureAway(this, "true")
+        presenceEvent("away")
+    } 
+    catch (ex) {
+        log.error "setAway Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "setAway")
+    }
 }
 
 def setHome() {
-    log.trace "setHome()..."
-    parent.setStructureAway(this, "false")
-    presenceEvent("home")
+    try {
+        log.trace "setHome()..."
+        parent.setStructureAway(this, "false")
+        presenceEvent("home")
+    } 
+    catch (ex) {
+        log.error "setHome Exception: ${ex}"
+        parent?.sendChildExceptionData("presence", ex.toString(), "setHome")
+    }
 }
-
 
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 // Local Device Logging
 def Logger(msg, logType = "debug") {
-     if(parent.settings?.childDebug) { 
+     if(state?.debug) { 
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
-                break;
+                break
             case "debug":
                 log.debug "${msg}"
                 break
@@ -245,17 +299,17 @@ def Logger(msg, logType = "debug") {
                 break
             default:
                 log.debug "${msg}"
-                break;
+                break
         }
-     }
- }
+    }
+}
  
- //This will Print logs from the parent app when added to parent method that the child calls
+//This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
     switch (level) {
         case "trace":
             log.trace "PARENT_Log>> " + message
-            break;
+            break
         case "debug":
             log.debug "PARENT_Log>> " + message
             break
@@ -267,11 +321,11 @@ def log(message, level = "trace") {
             break
         default:
             log.error "PARENT_Log>> " + message
-            break;
+            break
     }            
     return null // always child interface call with a return value
 }
 
-private def textDevName()   { "Nest Presence${appDevName()}" }
-private def appDevType()    { false }
+private def textDevName()   { return "Nest Presence${appDevName()}" }
+private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
