@@ -311,8 +311,13 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
 }
 
 def getTemp() { 
-    try { return state.curWeatherTemp } 
-    catch (ex) { 
+    try { 
+     if ( wantMetric() ) {
+     	return "${state?.curWeatherTemp_c}°C"
+     } else {
+     	return	"${state?.curWeatherTemp_f}°F"
+    }       
+    } catch (ex) { 
         parent?.sendChildExceptionData("weather", ex.toString(), "getTemp")
         return 0 
     }
@@ -354,7 +359,6 @@ def getWeatherConditions(Map weatData) {
             state.curWeatherCond = cur?.current_observation?.weather.toString()
             state.curWeatherIcon = cur?.current_observation?.icon.toString()
             state.zipCode = cur?.current_observation?.display_location.zip.toString()
-            state.curWeatherTemp = ( wantMetric() ) ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
             def curTemp = wantMetric() ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
             temperatureEvent( (wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f), 
                         (wantMetric() ? state?.curFeelsTemp_c : state?.curFeelsTemp_f) )
