@@ -5,7 +5,7 @@
     "versions": {
         "app": {
             "type": "rel",
-            "ver": "2.5.2"
+            "ver": "2.5.4"
         },
         "thermostat": {
             "type": "rel",
@@ -14,6 +14,10 @@
         "protect": {
             "type": "rel",
             "ver": "2.5.1"
+        },
+        "camera": {
+            "type": "rel",
+            "ver": "0.0.1"
         },
         "presence": {
             "type": "rel",
@@ -25,9 +29,9 @@
         }
     },
     "broadcast": {
-        "msgId": null,
-        "message": null,
-        "type": null
+        "msgId": "48vm9GiNju",
+        "message": "Nest Manager Broadcast: Please remember that after updating your code to v2.5 that you must update the device handler code as well.",
+        "type": "info"
     },
     "updater": {
         "updateVer": 1,
