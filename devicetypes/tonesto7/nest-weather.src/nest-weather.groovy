@@ -795,7 +795,7 @@ def getWeatherHtml() {
             </style>
                 <div class="container">
                 <h4>Current Weather Conditions</h4>
-                <h3><a href="#openModal">${state?.walert}</a></he>
+                <h3><a href="#openModal">${state?.walert}</a></h3>
                 <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
                     <div class="row">
                             <div class="six columns">
