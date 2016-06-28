@@ -38,12 +38,16 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.4" }
-def appVerDate() { "6-24-2016" }
+def appVersion() { "2.5.5" }
+def appVerDate() { "6-28-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.4 (June 24th, 2016):"
+    str += "V2.5.5 (June 28th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • WORKAROUND: Created solution to workaround the Android Client install bug."
+
+    str += "\n\nV2.5.4 (June 24th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Fixed null bug preventing child update on new installs."
     str += "\n • FIXED: Automation Naming Bug."
