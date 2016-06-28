@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.5.2" }
+def devVer() { return "2.5.3" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -177,7 +177,6 @@ def refresh() {
 def generateEvent(Map eventData) {
     //log.trace("generateEvent parsing data ${eventData}")
     try {
-        state?.testMode = (testMode == "off") ? null : testMode
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
             def results = eventData?.data
@@ -416,6 +415,7 @@ def testingStateEvent(test) {
     try {
         def carbonVal = device.currentState("nestCarbonMonoxide")?.value
         def smokeVal = device.currentState("nestSmoke")?.value
+        def testVal = device.currentState("isTesting")?.value
 
         def alarmStateST = "ok"
         def smokeValStr = "clear"
@@ -432,11 +432,11 @@ def testingStateEvent(test) {
         if(!smokeVal.equals(smokeState)) {
             log.debug("Nest Smoke State is: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
             sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-            sendEvent( name: 'smoke', value: smokeValStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true ) 
+            sendEvent( name: 'smoke', value: smokeValStr, descriptionText: "Smoke Alarm: ${smokeState} Testing: ${testVal}", type: "physical", displayed: true, isStateChange: true ) 
         } else { Logger("Smoke State: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
         if(!carbonVal.equals(coState)) {
             sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-            sendEvent( name: 'carbonMonoxide', value: carbonValStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true )      
+            sendEvent( name: 'carbonMonoxide', value: carbonValStr, descriptionText: "CO Alarm: ${coState} Testing: ${testVal}", type: "physical", displayed: true, isStateChange: true )      
         } else { Logger("CO State: (${coState.toString().toUpperCase()}) | Original State: (${carbonVal.toString().toUpperCase()})") }
 
         log.info "alarmState: ${alarmStateST} (Nest Smoke: ${smokeState.toString().capitalize()} | Nest CarbonMonoxide: ${coState.toString().capitalize()})"
@@ -603,7 +603,8 @@ def getInfoHtml() {
                 "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
         def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
         def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
-        def testModeHTML = state?.testMode ? "<h3>Test Mode</h3>" : ""
+        def testVal = device.currentState("isTesting")?.value
+        def testModeHTML = testVal ? "<h3>Test Mode</h3>" : ""
         def html = """
         <!DOCTYPE html>
         <html>
