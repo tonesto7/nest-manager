@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.0" }
+def devVer() { return "2.5.1" }
 
 // for the UI
 metadata {
@@ -120,7 +120,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "generateEvent")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "generateEvent")
     }
 }
 
@@ -153,7 +153,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "deviceVerEvent")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "deviceVerEvent")
     }
 }
 
@@ -169,7 +169,7 @@ def debugOnEvent(debug) {
     }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "debugOnEvent")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "debugOnEvent")
     }
 }
 
@@ -188,7 +188,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "lastUpdatedEvent")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "lastUpdatedEvent")
     }
 }
 
@@ -209,7 +209,7 @@ def presenceEvent(presence) {
     }
     catch (ex) {
         log.error "presenceEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "presenceEvent")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "presenceEvent")
     }
 }
 
@@ -225,7 +225,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "apiStatusEvent")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "apiStatusEvent")
     }
 }
 
@@ -250,7 +250,7 @@ void setPresence() {
     } 
     catch (ex) {
         log.error "setPresence Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "setPresence")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "setPresence")
     }
 }
 
@@ -262,7 +262,7 @@ def setAway() {
     } 
     catch (ex) {
         log.error "setAway Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "setAway")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "setAway")
     }
 }
 
@@ -274,7 +274,7 @@ def setHome() {
     } 
     catch (ex) {
         log.error "setHome Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", ex.toString(), "setHome")
+        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "setHome")
     }
 }
 

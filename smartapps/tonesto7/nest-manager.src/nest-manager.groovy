@@ -253,8 +253,9 @@ def authPage() {
         }
     } 
     else { 
+        //return mainPage()
         if(atomicState?.nestStructures) {
-            return mainPage() 
+            return mainPage()
         } else {
             return fillerPage()
         }
@@ -263,9 +264,9 @@ def authPage() {
 
 def fillerPage() {
     //log.trace "fillerPage"
-    def structs = getNestStructures()
-    return dynamicPage(name: "fillerPage", title: "Dummy Page To help android client", refreshInterval: !atomicState?.nestStructures ? 10 : null,
-            nextPage: atomicState?.nestStructures ? "mainPage" : "", install: false, uninstall: false) {
+    //atomicState?.nestStructures = getNestStructures()
+    return dynamicPage(name: "fillerPage", title: "Dummy Page To help android client", refreshInterval: (!atomicState?.nestStructures ? 10 : null),
+            nextPage: (atomicState?.nestStructures ? "mainPage" : ""), install: false, uninstall: false) {
         if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
         section("") {
             if(!atomicState?.nestStructures) {
@@ -280,7 +281,7 @@ def fillerPage() {
 def mainPage() {
     //log.trace "mainPage"
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
-    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
+    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : ""), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
@@ -366,7 +367,7 @@ def mainPage() {
 
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
-        def structs = getNestStructures()
+        def structs = atomicState?.nestStructures
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
         if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -3567,9 +3568,9 @@ def sendExceptionData(exMsg, methodName) {
     }
 }
 
-def sendChildExceptionData(devType, exMsg, methodName) {
+def sendChildExceptionData(devType, devVer, exMsg, methodName) {
     if (optInSendExceptions) {
-        def exData = ["deviceType":devType, "methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+        def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
         def results = new groovy.json.JsonOutput().toJson(exData)
         sendAnalyticExceptionData(results, "errorData/${devType}/${methodName}.json")
     }

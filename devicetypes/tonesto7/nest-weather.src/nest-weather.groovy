@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.0" }
+def devVer() { return "2.5.1" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -133,7 +133,7 @@ def getTempColors() {
     }
     catch (ex) {
         log.error "getTempColors Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getTempColors")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getTempColors")
     }
 }
 
@@ -174,7 +174,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "generateEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "generateEvent")
     }
 }
 
@@ -208,7 +208,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "deviceVerEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "deviceVerEvent")
     }
 }
 
@@ -225,7 +225,7 @@ def debugOnEvent(debug) {
     }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "debugOnEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "debugOnEvent")
     }
 }
 
@@ -245,7 +245,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "lastUpdatedEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "lastUpdatedEvent")
     }
 }
 
@@ -261,7 +261,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "apiStatusEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "apiStatusEvent")
     }
 }
 
@@ -275,7 +275,7 @@ def humidityEvent(humidity) {
     }
     catch (ex) {
         log.error "humidityEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "humidityEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "humidityEvent")
     }
 }
 
@@ -289,7 +289,7 @@ def illuminanceEvent(illum) {
     }
     catch (ex) {
         log.error "illuminanceEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "illuminanceEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "illuminanceEvent")
     }
 }
 
@@ -306,7 +306,7 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
     }
     catch (ex) {
         log.error "temperatureEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "temperatureEvent")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "temperatureEvent")
     }
 }
 
@@ -318,7 +318,7 @@ def getTemp() {
      	return	"${state?.curWeatherTemp_f}°F"
     }       
     } catch (ex) { 
-        parent?.sendChildExceptionData("weather", ex.toString(), "getTemp")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getTemp")
         return 0 
     }
 }
@@ -326,7 +326,7 @@ def getTemp() {
 def getCurWeather() { 
     try { return state.curWeather } 
     catch (ex) { 
-        parent?.sendChildExceptionData("weather", ex.toString(), "getCurWeather")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getCurWeather")
         return 0 
     }
 }
@@ -334,7 +334,7 @@ def getCurWeather() {
 def getHumidity() { 
     try { return device.currentValue("humidity") } 
     catch (ex) { 
-        parent?.sendChildExceptionData("weather", ex.toString(), "getHumidity")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getHumidity")
         return 0 
     }
 }
@@ -398,7 +398,7 @@ def getWeatherConditions(Map weatData) {
     }
     catch (ex) {
         log.error "getWeatherConditions Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getWeatherConditions")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherConditions")
     }
 }
 
@@ -419,7 +419,7 @@ def getWeatherForecast(Map weatData) {
     }
     catch (ex) {
         log.error "getWeatherForecast Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getWeatherForecast")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherForecast")
     }
 }
 
@@ -436,7 +436,7 @@ def getWeatherAstronomy(weatData) {
     }
     catch (ex) {
         log.error "getWeatherAstronomy Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getWeatherAstronomy")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherAstronomy")
     }
 }
 
@@ -488,7 +488,7 @@ def getWeatherAlerts(weatData) {
     }
     catch (ex) {
         log.error "getWeatherAlerts Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getWeatherAlerts")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherAlerts")
     }
 }
 
@@ -508,7 +508,7 @@ private pad(String s, size = 25) {
     }
     catch (ex) {
         log.error "pad Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "pad")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "pad")
     }
 }
 
@@ -565,7 +565,7 @@ private estimateLux(weatherIcon) {
     }
     catch (ex) {
         log.error "estimateLux Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "estimateLux")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "estimateLux")
     }
 }
 
@@ -663,7 +663,7 @@ def getImgBase64(url, type) {
     }
     catch (ex) {
         log.error "getImageBase64 Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getImgBase64")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getImgBase64")
     }
 }
 
@@ -680,7 +680,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "getCss Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getCSS")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getCSS")
     }
 }
  catch (ex) {
@@ -695,7 +695,7 @@ def getWeatherIcon(weatherIcon) {
     }
     catch (ex) {
         log.error "getWeatherIcon Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getWeatherIcon")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherIcon")
     }
 }
 
@@ -728,7 +728,7 @@ private localDate(timeZone) {
     }
     catch (ex) {
         log.error "localDate Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "localDate")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "localDate")
     }
 }
 
@@ -850,7 +850,7 @@ def getWeatherHtml() {
     }
     catch (ex) {
         log.error "getWeatherHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", ex.toString(), "getWeatherHtml")
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherHtml")
     }
 }
 private def textDevName()  { return "Nest Weather${appDevName()}" }

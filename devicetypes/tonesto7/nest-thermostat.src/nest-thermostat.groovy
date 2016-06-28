@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.1"}
+def devVer() { return "2.5.2"}
 
 // for the UI
 metadata {
@@ -390,7 +390,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "generateEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "generateEvent")
     }
 }
 
@@ -403,11 +403,16 @@ def getDeviceStateData() {
 }
 
 def getTimeZone() { 
-    def tz = null
-    if (location?.timeZone) { tz = location?.timeZone }
-    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
-    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
-    return tz
+    try {
+        def tz = null
+        if (location?.timeZone) { tz = location?.timeZone }
+        else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+        if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+        return tz
+    } catch (ex) {
+        log.error "getTimeZone Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "getTimeZone")
+    }
 }
 
 def deviceVerEvent(ver) {
@@ -424,7 +429,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "deviceVerEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "deviceVerEvent")
     }
 }
 
@@ -441,7 +446,7 @@ def debugOnEvent(debug) {
     }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "debugOnEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "debugOnEvent")
     }
 }
 
@@ -461,7 +466,7 @@ def lastCheckinEvent(checkin) {
     }
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "lastCheckinEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "lastCheckinEvent")
     }
 }
 
@@ -481,7 +486,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "lastUpdatedEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "lastUpdatedEvent")
     }
 }
 
@@ -496,7 +501,7 @@ def softwareVerEvent(ver) {
     }
     catch (ex) {
         log.error "targetTempEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "targetTempEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "targetTempEvent")
     }
 }
 
@@ -511,7 +516,7 @@ def tempUnitEvent(unit) {
     }
     catch (ex) {
         log.error "tempUnitEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "tempUnitEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "tempUnitEvent")
     }
 }
 
@@ -526,7 +531,7 @@ def targetTempEvent(Double targetTemp) {
     }
     catch (ex) {
         log.error "targetTempEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "targetTempEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "targetTempEvent")
     }
 }
 
@@ -541,7 +546,7 @@ def thermostatSetpointEvent(Double targetTemp) {
     }
     catch (ex) {
         log.error "thermostatSetpointEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "thermostatSetpointEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "thermostatSetpointEvent")
     }
 }
 
@@ -556,7 +561,7 @@ def temperatureEvent(Double tempVal) {
     }
     catch (ex) {
         log.error "temperatureEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "temperatureEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "temperatureEvent")
     }
 }
 
@@ -578,7 +583,7 @@ def heatingSetpointEvent(Double tempVal) {
     }
     catch (ex) {
         log.error "heatingSetpointEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "heatingSetpointEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "heatingSetpointEvent")
     }
 }
 
@@ -600,7 +605,7 @@ def coolingSetpointEvent(Double tempVal) {
     }
     catch (ex) {
         log.error "coolingSetpointEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "coolingSetpointEvent") 
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "coolingSetpointEvent") 
     }
 }
 
@@ -616,7 +621,7 @@ def hasLeafEvent(Boolean hasLeaf) {
     }
     catch (ex) {
         log.error "hasLeafEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "hasLeafEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "hasLeafEvent")
     }
 }
 
@@ -630,7 +635,7 @@ def humidityEvent(humidity) {
     }
     catch (ex) {
         log.error "humidityEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "humidityEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "humidityEvent")
     }
 }
 
@@ -651,7 +656,7 @@ def presenceEvent(presence) {
     }
     catch (ex) {
         log.error "presenceEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "presenceEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "presenceEvent")
     }
 }
 
@@ -668,7 +673,7 @@ def hvacModeEvent(mode) {
     }
     catch (ex) {
         log.error "hvacModeEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "hvacModeEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "hvacModeEvent")
     }
 } 
 
@@ -683,7 +688,7 @@ def fanModeEvent(fanActive) {
     }
     catch (ex) {
         log.error "fanModeEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "fanModeEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "fanModeEvent")
     }
 }
 
@@ -698,7 +703,7 @@ def operatingStateEvent(operatingState) {
     }
     catch (ex) {
         log.error "operatingStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "operatingStateEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "operatingStateEvent")
     }
 }
 
@@ -714,7 +719,7 @@ def onlineStatusEvent(online) {
     }
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "onlineStatusEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "onlineStatusEvent")
     }
 }
 
@@ -730,7 +735,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "apiStatusEvent")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "apiStatusEvent")
     }
 }
 
@@ -743,7 +748,7 @@ def canHeatCool(canHeat, canCool) {
     }
     catch (ex) {
         log.error "canHeatCool Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "canHeatCool")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "canHeatCool")
     }
 }
 
@@ -754,7 +759,7 @@ def hasFan(hasFan) {
     }
     catch (ex) {
         log.error "hasFan Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "hasFan")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "hasFan")
     }
 }
 
@@ -764,7 +769,7 @@ def isEmergencyHeat(val) {
     }
     catch (ex) {
         log.error "isEmergencyHeat Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "isEmergencyHeat")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "isEmergencyHeat")
     }
 }
 
@@ -775,7 +780,7 @@ def clearHeatingSetpoint() {
     }
     catch (ex) {
         log.error "clearHeatingSetpoint Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "clearHeatingSetpoint")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "clearHeatingSetpoint")
     }
 }
 
@@ -786,7 +791,7 @@ def clearCoolingSetpoint() {
     }
     catch (ex) {
         log.error "clearCoolingSetpoint Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "clearCoolingSetpoint")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "clearCoolingSetpoint")
     }
 }
 
@@ -846,7 +851,7 @@ void heatingSetpointUp() {
     }
     catch (ex) {
         log.error "heatingSetpointUp Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "heatingSetpointUp")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "heatingSetpointUp")
     }
 }
 
@@ -860,7 +865,7 @@ void heatingSetpointDown() {
     }
     catch (ex) {
         log.error "heatingSetpointDown Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "heatingSetpointDown")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "heatingSetpointDown")
     }
 }
 
@@ -874,7 +879,7 @@ void coolingSetpointUp() {
     }
     catch (ex) {
         log.error "coolingSetpointUp Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "coolingSetpointUp")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "coolingSetpointUp")
     }
 }
 
@@ -888,7 +893,7 @@ void coolingSetpointDown() {
     }
     catch (ex) {
         log.error "coolingSetpointDown Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "coolingSetpointDown")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "coolingSetpointDown")
     }
 }
 
@@ -1011,7 +1016,7 @@ void levelUpDown(tempVal, chgType = null) {
     }
     catch (ex) {
         log.error "levelUpDown Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "levelUpDown")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "levelUpDown")
     }
 }
 
@@ -1040,7 +1045,7 @@ def canChangeTemp() {
     }
     catch (ex) {
         log.error "canChangeTemp Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "canChangeTemp")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "canChangeTemp")
     }
 }
 
@@ -1079,7 +1084,7 @@ void changeSetpoint(val) {
     }
     catch (ex) {
         log.error "changeSetpoint Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "changeSetpoint")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "changeSetpoint")
     }
 }
 
@@ -1147,7 +1152,7 @@ void setHeatingSetpoint(Double reqtemp) {
     }
     catch (ex) {
         log.error "setHeatingSetpoint Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setHeatingSetpoint")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setHeatingSetpoint")
     }
 }
 
@@ -1215,7 +1220,7 @@ void setCoolingSetpoint(Double reqtemp) {
     }
     catch (ex) {
         log.error "setCoolingSetpoint Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setCoolingSetpoint")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setCoolingSetpoint")
     }
 }
 
@@ -1236,7 +1241,7 @@ void setPresence() {
     }
     catch (ex) {
         log.error "setPresence Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setPresence")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setPresence")
     }
 }
 
@@ -1248,7 +1253,7 @@ void away() {
     }
     catch (ex) {
         log.error "away Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "away")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "away")
     }
 }
 
@@ -1260,7 +1265,7 @@ void present() {
     }
     catch (ex) {
         log.error "present Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "present")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "present")
     }
 }
 
@@ -1271,7 +1276,7 @@ def setAway() {
     }
     catch (ex) {
         log.error "setAway Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setAway")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setAway")
     }
 }
 
@@ -1282,7 +1287,7 @@ def setHome() {
     }
     catch (ex) {
         log.error "setHome Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setHome")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setHome")
     }
 }
 
@@ -1313,7 +1318,7 @@ log.trace "changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTrie
     }
     catch (ex) {
         log.error "changeMode Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "changeMode")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "changeMode")
     }
 }
 
@@ -1329,7 +1334,7 @@ def setHvacMode(nextMode) {
     }
     catch (ex) {
         log.error "setHvacMode Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setHvacMode")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setHvacMode")
     }
 }
 
@@ -1370,7 +1375,7 @@ def doChangeMode() {
     }
     catch (ex) {
         log.error "doChangeMode Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "doChangeMode")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "doChangeMode")
     }
 }
 
@@ -1382,7 +1387,7 @@ void off() {
     }
     catch (ex) {
         log.error "off Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "off")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "off")
     }
 }
 
@@ -1397,7 +1402,7 @@ void heat() {
     }
     catch (ex) {
         log.error "heat Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "heat")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "heat")
     }
 }
 
@@ -1417,7 +1422,7 @@ void cool() {
     }
     catch (ex) {
         log.error "cool Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "cool")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "cool")
     }
 }
 
@@ -1432,7 +1437,7 @@ void auto() {
     }
     catch (ex) {
         log.error "auto Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "auto")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "auto")
     }
 }
 
@@ -1462,7 +1467,7 @@ void setThermostatMode(modeStr) {
     }
     catch (ex) {
         log.error "setThermostatMode Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setThermostatMode")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setThermostatMode")
     }
 }
 
@@ -1482,7 +1487,7 @@ void fanOn() {
     }
     catch (ex) {
         log.error "fanOn Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "fanOn")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "fanOn")
     }
 }
 
@@ -1498,7 +1503,7 @@ void fanOff() {
     }
     catch (ex) {
         log.error "fanOff Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "fanOff")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "fanOff")
     }
 }
 
@@ -1519,7 +1524,7 @@ void fanAuto() {
     }
     catch (ex) {
         log.error "fanAuto Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "fanAuto")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "fanAuto")
     }
 }
 
@@ -1546,7 +1551,7 @@ void setThermostatFanMode(fanModeStr) {
     }
     catch (ex) {
         log.error "setThermostatFanMode Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "setThermostatFanMode")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "setThermostatFanMode")
     }
 }
 
@@ -1624,7 +1629,7 @@ def getImgBase64(url,type) {
     }
     catch (ex) {
         log.error "getImageBytes Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getImgBase64")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "getImgBase64")
     }
 }
 
@@ -1640,7 +1645,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "Failed to load CSS - Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getCSS")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "getCSS")
     }
 }
 
@@ -1650,7 +1655,7 @@ def getImg(imgName) {
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getImg")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "getImg")
     }
 }
 
@@ -1730,7 +1735,7 @@ def getInfoHtml() {
     }
     catch (ex) {
         log.error "getInfoHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getInfoHtml")
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "getInfoHtml")
     }
 }
 
