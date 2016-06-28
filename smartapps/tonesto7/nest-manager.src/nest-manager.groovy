@@ -46,6 +46,7 @@ def appVerInfo() {
     str += "V2.5.5 (June 28th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • WORKAROUND: Created solution to workaround the Android Client install bug."
+    str += "\n • UPDATED: Added device version info to exception data that's sent to the developer."
 
     str += "\n\nV2.5.4 (June 24th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -227,6 +228,7 @@ def authPage() {
     }
     updateWebStuff(true)
     setStateVar(true)
+    //atomicState?.nestStructures = null
 
     def description
     def oauthTokenProvided = false
@@ -246,16 +248,16 @@ def authPage() {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
             section(""){
-                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button.", state: "complete"
-                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", required: true, state: null
+                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
+                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
     } 
     else { 
-        //return mainPage()
-        if(atomicState?.nestStructures) {
-            return mainPage()
+        //if(!atomicState?.isInstalled) {
+        if(atomicState?.isInstalled || atomicState?.nestStructures) {
+            return mainPage() 
         } else {
             return fillerPage()
         }
@@ -265,16 +267,18 @@ def authPage() {
 def fillerPage() {
     //log.trace "fillerPage"
     //atomicState?.nestStructures = getNestStructures()
-    return dynamicPage(name: "fillerPage", title: "Dummy Page To help android client", refreshInterval: (!atomicState?.nestStructures ? 10 : null),
-            nextPage: (atomicState?.nestStructures ? "mainPage" : ""), install: false, uninstall: false) {
-        if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
-        section("") {
-            if(!atomicState?.nestStructures) {
-                paragraph "No Location data found yet.  This page will refresh in 10 seconds... \nThis page is here to help fix the Android Client"
-            } else {
-                return mainPage()
+    if(!atomicState?.nestStructures) {
+        return dynamicPage(name: "fillerPage", title: "Filler Page", refreshInterval: (!atomicState?.nestStructures ? 10 : null),
+                nextPage: (atomicState?.nestStructures ? "mainPage" : ""), install: false, uninstall: false) {
+            if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
+            section("") {
+                if(!atomicState?.nestStructures) {
+                    paragraph "No Location data found yet.  This page will refresh in 10 seconds... \nThis page is here to help fix the Android Client"
+                } 
             }
         }
+    } else {
+        return authPage()
     }
 }
 
@@ -367,6 +371,7 @@ def mainPage() {
 
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
+        if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
         def structs = atomicState?.nestStructures
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
