@@ -258,7 +258,7 @@ def authPage() {
 }
 
 def fillerPage() {
-    log.trace "fillerPage"
+    //log.trace "fillerPage"
     def structs = getNestStructures()
     return dynamicPage(name: "fillerPage", title: "Dummy Page To help android client", refreshInterval: !atomicState?.nestStructures ? 10 : null,
             nextPage: atomicState?.nestStructures ? "mainPage" : "", install: false, uninstall: false) {
@@ -274,7 +274,7 @@ def fillerPage() {
 }
 
 def mainPage() {
-    log.trace "mainPage"
+    //log.trace "mainPage"
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
