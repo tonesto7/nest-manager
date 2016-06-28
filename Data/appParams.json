@@ -5,7 +5,7 @@
     "versions": {
         "app": {
             "type": "rel",
-            "ver": "2.5.4"
+            "ver": "2.5.5"
         },
         "thermostat": {
             "type": "rel",
