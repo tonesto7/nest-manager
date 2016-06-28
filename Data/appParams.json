@@ -19,6 +19,10 @@
             "type": "rel",
             "ver": "0.0.1"
         },
+        "camera": {
+            "type": "rel",
+            "ver": "0.0.1"
+        },
         "presence": {
             "type": "rel",
             "ver": "2.5.0"

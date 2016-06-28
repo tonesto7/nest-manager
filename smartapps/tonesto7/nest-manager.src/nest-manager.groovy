@@ -126,6 +126,7 @@ preferences {
     //Manager Pages    
     page(name: "authPage")
     page(name: "mainPage")
+    page(name: "fillerPage")
     page(name: "deviceSelectPage")
     page(name: "reviewSetupPage")
     page(name: "changeLogPage")
@@ -247,10 +248,33 @@ def authPage() {
             }
         }
     } 
-    else { return mainPage() }
+    else { 
+        if(atomicState?.nestStructures) {
+            return mainPage() 
+        } else {
+            return fillerPage()
+        }
+    }
+}
+
+def fillerPage() {
+    log.trace "fillerPage"
+    def structs = getNestStructures()
+    return dynamicPage(name: "fillerPage", title: "Dummy Page To help android client", refreshInterval: !atomicState?.nestStructures ? 10 : null,
+            nextPage: atomicState?.nestStructures ? "mainPage" : "", install: false, uninstall: false) {
+        if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
+        section("") {
+            if(!atomicState?.nestStructures) {
+                paragraph "No Location data found yet.  This page will refresh in 10 seconds... \nThis page is here to help fix the Android Client"
+            } else {
+                return mainPage()
+            }
+        }
+    }
 }
 
 def mainPage() {
+    log.trace "mainPage"
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
@@ -267,7 +291,8 @@ def mainPage() {
             }
         }
         if(!atomicState?.isInstalled) {
-            def structs = getNestStructures()
+            //def structs = getNestStructures()
+            def structs = atomicState?.nestStructures
             def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
             LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
             if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -2414,7 +2439,10 @@ def callback() {
             httpPost(uri: tokenUrl) { resp ->
                 atomicState.tokenExpires = resp?.data.expires_in
                 atomicState.authToken = resp?.data.access_token
-                if(atomicState?.authToken) { atomicState?.tokenCreatedDt = getDtNow() }
+                if(atomicState?.authToken) { 
+                    atomicState?.tokenCreatedDt = getDtNow()
+                    atomicState?.nestStructures = getNestStructures() 
+                }
             }
 
             if (atomicState?.authToken) {
