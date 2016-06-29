@@ -255,7 +255,6 @@ def authPage() {
         }
     } 
     else { 
-        //if(!atomicState?.isInstalled) {
         if(atomicState?.isInstalled || atomicState?.nestStructures) {
             return mainPage() 
         } else {
