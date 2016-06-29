@@ -38,12 +38,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.4" }
-def appVerDate() { "6-24-2016" }
+def appVersion() { "2.5.5" }
+def appVerDate() { "6-28-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.4 (June 24th, 2016):"
+    str += "V2.5.5 (June 28th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • WORKAROUND: Created solution to workaround the Android Client install bug."
+    str += "\n • UPDATED: Added device version info to exception data that's sent to the developer."
+
+    str += "\n\nV2.5.4 (June 24th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Fixed null bug preventing child update on new installs."
     str += "\n • FIXED: Automation Naming Bug."
@@ -223,6 +228,7 @@ def authPage() {
     }
     updateWebStuff(true)
     setStateVar(true)
+    //atomicState?.nestStructures = null
 
     def description
     def oauthTokenProvided = false
@@ -242,14 +248,14 @@ def authPage() {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
             section(""){
-                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button.", state: "complete"
-                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", required: true, state: null
+                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
+                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
     } 
     else { 
-        if(atomicState?.nestStructures) {
+        if(atomicState?.isInstalled || atomicState?.nestStructures) {
             return mainPage() 
         } else {
             return fillerPage()
@@ -258,25 +264,27 @@ def authPage() {
 }
 
 def fillerPage() {
-    log.trace "fillerPage"
-    def structs = getNestStructures()
-    return dynamicPage(name: "fillerPage", title: "Dummy Page To help android client", refreshInterval: !atomicState?.nestStructures ? 10 : null,
-            nextPage: atomicState?.nestStructures ? "mainPage" : "", install: false, uninstall: false) {
-        if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
-        section("") {
-            if(!atomicState?.nestStructures) {
-                paragraph "No Location data found yet.  This page will refresh in 10 seconds... \nThis page is here to help fix the Android Client"
-            } else {
-                return mainPage()
+    //log.trace "fillerPage"
+    //atomicState?.nestStructures = getNestStructures()
+    if(!atomicState?.nestStructures) {
+        return dynamicPage(name: "fillerPage", title: "Filler Page", refreshInterval: (!atomicState?.nestStructures ? 10 : null),
+                nextPage: (atomicState?.nestStructures ? "mainPage" : ""), install: false, uninstall: false) {
+            if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
+            section("") {
+                if(!atomicState?.nestStructures) {
+                    paragraph "No Location data found yet.  This page will refresh in 10 seconds... \nThis page is here to help fix the Android Client"
+                } 
             }
         }
+    } else {
+        return authPage()
     }
 }
 
 def mainPage() {
-    log.trace "mainPage"
+    //log.trace "mainPage"
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
-    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
+    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : ""), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
@@ -362,7 +370,8 @@ def mainPage() {
 
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
-        def structs = getNestStructures()
+        if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
+        def structs = atomicState?.nestStructures
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
         if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -470,10 +479,10 @@ def prefsPage() {
         }
         section("Share Data with Developer:") {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
+            input(name: "mobileClientType", title:"Mobile Client Type (Primary)?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
+                                image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            input(name: "mobileClientType", title:"Mobile Client Type?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
-                                image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
         }
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
@@ -3278,11 +3287,12 @@ def nestInfoPage () {
         }
         section("Recent Command") {
             def cmdDesc = ""
-            cmdDesc += " • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
-            cmdDesc += "\nLast Command Details:"
+            cmdDesc += "Last Command Details:"
             cmdDesc += "\n • DateTime: (${atomicState.lastCmdSentDt ?: "Nothing found..."})"
             cmdDesc += "\n • Cmd Sent: (${atomicState.lastCmdSent ?: "Nothing found..."})"
             cmdDesc += "\n • Cmd Result: (${atomicState?.lastCmdSentStatus ?: "Nothing found..."})"
+
+            cmdDesc += "\n\n • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
             paragraph "${cmdDesc}"
         }
         section("Diagnostics") {
@@ -3563,9 +3573,9 @@ def sendExceptionData(exMsg, methodName) {
     }
 }
 
-def sendChildExceptionData(devType, exMsg, methodName) {
+def sendChildExceptionData(devType, devVer, exMsg, methodName) {
     if (optInSendExceptions) {
-        def exData = ["deviceType":devType, "methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+        def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
         def results = new groovy.json.JsonOutput().toJson(exData)
         sendAnalyticExceptionData(results, "errorData/${devType}/${methodName}.json")
     }
