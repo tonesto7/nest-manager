@@ -473,6 +473,16 @@ def getWeatherAlerts(weatData) {
                         newAlerts = true
                         state.walert = pad(alert.description) // description
                         state.walertMessage = pad(alert.message) // message
+
+                        // Try to format message some
+                        state.walertMessage = state.walertMessage.replaceAll(/\.\.\./, ' ')
+                        state.walertMessage = state.walertMessage.replaceAll(/\*/, '')
+                        state.walertMessage = state.walertMessage.replaceAll(/\n\n\n/, '\n\n')
+                        state.walertMessage = state.walertMessage.replaceAll(/\n\n\n/, '\n\n')
+                        state.walertMessage = state.walertMessage.replaceAll(/\n\n\n/, '\n\n')
+                        state.walertMessage = state.walertMessage.replaceAll(/\n\n/, '<br>')
+                        state.walertMessage = state.walertMessage.replaceAll(/\n/, ' ')
+
                         if(state?.weatherAlertNotify) {
                             sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
                         }
