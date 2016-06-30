@@ -295,6 +295,7 @@ def mainPage() {
             }
         }
         if(!atomicState?.isInstalled) {
+            atomicState?.nestStructures = getNestStructures()
             def structs = atomicState?.nestStructures ?: getNestStructures()
             def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
             LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
@@ -365,7 +366,8 @@ def mainPage() {
 
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
-        if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
+        //if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
+        atomicState?.nestStructures = getNestStructures()
         def structs = atomicState?.nestStructures ?: getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
@@ -1852,7 +1854,7 @@ def getNestStructures() {
                 struct = thisstruct
             }
             if (ok2PollDevice()) { getApiData("dev") }
-        } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true) }
+        } else { LogAction("Missing: atomicState.structData  ${atomicState?.structData}", "error", true) }
 
     } catch (ex) { 
         LogAction("getNestStructures Exception: ${ex}", "error", true)
