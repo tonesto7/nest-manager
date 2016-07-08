@@ -767,6 +767,9 @@ def forcedPoll(type = null) {
             LogAction("Forcing Update of Structure Data...", "info", true)
             getApiData("str")
         }
+        atomicState?.lastWebUpdDt = null
+        atomicState?.lastWeatherUpdDt = null
+        atomicState?.lastForecastUpdDt = null
         updateWebStuff(true)
     } else {
         LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${settings?.pollWaitVal})...", "debug", true)
