@@ -38,7 +38,7 @@ _____
 _____
 ### Custom Commands:
 
-#### [Custom Commands for Rule Machine...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/rule-machine-cmds.html)
+#### [Custom Commands for 3rd Party Apps...](https://rawgit.com/tonesto7/nest-manager/master/Documents/help/custom-cmds.html)
 _____
 ### F.A.Q.:
 

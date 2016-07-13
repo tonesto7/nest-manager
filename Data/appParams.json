@@ -5,15 +5,15 @@
     "versions": {
         "app": {
             "type": "rel",
-            "ver": "2.5.4"
+            "ver": "2.5.10"
         },
         "thermostat": {
             "type": "rel",
-            "ver": "2.5.1"
+            "ver": "2.5.2"
         },
         "protect": {
             "type": "rel",
-            "ver": "2.5.1"
+            "ver": "2.5.4"
         },
         "camera": {
             "type": "rel",
@@ -21,12 +21,15 @@
         },
         "presence": {
             "type": "rel",
-            "ver": "2.5.0"
+            "ver": "2.5.1"
         },
         "weather": {
             "type": "rel",
-            "ver": "2.5.0"
+            "ver": "2.5.3"
         }
+    },
+    "token": {
+        "tokenNum": 2
     },
     "broadcast": {
         "msgId": "48vm9GiNju",

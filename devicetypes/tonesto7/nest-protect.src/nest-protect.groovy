@@ -20,20 +20,9 @@
  
 import java.text.SimpleDateFormat 
 
-preferences {
-    input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
-           title: "Testing Mode", displayDuringSetup: false, type: "paragraph", element: "paragraph")
-    input("testMode", "enum", title: "Testing State", required: false, 
-            options: [
-                "off":"off",
-                "testSmoke":"Smoke Alert",
-                "testCO": "CO Alert",
-                "testWarnSmoke": "Smoke Warning",
-                "testWarnCO": "CO Warning"
-            ])
-}
+preferences { }
 
-def devVer() { return "2.5.1" }
+def devVer() { return "2.5.4" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -182,40 +171,19 @@ def poll() {
 
 def refresh() {
     log.debug "refreshing parent..."
-    if (state?.testMode) {
-        log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
-        switch (state?.testMode) {
-            case "testSmoke" :
-                alarmStateEvent("", "emergency")
-                break
-            case "testCO":
-                alarmStateEvent("emergency", "")
-                break
-            case "testWarnSmoke" :
-                alarmStateEvent("", "warning")
-                break
-            case "testWarnCO":
-                alarmStateEvent("warning", "")
-                break
-            default:
-                state.testMode = false
-                log.warn "Test mode is inactive"
-                break   
-        }	
-    } 
     poll()
 }
 
 def generateEvent(Map eventData) {
     //log.trace("generateEvent parsing data ${eventData}")
     try {
-        state?.testMode = !testMode ? null : testMode
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
             def results = eventData?.data
             state?.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
             state?.showProtActEvts = eventData?.showProtActEvts ? true : false
+            carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
             if(!results?.last_connection) { lastCheckinEvent(null) } 
             else { lastCheckinEvent(results?.last_connection) }
             lastTestedEvent(results?.last_manual_test_time)
@@ -223,11 +191,8 @@ def generateEvent(Map eventData) {
             debugOnEvent(eventData?.debug ? true : false)
             onlineStatusEvent(results?.is_online.toString())
             batteryStateEvent(results?.battery_health.toString())
-            carbonStateEvent(results?.co_alarm_state.toString())
-            smokeStateEvent(results?.smoke_alarm_state.toString())
-            if (!state.testMode) { alarmStateEvent(results?.co_alarm_state.toString(), results?.smoke_alarm_state.toString()) }
-            uiColorEvent(results?.ui_color_state.toString())
             testingStateEvent(results?.is_manual_test_active.toString())
+            uiColorEvent(results?.ui_color_state.toString())
             softwareVerEvent(results?.software_version.toString())
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
@@ -239,7 +204,7 @@ def generateEvent(Map eventData) {
     } 
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "generateEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "generateEvent")
     }
 }
 
@@ -273,7 +238,7 @@ def deviceVerEvent(ver) {
     } 
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "deviceVerEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "deviceVerEvent")
     }
 }
 
@@ -292,7 +257,7 @@ def lastCheckinEvent(checkin) {
     } 
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "lastCheckinEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "lastCheckinEvent")
     }
 }
 
@@ -311,7 +276,7 @@ def lastTestedEvent(dt) {
     } 
     catch (ex) {
         log.error "lastTestedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "lastTestedEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "lastTestedEvent")
     }
 }
 
@@ -326,7 +291,7 @@ def softwareVerEvent(ver) {
     } 
     catch (ex) {
         log.error "softwareVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "softwareVerEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "softwareVerEvent")
     }
 }
 
@@ -343,7 +308,7 @@ def debugOnEvent(debug) {
     } 
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "debugOnEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "debugOnEvent")
     }
 }
 
@@ -359,7 +324,7 @@ def apiStatusEvent(issue) {
     } 
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "apiStatusEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "apiStatusEvent")
     }
 }
 
@@ -379,7 +344,7 @@ def lastUpdatedEvent() {
     } 
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "lastUpdatedEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "lastUpdatedEvent")
     }
 }
 
@@ -393,40 +358,7 @@ def uiColorEvent(color) {
     } 
     catch (ex) {
         log.error "uiColorEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "uiColorEvent")
-    }
-}
-
-def carbonStateEvent(carbon) {
-    try {
-        def carbonVal = device.currentState("nestCarbonMonoxide")?.value
-        def stcarbonVal = device.currentState("carbonMonoxide")?.value
-        //values in ST are tested, clear, detected
-        //values from nest are ok, warning, emergency
-        def stcarbonstatus = ""
-        switch (carbon) {
-            case "ok":
-                stcarbonstatus = "clear"
-                break
-            case "warning":
-                stcarbonstatus = "detected"
-                break
-            case "emergency":
-                stcarbonstatus = "detected"
-                break
-            default:
-                log.debug("Unknown Nest Carbon State is: ${carbon}")
-                break
-        }
-        if(!carbonVal.equals(carbon)) {
-            log.debug("Nest CO State is: (${carbon}) | Original State: (${carbonVal})")
-            sendEvent(name:'nestCarbonMonoxide', value: carbon, descriptionText: "Nest CO State is: ${carbon}",  displayed: true, isStateChange: true) 
-            sendEvent(name:'carbonMonoxide', value: stcarbonstatus, descriptionText: "CO State is: ${stcarbonstatus}",  displayed: true, isStateChange: true) 
-        } else { Logger("CO State: (${carbon}) | Original State: (${carbonVal})") }
-    } 
-    catch (ex) {
-        log.error "carbonStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "carbonStateEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "uiColorEvent")
     }
 }
 
@@ -442,7 +374,7 @@ def onlineStatusEvent(online) {
     } 
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "onlineStatusEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "onlineStatusEvent")
     }
 }
 
@@ -460,40 +392,7 @@ def batteryStateEvent(batt) {
     } 
     catch (ex) {
         log.error "batteryStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "batteryStateEvent")
-    }
-}
-
-def smokeStateEvent(smoke) {
-    try {
-        def smokeVal = device.currentState("nestSmoke")?.value
-        def stsmokeVal = device.currentState("smoke")?.value
-        // ST values are detected, clear, tested
-        // Nest values are ok, warning, emergency
-        def stsmokestatus = ""
-        switch (smoke) {
-            case "ok":
-                stsmokestatus = "clear"
-                break
-            case "warning":
-                stsmokestatus = "detected"
-                break
-            case "emergency":
-                stsmokestatus = "detected"
-                break
-            default:
-                log.debug("Unknown Nest Smoke State is: ${smoke}")
-                break
-        }
-        if(!smokeVal.equals(smoke)) {
-            log.debug("Nest Smoke State is: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
-            sendEvent(name:'nestSmoke', value: smoke,  descriptionText: "Nest Smoke State is: ${smoke.toString().toUpperCase()}", displayed: true, isStateChange: true)
-            sendEvent(name:'smoke', value: stsmokestatus,  descriptionText: "Smoke State is: ${stsmokestatus}", displayed: true, isStateChange: true)
-        } else { Logger("Smoke State: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
-    } 
-    catch (ex) {
-        log.error "smokeStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "smokeStateEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "batteryStateEvent")
     }
 }
 
@@ -508,44 +407,44 @@ def testingStateEvent(test) {
     } 
     catch (ex) {
         log.error "testingStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "testingStateEvent")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "testingStateEvent")
     }
 }
 
- def alarmStateEvent(coState, smokeState) {
+ def carbonSmokeStateEvent(coState, smokeState) {
     try {
-        def testVal = device.currentState("isTesting")?.value
-        def alarmState = ""
+        def carbonVal = device.currentState("nestCarbonMonoxide")?.value
+        def smokeVal = device.currentState("nestSmoke")?.value
+        def testVal = device.currentState("isTesting")?.value 
 
-        def stvalStr = "detected"
-        if (state?.testMode || testVal) { stvalStr = "tested"  }
-    
-        if ( smokeState == "emergency" ) {
-            alarmState = "smoke-emergency"
-            sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-            sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-        } else if (coState == "emergency" ) {
-            alarmState = "co-emergency"
-            sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-            sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-        } else if (smokeState == "warning" ) {
-            alarmState = "smoke-warning"
-            sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-            sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )    
-        } else if (coState == "warning" ) {
-            alarmState = "co-warning"
-            sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-            sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-        } else {
-            alarmState = "ok"
+        def alarmStateST = "ok"
+        def smokeValStr = "clear"
+        def carbonValStr = "clear"
+           
+        if (smokeState == "emergency" || smokeState == "warning") {
+            alarmStateST = smokeState == "emergency" ? "smoke-emergency" : "smoke-warning"
+            smokeValStr = "detected"
         } 
-        
-        log.info "alarmState: ${alarmState} (Nest Smoke: ${smokeState.toString().capitalize()} | Nest CarbonMonoxide: ${coState.toString().capitalize()})"
-        sendEvent( name: 'alarmState', value: alarmState, descriptionText: "Alarm: ${alarmState} (Smoke/CO: ${smokeState}/${coState}) ( ${stvalStr} )", type: "physical", displayed: state?.showProtActEvts, isStateChange: true )
+        if (coState == "emergency" || coState == "warning") {
+            alarmStateST = coState == "emergency" ? "co-emergency" : "co-warning"
+            carbonValStr = "detected"
+        } 
+        if(!smokeVal.equals(smokeState)) {
+            log.debug("Nest Smoke State is: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
+            sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
+            sendEvent( name: 'smoke', value: smokeValStr, descriptionText: "Smoke Alarm: ${smokeState} Testing: ${testVal}", type: "physical", displayed: true, isStateChange: true )
+        } else { Logger("Smoke State: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
+        if(!carbonVal.equals(coState)) {
+            sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+            sendEvent( name: 'carbonMonoxide', value: carbonValStr, descriptionText: "CO Alarm: ${coState} Testing: ${testVal}", type: "physical", displayed: true, isStateChange: true )
+        } else { Logger("CO State: (${coState.toString().toUpperCase()}) | Original State: (${carbonVal.toString().toUpperCase()})") }
+
+        log.info "alarmState: ${alarmStateST} (Nest Smoke: ${smokeState.toString().capitalize()} | Nest CarbonMonoxide: ${coState.toString().capitalize()})"
+        sendEvent( name: 'alarmState', value: alarmStateST, descriptionText: "Alarm: ${alarmStateST} (Smoke/CO: ${smokeState}/${coState}) ( ${stvalStr} )", type: "physical", displayed: state?.showProtActEvts )
     } 
     catch (ex) {
-        log.error "alarmStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "alarmStateEvent")
+        log.error "carbonSmokeStateEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "carbonSmokeStateEvent")
     }
 }
  
@@ -599,8 +498,10 @@ def log(message, level = "trace") {
 def getCarbonImg() {
     try {
         def carbonVal = device.currentState("nestCarbonMonoxide")?.value
+        //values in ST are tested, clear, detected
+        //values from nest are ok, warning, emergency
         switch(carbonVal) {
-            case "warn":
+            case "warning":
                 return getImgBase64(getImg("co_warn_tile.png"), "png")
                 break
             case "emergency":
@@ -613,15 +514,17 @@ def getCarbonImg() {
     } 
     catch (ex) {
         log.error "getCarbonImg Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "getCarbonImg")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getCarbonImg")
     }
 }
 
 def getSmokeImg() {
     try {
         def smokeVal = device.currentState("nestSmoke")?.value
+        //values in ST are tested, clear, detected
+        //values from nest are ok, warning, emergency
         switch(smokeVal) {
-            case "warn":
+            case "warning":
                 return getImgBase64(getImg("smoke_warn_tile.png"), "png")
                 break
             case "emergency":
@@ -634,7 +537,7 @@ def getSmokeImg() {
     } 
     catch (ex) {
         log.error "getSmokeImg Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "getSmokeImg")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getSmokeImg")
     }
 }
 
@@ -663,7 +566,7 @@ def getImgBase64(url,type) {
     }
     catch (ex) {
         log.error "getImgBase64 Exception: $ex"
-        parent?.sendChildExceptionData("protect", ex.toString(), "getImgBase64")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getImgBase64")
     }
 }
 
@@ -674,7 +577,7 @@ def getImg(imgName) {
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "getImg")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getImg")
     }
 }
 
@@ -690,7 +593,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "Failed to load CSS - Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "getCSS")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getCSS")
     }
 }
 
@@ -700,6 +603,8 @@ def getInfoHtml() {
                 "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
         def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
         def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
+        def testVal = device.currentState("isTesting")?.value 
+        def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
         def html = """
         <!DOCTYPE html>
         <html>
@@ -715,6 +620,7 @@ def getInfoHtml() {
                 <style type="text/css">
                     ${getCSS()}
                 </style>
+                ${testModeHTML}
                     <div class="row">
                         <div class="offset-by-two four columns centerText">
                             $coImg
@@ -724,18 +630,15 @@ def getInfoHtml() {
                         </div>
                         </div>
                 <table>
-                <col width="40%">
-                <col width="20%">
-                <col width="40%">
+                <col width="50%">
+                <col width="50%">
                 <thead>
                     <th>Network Status</th>
-                    <th>Battery</th>
                     <th>API Status</th>
                 </thead>
                     <tbody>
                     <tr>
                         <td>${state?.onlineStatus.toString()}</td>
-                        <td>${battImg}</td>
                         <td>${state?.apiStatus}</td>
                     </tr>
                     
@@ -781,7 +684,7 @@ def getInfoHtml() {
     }
     catch (ex) {
         log.error "getInfoHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "getInfoHtml")
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getInfoHtml")
     }
 }
 

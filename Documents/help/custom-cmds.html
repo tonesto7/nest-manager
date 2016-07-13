@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>help-page</title>
+<title>custom-cmds</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style type="text/css">
 /* GitHub stylesheet for MarkdownPad (http://markdownpad.com) */
@@ -291,37 +291,81 @@ img {
 </style>
 </head>
 <body>
-<h1><img src="https://github.com/tonesto7/nest-manager/raw/master/Images/App/help_icon.png" width="48" height="48"> Nest Manager Help Page</h1>
-<hr />
-<h3>Getting Up and Running</h3>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/getting-started.html">Getting Started...</a></h4>
-<hr />
-<h3><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png" width="32" height="32"> Troubleshooting:</h3>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/diagnostics.html">Smart-App Diagnostics...</a></h4>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/logging.html">Smart-App and Device Logging...</a></h4>
-<hr />
-<h3><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png" width="32" height="32"> Push Notifications:</h3>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/notifications.html">App &amp; Push Notifications</a></h4>
-<hr />
-<h3><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png" width="32" height="32"> Device Preferences:</h3>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/polling-timing.html">Device Polling &amp; Timing...</a></h4>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/device-preferences.html">Device Customization Options...</a></h4>
-<hr />
-<h3>Automations:</h3>
-<h4><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/remote_sensor_icon.png" width="32" height="32"> <a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/automations/renote-sensors.html">Remote Temp Sensors</a></h4>
-<h4><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/external_temp_icon.png" width="32" height="32"> <a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/automations/external-temps.html">External Temp Sensors</a></h4>
-<h4><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/open_window.png" width="32" height="32"> <a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/automations/contact-sensors.html">Contact Sensors</a></h4>
-<h4><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/mode_automation_icon.png" width="32" height="32"> <a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/automations/nest-modes.html">Nest Mode Automations</a></h4>
-<h4><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/mode_setpoints_icon.png" width="32" height="32"> <a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/automations/setpoint-modes.html">Thermostat Setpoint Automations</a></h4>
-<hr />
-<h3>Sending Nest Commands:</h3>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html">Nest Commands Details...</a></h4>
-<hr />
-<h3>Custom Commands:</h3>
-<h4><a href="https://rawgit.com/tonesto7/nest-manager/master/Documents/help/custom-cmds.html">Custom Commands for 3rd Party Apps...</a></h4>
-<hr />
-<h3>F.A.Q.:</h3>
-<h4><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nm-faq.html">Frequent Questions...</a></h4>
+<h2>3rd Party Custom Commands</h2>
+<h3>Nest Thermostat</h3>
+<table>
+<thead>
+<tr>
+	<th align="center"><strong>Command</strong></th>
+	<th align="center"><strong>Accepted Values</strong></th>
+	<th align="center"><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+	<td align="center">away()</td>
+	<td align="center">none</td>
+	<td align="center">Sets the Nest Location Away</td>
+</tr>
+<tr>
+	<td align="center">present()</td>
+	<td align="center">none</td>
+	<td align="center">Sets the Nest Location Home</td>
+</tr>
+<tr>
+	<td align="center">setPresence()</td>
+	<td align="center">none</td>
+	<td align="center">Cycles between Present/Away</td>
+</tr>
+<tr>
+	<td align="center">changeMode()</td>
+	<td align="center">none</td>
+	<td align="center">Cycles to next available mode</td>
+</tr>
+<tr>
+	<td align="center">setThermostatMode(string)</td>
+	<td align="center">&quot;auto&quot;, &quot;cool&quot;, &quot;heat&quot;, &quot;off&quot;, &quot;emergency heat&quot;</td>
+	<td align="center">Changes Thermostat mode</td>
+</tr>
+<tr>
+	<td align="center">heatingSetpointUp()</td>
+	<td align="center">none</td>
+	<td align="center">Increases heat setpoint temp 1 degree</td>
+</tr>
+<tr>
+	<td align="center">heatingSetpointDown()</td>
+	<td align="center">none</td>
+	<td align="center">Decreases heat setpoint temp 1 degree</td>
+</tr>
+<tr>
+	<td align="center">coolingSetpointUp()</td>
+	<td align="center">none</td>
+	<td align="center">Increases cool setpoint temp 1 degree</td>
+</tr>
+<tr>
+	<td align="center">coolingSetpointDown()</td>
+	<td align="center">none</td>
+	<td align="center">Decreases cool setpoint temp 1 degree</td>
+</tr>
+</tbody>
+</table>
+<h3>Nest Presence</h3>
+<table>
+<thead>
+<tr>
+	<th align="center"><strong>Command</strong></th>
+	<th align="center"><strong>Values</strong></th>
+	<th align="center"><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+	<td align="center">setPresence()</td>
+	<td align="center">none</td>
+	<td align="center">Cycles between Present/Away</td>
+</tr>
+</tbody>
+</table>
 
 </body>
 </html>

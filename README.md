@@ -28,21 +28,21 @@ This is a Child-SmartApp that allows you to creat different types of automations
 * @scpickle
 
 ## Version Info
-__Latest App Version:__ |
------------ | -----------
-Nest Manager | __*v2.5.0*__
+__SmartApp:__ | __Version:__ |
+:--- | :---: |
+Nest Manager | *v2.5.4* |
 
-__Latest Device Versions:__ |
------------ | -----------
-Nest Presence Device | __*v2.5.0*__
-Nest Protect Device | __*v2.5.0*__
-Nest Thermostat Device | __*v2.5.0*__
-Nest Weather Device | __*v2.5.0*__
+__Device:__ | Version: |
+:--- | :---: |
+Nest Presence Device | *v2.5.0* |
+Nest Protect Device | *v2.5.2* |
+Nest Thermostat Device | *v2.5.1* |
+Nest Weather Device | *v2.5.0* |
 
 ## What's New
 ***Manager App:***
 
- * **NEW**: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
+ * **NEW**: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady624
  * **NEW**: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.
  * **NEW**: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.
  * **ADDED**: Ability to Disable each automations individually.
@@ -94,21 +94,26 @@ Nest Weather Device | __*v2.5.0*__
  * The devices look great :smile:
 
 ## 3rd-Party SmartApp Compatibility (Confirmed)
----------- | ----------
- [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) | @Mike_Maxwell 
- [SmartTiles](http://smarttiles.click/) | @625alex 
- [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204) | @bravenel 
- [CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7)  | @ady264
- Keep Me Cozy (I & II) (link) | 
- Routines | @smartthings
 
+SmartApp | Author |
+:--- | :--- |
+[Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) | @Mike_Maxwell |
+[SmartTiles](http://smarttiles.click/) | @625alex |
+[CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7) | @ady624 |
+[Ask Alexa](https://community.smartthings.com/t/release-ask-alexa) | @MichaelS |
+Rule Machine (No Longer Available) | @bravenel |
+ 
  
 ## New Installations
+Thanks @MichaelS for letting me borrow from your Ask Alexa Install Instructions...
 
 ### Method 1: Using Git Integration (Recommended) 
-_Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices._
+
+_Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Manager App, Presence, Protect, Thermostat, and Weather devices._
 
 If you don't already have Git Integration setup please visit __*[GitHub Integration Instructions](http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html)*__
+
+**Git Integration is not currently available outside of US**
 
 For advanced users who have their SmartThings IDE integrated with GitHub, the installation and maintaining of code becomes very simple. This manual will not go into detail about setting up your IDE with GitHub; those instructions can be found on the SmartThings web site [[http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html?highlight=git]]
 
@@ -127,8 +132,8 @@ For advanced users who have their SmartThings IDE integrated with GitHub, the in
 ![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/GithubIntegration.png)
 
 * Close the GitHub Repository Integration page
-*Next, click the **Update from Repo** button at the upper-right corner of the IDE
-*On the right-hand column, scroll down to click the apps you want to install. This will typically be:
+* Next, click the **Update from Repo** button at the upper-right corner of the IDE
+* On the right-hand column, scroll down to click the apps you want to install. This will typically be:
 
     `**SmartApp**: smartapps/tonesto7/nest-manager.src/nest-manager.groovy`
     
@@ -140,9 +145,8 @@ For advanced users who have their SmartThings IDE integrated with GitHub, the in
  
  * Go to "**My Device Handlers**" in the IDE
  * Under My Device Handlers Click on ***Update from Repo*** and select ***nest-manager*** from the drop-down
- * Check the box next to ***nest-presence***, ***nest-protect***, ***nest-thermostat***, and ***nest-weather*** then click **Execute Update**
- * Click on each device link and select "**Publish** and **For Me**
- 
+ * Check the box next to ***nest-presence***, ***nest-protect***, ***nest-thermostat***, and ***nest-weather*** then check the **Publish** box and click **Execute Update**
+  
 That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps*** under the mobile app.
 
 When updates are available to the source code you will see the Link color change from black in the IDE.
@@ -226,14 +230,6 @@ Performing updates using Git Integration is the fastest method of updating.
 Just follow the same methods as the install by clicking on update from repo.
 
 If you don't have Git Integration you will just need to copy/paste the code from the source links above over each app/device and press **Save** the **Publish** for me. 
-
-Just Remember to perform the following before upgrading any existing code using the methods above: 
-
-* Remove any existing configured Nest Automations.
-* Delete the Old Nest Automation app from the IDE.  
-* Update Nest Manager code to latest version
-* Update all Device Handler code to latest version
-* Open the Manager App and complete the setup review and press done.
 
 -----
 ## Setting up Nest Manager App
