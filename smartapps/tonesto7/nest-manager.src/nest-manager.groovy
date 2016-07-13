@@ -35,17 +35,12 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.10" }
-def appVerDate() { "7-12-2016" }
+def appVersion() { "2.5.9" }
+def appVerDate() { "7-11-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.10 (July 12th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • FIXED: Bug in remote sensor fan logic."
-    str += "\n • FIXED: Automation Name did not change After it was Disabled."
-
-    str += "\n\nV2.5.9 (July 11th, 2016):"
+    str += "V2.5.9 (July 11th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Minor update to remote sensor fan logic and now there debug info is much easier to understand."
     str += "\n • UPDATED: Minor Tweaks to remote sensor temp logic debug logs so it's a little easier to understand."
@@ -3675,6 +3670,9 @@ def selectAutoPage() {
             section("Turn Thermostat On/Off when a Door/Window is Opened:") {
                 href "mainAutoPage", title: "Contact Sensors...", description: "", params: [autoType: "conWat"], image: getAppImg("open_window.png")
             }
+           section("Turn Thermostat Off if a leak is detected:") {
+                href "mainAutoPage", title: "Leak Sensors...", description: "", params: [autoType: "leakWat"], image: getAppImg("open_window.png")
+            }
             section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                 href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
             }
@@ -3699,6 +3697,7 @@ def mainAutoPage(params) {
     if (autoType == "remSen" && !isRemSenConfigured()) { return remSensorPage() }
     else if (autoType == "extTmp" && !isExtTmpConfigured()) { return extTempPage() }
     else if (autoType == "conWat" && !isConWatConfigured()) { return contactWatchPage() }
+    else if (autoType == "leakWat" && !isConWatConfigured()) { return leakWatchPage() }
     else if (autoType == "nMode" && !isNestModesConfigured()) { return nestModePresPage() }
     else if (autoType == "tMode" && !isTstatModesConfigured()) { return tstatModePage() }
     
@@ -3791,6 +3790,28 @@ def mainAutoPage(params) {
                 } 
             } 
 
+		if(autoType == "leakWat" && !disableAutomation) { 
+                section("Turn Thermostat Off if a leak is detected:") {
+                    def leakDesc = ""
+                    leakDesc += leakWatTstat ? "${leakWatTstat?.label}\n • Temp: (${getDeviceTemp(leakWatTstat)}°${atomicState?.tempUnit})" : ""
+                    leakDesc += leakWatTstat ? "\n • Mode: (${leakWatTstat?.currentThermostatOperatingState.toString()}/${leakWatTstat?.currentThermostatMode.toString()})" : ""
+                    leakDesc += (leakWatSensors && leakWatTstat && leakWatContactDesc()) ? "\n\n${leakWatSensorDesc()}" : ""
+                    leakDesc += (leakWatSensors && leakWatTstat) ? "\n\nTrigger Status:" : ""
+                    leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
+                    leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
+                    leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
+                    leakDesc += leakWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
+                    leakDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
+                    leakDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
+                            "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
+                    leakDesc += (leakWatContacts && leakWatTstat) ? "\n\nTap to Modify..." : ""
+                    def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
+                    href "leakWatchPage", title: "Leak Sensors Config...", description: leakWatDesc ?: "Tap to Configure...", state: (leakWatDesc ? "complete" : null), image: getAppImg("open_window.png")
+                } 
+            } 
+
+
             if(autoType == "nMode" && !disableAutomation) {
                 section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                     def nDesc = ""
@@ -3866,7 +3887,6 @@ def initAutoApp() {
 
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
-    def appLbl = app?.label?.toString()
     def newName = appName() == "Nest Manager" ? "Nest Automations" : "${appName()}"
     def typeLabel = ""
     def newLbl
@@ -3874,11 +3894,12 @@ def getAutoTypeLabel() {
     if (type == "remSen")       { typeLabel = "${newName} (RemoteSensor)" }
     else if (type == "extTmp")  { typeLabel = "${newName} (ExternalTemp)" }
     else if (type == "conWat")  { typeLabel = "${newName} (Contact)" }
+    else if (type == "leakWat")  { typeLabel = "${newName} (Leak)" }
     else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
     else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
     
-    if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
-        newLbl = appLbl
+    if(app?.label?.toString() != typeLabel && app?.label?.toString() != "Nest Manager") {
+        newLbl = app?.label?.toString()
     } else {
         newLbl = typeLabel
     } 
@@ -4631,7 +4652,7 @@ def getRemSenFanRunOk(operState, fanState) {
     if (!ruleTypeOk) {
         LogAction("Remote Sensor Fan Run: The Selected Rule-Type is not valid... Skipping... | RuleType: ${remSenRuleType}", "info", true) 
     }
-    if(!fanAlreadyOn && !timeSinceLastRunOk) { 
+    if(!fanAlreadyOn && !timeSince) { 
         LogAction("Remote Sensor Fan Run: Required Conditions to Run Fan are not met!!! | The Time Since Last Run (${getLastRemSenFanRunDtSec()} Seconds) is not greater than Required value (${waitTimeVal} seconds)", "info", true) 
     }
     
@@ -5278,6 +5299,266 @@ def conWatContactEvt(evt) {
             }
         } else {
             LogAction("conWatContactEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
+        }
+    }
+}
+
+/******************************************************************************  
+|                			WATCH FOR LEAKS AUTOMATION CODE	                  |
+*******************************************************************************/
+def leakWatPrefix() { return "leakWat" }
+
+def leakWatchPage() {
+    def pName = leakWatPrefix()
+    dynamicPage(name: "leakWatchPage", title: "Thermostat/Leak Automation", uninstall: false, nextPage: "mainAutoPage") {
+     
+     def dupTstat = checkThermostatDupe(leakWatTstat, leakWatTstatMir)
+        section("When Leak is Detected, Turn Off this Thermostat") {
+            def req = (leakWatSensor || leakWatTstat) ? true : false
+            input name: "leakWatSensor", type: "capability.waterSensor", title: "Which Leak Sensor(s)?", multiple: true, submitOnChange: true, required: req,
+                    image: getAppImg("contact_icon.png")
+            if(leakWatSensors) {
+                paragraph "${leakWatSensorDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
+            }
+            input name: "leakWatTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
+                    image: getAppImg("thermostat_icon.png")
+            if (leakWatTstat) {
+                getTstatCapabilities(leakWatTstat, leakWatPrefix())
+                def str = ""
+                str += leakWatTstat ? "Current Status:" : ""
+                str += leakWatTstat ? "\n• Temp: ${leakWatTstat?.currentTemperature}°${atomicState?.tempUnit}" : ""
+                str += leakWatTstat ? "\n• Mode: ${leakWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${leakWatTstat?.currentThermostatMode.toString().capitalize()}" : ""
+                paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+            }
+            if(dupTstat) {
+                paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
+            }
+            if(leakWatTstat) {
+                input name: "leakWatTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+                        image: getAppImg("thermostat_icon.png")
+            }
+        }
+        if(leakWatSensors && leakWatTstat) {
+            section("Delay Values:") {
+                input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode on Dry?", description: "", required: false, defaultValue: false, submitOnChange: true,
+                        image: getAppImg("restore_icon.png")
+                if(leakWatRestoreOnDry) {
+                    if(atomicState?."${leakWatPrefix()}TstatCanCool" && atomicState?."${leakWatPrefix()}TstatCanHeat") {
+                        input name: "leakWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode if Already Off?", description: "", required: false, defaultValue: false, submitOnChange: true,
+                                image: getAppImg("restore_icon.png")
+                    }
+                    input name: "leakWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
+                }
+            }
+            section(getDmtSectionDesc(conWatPrefix())) {
+                def pageDesc = getDayModeTimeDesc(pName)
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null), 
+                        image: getAppImg("cal_filter_icon.png")
+            }
+            section("Notifications:") {
+                href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true], 
+                        state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
+                if(settings?."${pName}AllowSpeechNotif") {
+                    input name: "leakWatSpeechOnRestore", type: "bool", title: "Speak on Mode Restoration?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                }
+            }
+        }
+        section("Help:") {
+            href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
+        }
+    }
+}
+
+def leakWatSensorDesc() {
+    if(leakWatSensors) {
+        def cCnt = leakWatSensors?.size() ?: 0
+        def str = ""
+        def cnt = 0
+        str += "Leak Sensors:"
+        leakWatSensors?.each { dev ->
+            cnt = cnt+1
+            str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${dev?.waterSensor?.toString().capitalize()})"
+        }
+        return str
+    }
+    return null
+}
+
+def isLeakWatConfigured() {
+    return (leakWatSensors && leakWatTstat && leakWatOffDelay) ? true : false
+}
+
+//Not Done
+def getLeakWatSensorsOk() { log.debug "here"
+return leakWatSensors?.currentState("contact")?.value.contains("wet") ? false : true }
+
+def leakWatContactOk() { return (!leakWatSensors && !leakWatTstat) ? false : true }
+def leakWatScheduleOk() { return autoScheduleOk(leakWatPrefix()) }
+def getLeakWatOffDelayVal() { return !leakWatOffDelay ? 300 : (leakWatOffDelay.toInteger()) }
+def getLeakWatOnDelayVal() { return !leakWatOnDelay ? 300 : (leakWatOnDelay.toInteger()) }
+def getLeakWatWetDtSec() { return !atomicState?.leakWatWetDt ? 100000 : GetTimeDiffSeconds(atomicState?.leakWatWetDt).toInteger() }
+def getLeakWatDryDtSec() { return !atomicState?.leakWatDryDt ? 100000 : GetTimeDiffSeconds(atomicState?.leakWatDryDt).toInteger() }
+
+
+
+//TODO
+def leakWatCheck() {
+    //log.trace "leakWatCheck..."
+    try {
+        if (disableAutomation) { return }
+        else {
+            def curMode = leakWatTstat?.currentState("thermostatMode")?.value.toString()
+            def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
+            def modeOff = (curMode == "off") ? true : false
+            def wetCtDesc = getOpenContacts(leakWatSensors) ? " '${getOpenContacts(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
+            def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
+            def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+            def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+            def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+            //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
+            //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
+            //start -- 
+            if(getLeakWatSensorsOk()) {
+                if(okToRestore) {
+                    if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5)) {
+                        def lastMode = null
+                        if(leakWatRestoreOnClose) {
+                            if(!atomicState?.leakWatRestoreMode) {
+                                if(leakWatRestoreAutoMode) {
+                                    lastMode = "auto"
+                                    LogAction("leakWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
+                                }
+                            } else {
+                                lastMode = atomicState?.leakWatRestoreMode
+                            }
+                        }
+                        if(lastMode != curMode) {
+                            if(setTstatMode(leakWatTstat, lastMode)) {
+                                atomicState.leakWatTstatTurnedOff = false
+                                atomicState?.leakWatTstatOffRequested = false
+                                if(leakWatTstatMir) { 
+                                    leakWatTstatMir?.each { tstat ->
+                                        if(setTstatMode(tstat, lastMode)) {
+                                            LogAction("Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
+                                        }
+                                    }
+                                }
+                                if(canSchedule()) { runIn(20, "leakWatFollowupCheck", [overwrite: true]) }
+                                LogAction("Restoring '${leakWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "info", true)
+                                if(allowNotif) {
+                                    sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "Info", 
+                                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                                    if(allowSpeech && speakOnRestore) {
+                                        def msg = "Restoring ${leakWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL contacts have been Closed again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})"
+                                        sendTTS(msg)
+                                    }
+                                }
+                            } else { 
+                                LogAction("leakWatCheck() | There was problem restoring the last mode to '...", "error", true) 
+                            }
+                        } else {
+                            LogAction("leakWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
+                        }
+                    }
+                } 
+            }
+            
+            
+         //Above is done -- below is not
+         // need to create methof for getOpenContacts
+          /*
+          if (!getLeakWatSensorsOk()) {
+                if(!modeOff) {
+                    if(getConWatOpenDtSec() >= (getleakWatOffDelayVal() - 2)) {
+                        if(leakWatRestoreOnDry) { 
+                            atomicState?.leakWatRestoreMode = curMode
+                            LogAction("Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
+                        }
+                        log.debug("${wetCtDesc} ${getOpenContacts(leakWatSensors).size() > 1 ? "are" : "is"} still Wet: Turning 'OFF' '${leakWatTstat?.label}'")
+                        atomicState?.leakWatTstatTurnedOff = true
+                        atomicState?.leakWatTstatOffRequested = true
+                        leakWatTstat?.off()
+                        if(leakWatTstatMir) { 
+                            leakWatTstatMir?.each { tstat ->
+                                tstat?.off()
+                                log.debug("Mirrored Off Command to ${tstat}")
+                            }
+                        }
+                        if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                        LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has been Wet for (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})...", "warning", true)
+                        if(allowNotif) {
+                            sendNofificationMsg("'${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has been Wet for (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})...", "Info", 
+                                settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                            if(allowNotif && allowSpeech) {
+                                def msg = "${leakWatTstat} has been turned OFF because${wetCtDesc}has been Wet for (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})"
+                                sendTTS(msg)
+                            }
+                        }
+                    }
+                } else { LogAction("leakWatCheck() | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true) }
+            }
+        */
+        }
+        
+    } catch (ex) {
+        LogAction("leakWatCheck Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "leakWatCheck")
+    }
+}
+
+def leakWatFollowupCheck() {
+    //log.trace "conWatFollowupCheck..."
+    def curMode = leakWatTstat?.currentThermostatMode.toString()
+    def modeOff = (curMode == "off") ? true : false
+    def leakWatTstatReqOff = atomicState?.leakWatTstatOffRequested ? true : false
+    if (modeOff != leakWatTstatReqOff) { leakWatCheck() }
+}
+
+def leakWatTstatModeEvt(evt) {
+    LogAction("LeakWatch Thermostat Mode Event | '${evt?.displayName}' Mode is now (${evt?.value.toString().toUpperCase()})", "trace", false)
+    if (disableAutomation) { return }
+    else { 
+        def modeOff = (evt?.value == "off") ? true : false
+        //if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
+    }
+}
+
+def leakWatContactEvt(evt) {
+    LogAction("LeakWatch Contact Event | '${evt?.displayName}' is now (${evt?.value.toString().toUpperCase()})", "trace", false)
+    if (disableAutomation) { return }
+    else {
+        def pName = leakWatPrefix()
+        def curMode = leakWatTstat?.currentThermostatMode.toString()
+        def isModeOff = (curMode == "off") ? true : false
+        def leakWet = (evt?.value == "wet") ? true : false
+        //is this used??
+        def contactsOk = getLeakWatSensorsOk()
+        
+        def canSched = false
+        def timeVal
+        if (leakWatScheduleOk()) {
+            if (leakWet) {
+                atomicState?.leakWatWetDt = getDtNow()
+                timeVal = ["valNum":getLeakWatOffDelayVal(), "valLabel":getEnumValue(longTimeSecEnum(), getLeakWatOffDelayVal())]
+                canSched = true
+            }
+            else if (!leakWet && getLeakWatSensorsOk()) {
+                if(isModeOff) {
+                    atomicState.leakWatDryDt = getDtNow()
+                    timeVal = ["valNum":getLeakWatOnDelayVal(), "valLabel":getEnumValue(longTimeSecEnum(), getLeakWatOnDelayVal())]
+                    canSched = true
+                }
+            }
+            if(canSched) {
+                LogAction("leakWatSensorEvt: ${!evt ? "A monitored Leak Sensor is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Leak Check scheduled for (${timeVal?.valLabel})...", "info", true)
+                runIn(timeVal?.valNum, "leakWatCheck", [overwrite: true]) 
+            } else {
+                unschedule("leakWatCheck")
+                LogAction("conWatContactEvt: Skipping Event... Any existing schedules have been cancelled...", "info", true)
+            }
+        } else {
+            LogAction("leakWatContactEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
         }
     }
 }
