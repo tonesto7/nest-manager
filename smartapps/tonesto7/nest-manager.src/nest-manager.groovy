@@ -35,8 +35,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.10" }
-def appVerDate() { "7-12-2016" }
+def appVersion() { "2.5.11" }
+def appVerDate() { "7-14-2016" }
 def appVerInfo() {
     def str = ""
 
@@ -4153,10 +4153,10 @@ def remSensorPage() {
                     }
                     section ("Optional Settings:") {
                         paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
-                        input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${atomicState?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                        input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         if(remSenRuleType != "Circ") {
                             paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
-                            input "remSenTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                            input "remSenTstatTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 5.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         }
                     }
                     section("Rule Evaluation Options:") {
@@ -4280,14 +4280,14 @@ def remSenTempSenEvt(evt) {
 
 def remSenTstatTempEvt(evt) {
     log.trace "RemoteSensor Event | Thermostat Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${atomicState?.tempUnit})"
-    //if(disableAutomation) { return }
-    //else { remSenEvtEval() }
+    if(disableAutomation) { return }
+    else { remSenEvtEval() }
 }
 
 def remSenTstatModeEvt(evt) {
     log.trace "RemoteSensor Event | Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()})"
     if(disableAutomation) { return }
-    //else { remSenEvtEval() }
+    else { remSenEvtEval() }
 }
 
 def remSenTstatFanSwitchEvt(evt) {
@@ -4407,8 +4407,8 @@ def remSenSwitchEvt(evt) {
 
 def remSenModeEvt(evt) {
     log.trace "RemoteSensor Event | ST Mode is (${evt?.value.toString().toUpperCase()})"
-    //if(disableAutomation) { return }
-    //else { remSenEvtEval() }
+    if(disableAutomation) { return }
+    else { remSenEvtEval() }
 }
 
 def coolingSetpointHandler(evt) { log.debug "coolingSetpointHandler()" }
@@ -4509,27 +4509,30 @@ def getLastRemSenFanRunDtSec() { return !atomicState?.lastRemSenFanRunDt ? 10000
 private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", true)
     if(disableAutomation) { return }
-    if(remSenUseSunAsMode) { getSunTimeState() }
-    def modeOk = (!remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes))) ? true : false
-    if(modeOk && (getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 300))) {
-        def schChkVal = ((remSenWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal - getLastRemSenEvalSec())
+    def remWaitVal = remSenWaitVal?.toInteger() ?: 300
+    if (getLastRemSenEvalSec() < remWaitVal) {
+        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remWaitVal - getLastRemSenEvalSec())
         runIn( schChkVal.toInteger(), "remSenEvtEval", [overwrite: true] )
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
     else { 
         atomicState?.lastRemSenEval = getDtNow()
-        if(!modeOk || (!remSensorDay && !remSensorNight) || !remSenTstat || !getRemSenModeOk()) {
-            def noGoDesc = ""
-            noGoDesc += !modeOk ? "Ignoring Event the because Mode Filters were set and the current mode was not selected for Evaluation" : ""
+        def home = false
+        def away = false
+        if (remSenTstat && remSenTstat?.currentPresence == "present") { home = true }
+            else { away = true }
+        if(remSenUseSunAsMode) { getSunTimeState() }
+        def noGoDesc = ""
+        if( (!remSensorDay && !remSensorNight) || !remSenTstat || !home) {
             noGoDesc += !remSensorDay && !remSensorNight ? "Missing Required Day or Night Sensor Selections..." : ""
             noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
-            noGoDesc += !getRemSenModeOk() ? "Ignoring because this mode is not one of those selected for evaluation..." : ""
-            LogAction("Remote Sensor Evaluation Status: ${noGoDesc}", "warn", true)
-        } else if (modeOk && getRemSenModeOk()) {
+            noGoDesc += !home ? "Ignoring because thermostat is in away mode." : ""
+            LogAction("Remote Sensor NOT Evaluating...Evaluation Status: ${noGoDesc}", "warn", true)
+        } else if (home) {
             //log.info "remSenEvtEval:  Evaluating Event..."
-            def threshold = !remSenTempDiffDegrees ? 0 : remSenTempDiffDegrees.toDouble()
-            def thresholdMax = threshold+5.0
-            def tempChangeVal = !remSenTempChgVal ? 0 : remSenTempChgVal.toDouble()
+            def threshold = !remSenTempDiffDegrees ? 2 : remSenTempDiffDegrees.toDouble()
+            def tempChangeVal = !remSenTstatTempChgVal ? 5 : remSenTstatTempChgVal.toDouble()
+            def maxTempChangeVal = tempChangeVal * 2
             def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
             def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
@@ -4540,84 +4543,150 @@ private remSenEvtEval() {
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
             def reqSenCoolSetPoint = getRemSenCoolSetTemp()
             def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
-            def stayOn = getRemSenTstatStayOn(hvacMode, reqSenHeatSetPoint, reqSenCoolSetPoint, curSenTemp, curTstatTemp, threshold)
+
+            def acRunning = (curTstatOperState == "cooling") ? true : false
+            def heatRunning = (curTstatOperState == "heating") ? true : false
             
             LogAction("remSenEvtEval: Remote Sensor Rule Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}", "trace", false)
             LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", false)
             LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "trace", false) 
             LogAction("remSenEvtEval: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "trace", false)
-            LogAction("remSenEvtEval: Threshold Temp: ${remSenTempDiffDegrees} | Change Temp Increments: ${remSenTempChgVal ?: "Not Set"}", "trace", false)
+            LogAction("remSenEvtEval: Threshold Temp: ${threshold} | Change Temp Increments: ${tempChangeVal}", "trace", false)
             
             if(hvacMode == "off") { 
                 LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
                 return 
             } 
+
+            def modeOk = (!remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes))) ? true : false
+            if(!modOk || !getRemSenModeOk()) { 
+                noGoDesc = ""
+                noGoDesc += !modeOk ? "Mode Filters were set and the current mode was not selected for Evaluation" : ""
+                noGoDesc += !getRemSenModeOk() ? "This mode is not one of those selected for evaluation..." : ""
+                LogAction("Remote Sensor: Skipping Evaluation...Remote Sensor Evaluation Status: ${noGoDesc}", "warn", true)
+            }
+
+            def chg = false
+            def chgval = 0
             if (hvacMode in ["cool","auto"]) {
                 //Changes Cool Setpoints
                 if (remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                                        
-                    log.debug "GetCoolStayOn: ${stayOn}"
+                    def onTemp = reqSenCoolSetPoint + threshold
+                    def offTemp = reqSenCoolSetPoint
+                    def turnOn = false
+                    def turnOff = false
 
-                    def coolTempDiff1 = curSenTemp - reqSenCoolSetPoint
-                    def coolTempDiff2 = reqSenCoolSetPoint - curSenTemp
-                    def coolTempDiff3 = curTstatTemp - curCoolSetpoint
-                    log.debug "coolTempDiff1: $coolTempDiff1 | coolTempDiff2: $coolTempDiff2 | coolTempDiff3: $coolTempDiff3"
-                    if(stayOn) {
-                        if(coolTempDiff1 >= threshold) {
-                            def newTemp = reqSenCoolSetPoint - tempChangeVal
-                            if(newTemp < curCoolSetpoint) {
-                                LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${newTemp}°${atomicState?.tempUnit})", "info", true)
-                                LogAction("Remote Sensor: COOL - (Sensor Temp: $curSenTemp - Sensor CoolSetpoint: $reqSenCoolSetPoint) ($coolTempDiff1 > Threshold: $threshold) = (${coolTempDiff1 > threshold})", "trace", true)
-                                remSenTstat?.setCoolingSetpoint(newTemp)
-                                if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(newTemp) }
-                            } else { log.debug "cool1 already set the $newTemp"}
+                    if (curSenTemp <= offTemp) {
+                        turnOff = true
+                    } else if (curSenTemp >= onTemp) {
+                        turnOn = true
+                    }
+
+                    if(!modOk || !getRemSenModeOk()) { 
+                        turnOff = true   // system should be off
+                        turnOn = false
+                    } 
+
+                    if (turnOff && acRunning) {
+                        chgval = curTstatTemp + tempChangeVal
+                        chg = true
+                        LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn Off Thermostat", "info", true)
+                    } else if (turnOn && !acRunning) {
+                        chgval = curTstatTemp - tempChangeVal
+                        chg = true
+                        LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn On Thermostat", "info", true)
+                    } else {
+   // logic to decide if we need to nudge thermostat to keep it on or off
+                        if (acRunning) {
+                            chgval = curTstatTemp - tempChangeVal
+                        } else {
+                            chgval = curTstatTemp + tempChangeVal
                         }
-                        
-                        else if (coolTempDiff2 > threshold && coolTempDiff3 > threshold) {
-                            def newTemp = curTstatTemp + tempChangeVal
-                            
-                            LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${newTemp}°${atomicState?.tempUnit})", "info", true)
-                            LogAction("Remote Sensor: COOL - (Sensor CoolSetpoint: $reqSenCoolSetPoint - Current Sensor Temp: $curSenTemp) ($coolTempDiff2 > Threshold: $threshold) = (${coolTempDiff2 > threshold})" +
-                                    "and (Tstat Temp: $curTstatTemp - Tstat CoolSetpoint: $curCoolSetpoint > Threshold: $threshold) ($coolTempDiff3) = (${coolTempDiff3 > threshold})", "trace", true)
-                            remSenTstat?.setCoolingSetpoint(newTemp)
-                            if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(newTemp) }
+                        def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
+    log.debug "coolDiff1: ${coolDiff1}"
+                        if (coolDiff1 < (tempChangeVal / 2)) {
+                            chg = true
+                            LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
                         }
                     }
-                    else {
-                        LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(reqSenCoolSetPoint)}°${atomicState?.tempUnit}) to Turn Off Thermostat", "info", true)
-                        //remSenTstat?.setCoolingSetpoint(reqSenCoolSetPoint)
-                        //if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(reqSenCoolSetPoint) }
-                        
+                    if (chg) {
+                        chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
+                        chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
+                        if (chgval != curCoolSetpoint) {
+                            remSenTstat?.setCoolingSetpoint(chgval)
+                            LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+                            if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(chgval) }
+                        } else {
+                            LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+                        }
+                        LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", true)
                     }
                 }
             }
 
+            chg = false
+            chgval = 0
             //Heat Functions....
             if (hvacMode in ["heat", "emergency heat", "auto"]) {
                 if (remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
-                    
-                    log.debug "GetHeatStayOn: ${stayOn}"
-                    /*if (reqSenHeatSetPoint - curSenTemp > threshold) {
-                        LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
-                        LogAction("Remote Sensor: HEAT - (Sensor HeatSetpoint: $reqSenHeatSetPoint - Sensor Temp: $curSenTemp > Threshold: $threshold)=(${reqSenHeatSetPoint - curSenTemp > threshold})", "trace", false)
-                        remSenTstat?.setHeatingSetpoint(curTstatTemp + tempChangeVal)
-                        if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(curTstatTemp + tempChangeVal) }
+                    def onTemp = reqSenHeatSetPoint - threshold
+                    def offTemp = reqSenHeatSetPoint
+                    def turnOn = false
+                    def turnOff = false
+
+                    if (curSenTemp <= onTemp) {
+                        turnOn = true
+                    } else if (curSenTemp >= offTemp) {
+                        turnOff = true
                     }
-                    else if (curSenTemp - reqSenHeatSetPoint > threshold && curHeatSetpoint - curTstatTemp > threshold) {
-                        LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
-                        LogAction("Remote Sensor: HEAT - (Sensor Temp: $curSenTemp - Sensor HeatSetpoint: $reqSenHeatSetPoint > Threshold: $threshold)=(${curSenTemp - reqSenHeatSetPoint > threshold}) and (Tstat HeatSetpoint: $curHeatSetpoint - Tstat Temp: $curTstatTemp > Threshold: $threshold)-(${curHeatSetpoint - curTstatTemp > threshold})", "trace", false)
-                        remSenTstat?.setHeatingSetpoint(curTstatTemp - tempChangeVal)
-                        if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - tempChangeVal) }
-                    }
-                    else {
-                        if(curHeatSetpoint != reqSenHeatSetPoint) {
-                            LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(reqSenHeatSetPoint)}°${atomicState?.tempUnit})", "debug", true)
-                            remSenTstat?.setHeatingSetpoint(reqSenHeatSetPoint)
-                            if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(reqSenHeatSetPoint) }
+
+                    if(!modOk || !getRemSenModeOk()) { 
+                        turnOff = true   // system should be off
+                        turnOn = false
+                    } 
+
+                    if (turnOff && heatRunning) {
+                        chgval = curTstatTemp - tempChangeVal
+                        chg = true
+                        LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn Off Thermostat", "info", true)
+                    } else if (turnOn && !heatRunning) {
+                        chgval = curTstatTemp + tempChangeVal
+                        chg = true
+                        LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn On Thermostat", "info", true)
+                    } else {
+   // logic to decide if we need to nudge thermostat to keep it on or off
+                        if (heatRunning) {
+                            chgval = curTstatTemp + tempChangeVal
+                        } else {
+                            chgval = curTstatTemp - tempChangeVal
                         }
-                    }*/
+                        def heatDiff1 = Math.abs(curTstatTemp - curHeatSetpoint)
+    log.debug "heatDiff1: ${heatDiff1}"
+                        if (heatDiff1 < (tempChangeVal / 2)) {
+                            chg = true
+                            LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to maintain state", "info", true)
+                        }
+                    }
+                    if (chg) {
+                        chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
+                        chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
+                        if (chgval != curHeatSetpoint) {
+                            remSenTstat?.setHeatingSetpoint(chgval)
+                            LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "debug", true)
+                            if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(chgval) }
+                        } else {
+                            LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "debug", true)
+                        }
+                        LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", true)
+                    }
                 }
             }
+
+            if(!modOk || !getRemSenModeOk()) { 
+                // with Nest, it automatically turns off fan so we don't need to turn it off;  ensure we don't turn it on again
+                return
+            } 
+
             // Determines Heat/Cool Fan Temps
             if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
                 def sTemp = getFanAutoModeTemp(hvacMode, curTstatOperState, reqSenHeatSetPoint, reqSenCoolSetPoint, curHeatSetpoint, curCoolSetpoint, curSenTemp)
@@ -4625,29 +4694,9 @@ private remSenEvtEval() {
             } 
         }
         else {
-            LogAction("Remote Sensor: Skipping Evaluation... Location or Sensor Mode is not valid for Rule Evaluation...", "info", true)
+            LogAction("Remote Sensor: Skipping Evaluation... Thermostat is set to away...", "info", true)
         }
     }
-}
-
-def getRemSenTstatStayOn(hvacMode, reqHeatSetTemp, reqCoolSetTemp, curSenTemp, curTstatTemp, threshold) {
-    //log.debug
-    def stayOn = false
-    def desiredSetTemp = 0.0
-    if (hvacMode == "cool") { 
-        desiredSetTemp = reqCoolSetTemp 
-        if(curSenTemp > reqCoolSetTemp) { 
-            stayOn = true
-        }
-    }
-    else if (hvacMode == "heat") { 
-        desiredSetTemp = reqHeatSetTemp
-        if(curSenTemp < reqHeatSetTemp) { 
-            stayOn = true
-        }
-    }
-    log.info "Desired User Temp: $desiredSetTemp | Remote Ambient Temps: (${getRemSenTempsToList().toString().replaceAll("\\[|\\]", "")}) | Remote Temp average: ${curSenTemp}°${atomicState?.tempUnit} || Result: $stayOn"
-    return stayOn
 }
 
 def getFanAutoModeTemp(hvacMode, operState, reqHeatSetTemp, reqCoolSetTemp, curHeatSetTemp, curCoolSetTemp, curSenTemp, operType = null) {
