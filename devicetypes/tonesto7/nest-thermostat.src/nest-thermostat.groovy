@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.2"}
+def devVer() { return "2.5.3"}
 
 // for the UI
 metadata {
@@ -76,6 +76,7 @@ metadata {
         attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
         attribute "nestPresence", "string"
+        attribute "presence", "string"
         attribute "canHeat", "string"
         attribute "canCool", "string"
         attribute "hasFan", "string"
