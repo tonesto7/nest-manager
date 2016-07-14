@@ -3891,13 +3891,10 @@ def nameAutoPage() {
 def initAutoApp() {
     unschedule()
     unsubscribe()
+    atomicState?.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
     subscribeToEvents()
     automationsInst()
     scheduler()
-    atomicState?.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
-    if(extTmpUseWeather && atomicState?.isExtTmpConfigured) { 
-        updateWeather() 
-    }
     app.updateLabel(getAutoTypeLabel())
 }
 
@@ -3970,10 +3967,12 @@ def subscribeToEvents() {
             if(remSenTstat) {
                 subscribe(remSenTstat, "temperature", remSenTstatTempEvt)
                 subscribe(remSenTstat, "thermostatMode", remSenTstatModeEvt)
+                subscribe(remSenTstat, "presence", remSenTstatPresenceEvt)
+                subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt)
                 if(remSenTstatFanSwitches) {
                     subscribe(remSenTstatFanSwitches, "switch", remSenTstatFanSwitchEvt)
                     subscribe(remSenTstat, "thermostatFanMode", remSenTstatFanEvt)
-                    if(remSenTstatFanSwitchTriggerType.toInteger() == 1) { subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt) }
+                    //if(remSenTstatFanSwitchTriggerType.toInteger() == 1) { subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt) }
                 }
             }
             if(remSenMotion) { subscribe(remSenMotion, "motion", remSenMotionEvt) }
@@ -3987,6 +3986,7 @@ def subscribeToEvents() {
             remSenEvtEval()
         }
     }
+
     //External Temp Subscriptions
     if (autoType == "extTmp") {
         if(!extTmpUseWeather && extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpTempEvt, [filterEvents: false]) }
@@ -4023,11 +4023,19 @@ def subscribeToEvents() {
 }
 
 def scheduler() {
-    def wVal = getExtTmpWeatherUpdVal()
-    //log.debug "wVal: ${wVal}"
-    if(extTmpUseWeather && extTmpTstat) { 
-        //schedule("0 15 * * * ?", "updateWeather")
-        schedule("0 0/${wVal} * * * ?", "updateWeather")
+    def autoType = atomicState?.automationType
+    if (autoType == "remSen") {
+    }
+    if (autoType == "extTmp") {
+        def wVal = getExtTmpWeatherUpdVal()
+        //log.debug "wVal: ${wVal}"
+        if(extTmpUseWeather && atomicState?.isExtTmpConfigured) { 
+            updateWeather() 
+        }
+        if(extTmpUseWeather && extTmpTstat) {
+            //schedule("0 15 * * * ?", "updateWeather")
+            schedule("0 0/${wVal} * * * ?", "updateWeather")
+        }
     }
 }
 
@@ -4168,7 +4176,7 @@ def remSensorPage() {
                     }
                     section("Rule Evaluation Options:") {
                         input "remSenEvalModes", "mode", title: "Only Evaluate Actions in these Modes?", description: "", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
-                        input "remSenWaitVal", "enum", title: "Wait Time between Evaluations?", required: false, defaultValue: 300, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                        input "remSenWaitVal", "enum", title: "Wait Time between Evaluations?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     }
                 }
             }
@@ -4297,6 +4305,12 @@ def remSenTstatModeEvt(evt) {
     else { remSenEvtEval() }
 }
 
+def remSenTstatPresenceEvt(evt) {
+    log.trace "RemoteSensor Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()})"
+    if(disableAutomation) { return }
+    else { remSenEvtEval() }
+}
+
 def remSenTstatFanSwitchEvt(evt) {
     log.trace "RemoteSensor Event | Thermostat Fan Switch: ${evt?.displayName} - is (${evt?.value.toString().toUpperCase()})"
     if(disableAutomation) { return }
@@ -4306,7 +4320,7 @@ def remSenTstatFanEvt(evt) {
     log.trace "RemoteSensor Event | Thermostat Fan: ${evt?.displayName} - Fan is (${evt?.value.toString().toUpperCase()})"
     if(disableAutomation) { return }
     else { 
-        remSenTstatFanSwitchCheck(["fan":evt?.value])
+        remSenTstatFanSwitchCheck()
     }
 }
 
@@ -4315,20 +4329,25 @@ def remSenTstatOperEvt(evt) {
     def isTstatIdle = (evt?.value == "idle") ? true : false
     if(disableAutomation) { return }
     else { 
+        remSenEvtEval()
         remSenTstatFanSwitchCheck()
     }
 }
 
-def remSenTstatFanSwitchCheck(evt) {
-    LogAction("RemoteSensor Event | Fan Switch Trigger: ${evt?.displayName} is now (${evt?.value.toString().toUpperCase()})", "trace", false)
+def remSenTstatFanSwitchCheck() {
+    LogAction("RemoteSensor Event | Fan Switch Check", "trace", false)
     try {
-        def hvacFanOn = (evt.fan && evt.fan in ["on", "circulate"]) ? true : false
+        if(disableAutomation) { return }
+        if(!remSenTstatFanSwitches) { return }
+
+        def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
+        def hvacFanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
+//      def hvacFanOn = (evt.fan && evt.fan in ["on", "circulate"]) ? true : false
         def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
         def remSenReqSetPoint = getRemSenReqSetpointTemp()
         def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
         def tempDiff = Math.abs(remSenReqSetPoint - curSenTemp)
-        if(disableAutomation) { return }
-        else if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter =! hvacMode)) {
+        if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter != hvacMode)) {
             LogAction("remSenTstatFanSwitchCheck: Skipping Because Thermostat Mode does not Match the required Mode to Trigger Running of the Fan", "info", true)
             return
         }
@@ -4516,9 +4535,9 @@ def getLastRemSenFanRunDtSec() { return !atomicState?.lastRemSenFanRunDt ? 10000
 private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", true)
     if(disableAutomation) { return }
-    def remWaitVal = remSenWaitVal?.toInteger() ?: 300
+    def remWaitVal = remSenWaitVal?.toInteger() ?: 60
     if (getLastRemSenEvalSec() < remWaitVal) {
-        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remWaitVal - getLastRemSenEvalSec())
+        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 8) ? 8 : (remWaitVal - getLastRemSenEvalSec())
         runIn( schChkVal.toInteger(), "remSenEvtEval", [overwrite: true] )
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
@@ -4554,11 +4573,11 @@ private remSenEvtEval() {
             def acRunning = (curTstatOperState == "cooling") ? true : false
             def heatRunning = (curTstatOperState == "heating") ? true : false
             
-            LogAction("remSenEvtEval: Remote Sensor Rule Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}", "trace", false)
-            LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", false)
-            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "trace", false) 
-            LogAction("remSenEvtEval: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "trace", false)
-            LogAction("remSenEvtEval: Threshold Temp: ${threshold} | Change Temp Increments: ${tempChangeVal}", "trace", false)
+            LogAction("remSenEvtEval: Remote Sensor Rule Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}", "trace", true)
+            LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", true)
+            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "trace", true) 
+            LogAction("remSenEvtEval: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "trace", true)
+            LogAction("remSenEvtEval: Threshold Temp: ${threshold} | Change Temp Increments: ${tempChangeVal}", "trace", true)
             
             if(hvacMode == "off") { 
                 LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
@@ -4603,14 +4622,14 @@ private remSenEvtEval() {
                         chg = true
                         LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn On Thermostat", "info", true)
                     } else {
-   // logic to decide if we need to nudge thermostat to keep it on or off
+                        // logic to decide if we need to nudge thermostat to keep it on or off
                         if (acRunning) {
                             chgval = curTstatTemp - tempChangeVal
                         } else {
                             chgval = curTstatTemp + tempChangeVal
                         }
                         def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
-    log.debug "coolDiff1: ${coolDiff1}"
+                        log.debug "coolDiff1: ${coolDiff1}"
                         if (coolDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
@@ -5063,7 +5082,8 @@ def getExtTmpWeatherUpdVal() { return !extTmpWeatherUpdateVal ? 15 : extTmpWeath
 def extTmpTempCheck() {
     //log.trace "extTmpTempCheck..."
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
-    def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
+    def curNestPres = "not present"
+    if (exTmpTstat) { curNestPres = exTmpTstat?.currentPresence } // get what thermostat thinks as commands go to it
     def modeOff = (curMode == "off") ? true : false
     def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
     
@@ -5284,7 +5304,8 @@ def conWatCheck() {
         if (disableAutomation) { return }
         else {
             def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
-            def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
+            def curNestPres = "not present"
+            if (conWatTstat) { curNestPres = conWatTstat?.currentPresence } // get what thermostat thinks as commands go to it
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
@@ -5520,7 +5541,8 @@ def leakWatCheck() {
         if (disableAutomation) { return }
         else {
             def curMode = leakWatTstat?.currentState("thermostatMode")?.value.toString()
-            def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
+            def curNestPres = "not present"
+            if (leakWatTstat) { curNestPres = leakWatTstat?.currentPresence } // get what thermostat thinks as commands go to it
             def modeOff = (curMode == "off") ? true : false
             def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
             def okToRestore = ((modeOff && leakWatRestoreOnDry) && (atomicState?.leakWatTstatTurnedOff )) ? true : false
