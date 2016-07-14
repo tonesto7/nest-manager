@@ -4002,8 +4002,7 @@ def subscribeToEvents() {
     //Leak Watcher Subscriptions
     if (autoType == "leakWat") {
         if(leakWatSensors && leakWatTstat) {
-            subscribe(leakWatSensors, "water.wet", leakWatSensorEvt)
-            subscribe(leakWatSensors, "water.dry", leakWatSensorEvt)
+            subscribe(leakWatSensors, "water", leakWatSensorEvt)
             subscribe(leakWatTstat, "thermostatMode", leakWatTstatModeEvt)
         }
     }
