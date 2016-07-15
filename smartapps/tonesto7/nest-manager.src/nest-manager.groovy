@@ -4708,13 +4708,18 @@ private remSenEvtEval() {
                 }
             }
 
-            if(!modeOk || !getRemSenModeOk()) { 
-                // with Nest, it automatically turns off fan so we don't need to turn it off;  ensure we don't turn it on again
-                return
-            } 
-
             // Determines Heat/Cool Fan Temps
             if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
+
+                if(!modeOk || !getRemSenModeOk()) { 
+                    if (fanOn) {
+                        remSenTstat?.fanAuto()
+                        if(remSenTstatsMirror) { remSenTstatsMir*.fanAuto() }
+                    }
+                    // with Nest, it automatically turns off fan after a defined time;  ensure we don't turn it on again
+                    return
+                } 
+
                 def sTemp = getFanAutoModeTemp(hvacMode, curTstatOperState, reqSenHeatSetPoint, reqSenCoolSetPoint, curHeatSetpoint, curCoolSetpoint, curSenTemp)
                 remSenFanControl(remSenTstat, remSenTstatsMir, hvacMode, remSenRuleType, curTstatOperState, curTstatFanMode, sTemp?.type?.toString(), curSenTemp, sTemp?.req?.toDouble(), sTemp?.cur?.toDouble(), threshold, fanOn)
             } 
@@ -4750,10 +4755,9 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, ruleType, curOperState, curF
                 }
             }
             atomicState?.lastRemSenFanRunDt = getDtNow()
-            atomicState?.remSenFanIsRunning = true
         }
         else {
-            if (!fanTempOk && (fanOn || atomicState?.remSenFanIsRunning)) {
+            if (!fanTempOk && fanOn) {
                 LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan that was used for ${operType.toString().toUpperCase()}ING Circulation", "info", true)
                 tstat?.fanAuto()
                 if(tstatsMir) { 
@@ -4762,7 +4766,6 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, ruleType, curOperState, curF
                         mt?.fanAuto() 
                     }
                 }
-                atomicState?.remSenFanIsRunning = false
             }
         }
     }
