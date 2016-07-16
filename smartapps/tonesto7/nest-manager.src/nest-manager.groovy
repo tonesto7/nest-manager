@@ -823,7 +823,7 @@ def getApiData(type = null) {
             atomicState?.lastStrucDataUpd = getDtNow()
             atomicState.needStrPoll = false
             httpGet(params) { resp ->
-                if(resp.status == 200) {
+                if(resp?.status == 200) {
                     LogTrace("API Structure Resp.Data: ${resp?.data}")
                     atomicState.apiIssues = false
                     if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) {
@@ -879,7 +879,7 @@ def updateChildData() {
         atomicState?.lastChildUpdDt = getDtNow()
         def useMt = !useMilitaryTime ? false : true
         def dbg = !childDebug ? false : true
-        def nestTz = getNestTimeZone().toString()
+        def nestTz = getNestTimeZone()?.toString()
         def api = !apiIssues() ? false : true
         getAllChildDevices().each {
             def devId = it?.deviceNetworkId
@@ -1485,7 +1485,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
                 atomicState?.lastCmdSentStatus = "ok" 
                 //sendEvtUpdateToDevice(typeId, type, obj, objVal)
             }
-            else if(resp.status == 400) {
+            else if(resp?.status == 400) {
                 LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
             }
             else {
@@ -1602,7 +1602,7 @@ def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null
                         sendNotificationToContacts(newMsg, who)
                         atomicState?.lastMsg = newMsg
                         atomicState?.lastMsgDt = getDtNow()
-                        log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                        LogAction("Push Message Sent: ${atomicState?.lastMsgDt}", "debug", true)
                     }
                 } else {
                     LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
@@ -2637,7 +2637,7 @@ def revokeNestToken() {
     ]
     try {
         httpDelete(params) { resp ->
-            if (resp.status == 204) {
+            if (resp?.status == 204) {
                 atomicState?.authToken = null
                 LogAction("Your Nest Token has been revoked successfully...", "warn", true)
                 return true
@@ -3888,16 +3888,16 @@ def sendAnalyticData(data, pathVal) {
     try {
         httpPutJson(params) { resp ->
             //log.debug "resp: ${resp}"
-            if( resp.status == 200) {
+            if( resp?.status == 200) {
                 LogAction("sendAnalyticData: Install Data Sent Successfully!!!", "info", true)
                 atomicState?.lastAnalyticUpdDt = getDtNow()
                 result = true
             }
-            else if(resp.status == 400) {
-                LogAction("sendAnalyticData: 'Bad Request' Exception: ${resp.status}", "error", true)
+            else if(resp?.status == 400) {
+                LogAction("sendAnalyticData: 'Bad Request' Exception: ${resp?.status}", "error", true)
             }
             else {
-                LogAction("sendAnalyticData: 'Unexpected' Response: ${resp.status}", "warn", true)
+                LogAction("sendAnalyticData: 'Unexpected' Response: ${resp?.status}", "warn", true)
             }
         }
     }
@@ -3919,24 +3919,24 @@ def sendAnalyticExceptionData(data, pathVal) {
     try {
         httpPostJson(params) { resp ->
             //log.debug "resp: ${resp}"
-            if( resp.status == 200) {
-                LogAction("sendExceptionData: Exception Data Sent Successfully!!!", "info", true)
+            if( resp?.status == 200) {
+                LogAction("sendAnalyticExceptionData: Exception Data Sent Successfully!!!", "info", true)
                 atomicState?.lastSentExceptionDataDt = getDtNow()
                 result = true
             }
-            else if(resp.status == 400) {
-                LogAction("sendExceptionData: 'Bad Request' Exception: ${resp.status}", "error", true)
+            else if(resp?.status == 400) {
+                LogAction("sendAnalyticExceptionData: 'Bad Request' Exception: ${resp?.status}", "error", true)
             }
             else {
-                LogAction("sendExceptionData: 'Unexpected' Response: ${resp.status}", "warn", true)
+                LogAction("sendAnalyticExceptionData: 'Unexpected' Response: ${resp?.status}", "warn", true)
             }
         }
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendExceptionData: 'HttpResponseException' Exception: ${ex}", "error", true)
+            LogAction("sendAnalyticExceptionData: 'HttpResponseException' Exception: ${ex}", "error", true)
         }
-        else { LogAction("sendExceptionData: Exception: ${ex}", "error", true) }
+        else { LogAction("sendAnalyticExceptionData: Exception: ${ex}", "error", true) }
     }
     return result
 }
@@ -4388,7 +4388,7 @@ def remSensorPage() {
     def pName = remSenPrefix()
     dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false, nextPage: "mainAutoPage") {
         def req = (remSensorDay || remSensorNight || remSenTstat) ? true : false
-        def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatMir)
+        def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatsMir)
         def tStatHeatSp = getTstatSetpoint(remSenTstat, "heat")
         def tStatCoolSp = getTstatSetpoint(remSenTstat, "cool")
         def tStatMode = remSenTstat ? remSenTstat?.currentThermostatMode : "unknown"
@@ -4766,7 +4766,7 @@ def remSenSwitchEvt(evt) {
 }
 
 def remSenModeEvt(evt) {
-    log.trace "RemoteSensor Event | ST Mode is (${evt?.value.toString().toUpperCase()})"
+    LogAction("RemoteSensor Event | ST Mode is (${evt?.value.toString().toUpperCase()})", "trace", false)
     if(disableAutomation) { return }
     else { remSenEvtEval() }
 }
@@ -5106,7 +5106,7 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, ruleType, curOperState, curF
 }
 
 def getRemSenFanRunOk(operState, fanState) { 
-    log.trace "getRemSenFanRunOk($operState, $fanState)"
+    //log.trace "getRemSenFanRunOk($operState, $fanState)"
     def fanAlreadyOn = (fanState in ["on", "circulate"]) ? true : false 
     def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
     def ruleTypeOk = (remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) ? true : false
@@ -5127,8 +5127,8 @@ def getRemSenFanRunOk(operState, fanState) {
     def result = (timeSinceLastRunOk && ruleTypeOk && tstatOperStateOk && (fanModeOk && !fanAlreadyOn)) ? true : false
     LogAction("RemSenFanRunOk Debug:", "debug", false)
     LogAction(" ├ RuleTypeOk: (${ruleTypeOk.toString().toUpperCase()}) | (RuleType: $remSenRuleType) ", "debug", false)
-    LogAction(" ├ ThermostatOperatingStateOk: (${tstatOperStateOk.toString().toUpperCase()}) | (Current: $operState)", "debug", false) 
-    LogAction(" ├ FanModeOk: (${fanModeOk.toString().toUpperCase()}) | (Current: $fanState)", "debug", false)
+    LogAction(" ├ ThermostatOperatingStateOk: (${tstatOperStateOk.toString().toUpperCase()}) | (Current: ${operState})", "debug", false) 
+    LogAction(" ├ FanModeOk: (${fanModeOk.toString().toUpperCase()}) | (Current: ${fanState})", "debug", false)
     LogAction(" ├ FanAlreadyOn: (${fanAlreadyOn.toString().toUpperCase()})", "debug", false) 
     LogAction(" ├ TimeSinceOk: (${timeSinceLastRunOk.toString().toUpperCase()}) (${getLastRemSenFanRunDtSec()} Seconds > $waitTimeVal Seconds)", "debug", false) 
     LogAction(" ├ LastFanRunSec: (${getLastRemSenFanRunDtSec()} Seconds)", "debug", false) 
@@ -5470,7 +5470,7 @@ def extTmpTempCheck() {
             if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
                 if(extTmpRestoreOnTemp) { 
                     atomicState?.extTmpRestoreMode = curMode
-                    LogAction("Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
+                    LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
                 }
                 //log.debug("External Temp has reached the temp threshold turning 'Off' ${extTmpTstat}")
                 extTmpTstat?.off()
@@ -5709,16 +5709,16 @@ def conWatCheck() {
                     if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
                         if(conWatRestoreOnClose) { 
                             atomicState?.conWatRestoreMode = curMode
-                            LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
+                            LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                         }
-                        log.debug("${openCtDesc} ${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'")
+                        LogAction("conWatCheck: ${openCtDesc} ${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
                         atomicState?.conWatTstatTurnedOff = true
                         atomicState?.conWatTstatOffRequested = true
                         conWatTstat?.off()
                         if(conWatTstatMir) { 
                             conWatTstatMir?.each { tstat ->
                                 tstat?.off()
-                                log.debug("Mirrored Off Command to ${tstat}")
+                                LogAction("conWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                             }
                         }
                         if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
@@ -5881,7 +5881,7 @@ def getLeakWatWetDtSec() { return !atomicState?.leakWatWetDt ? 100000 : GetTimeD
 def getLeakWatDryDtSec() { return !atomicState?.leakWatDryDt ? 100000 : GetTimeDiffSeconds(atomicState?.leakWatDryDt).toInteger() }
 
 def leakWatCheck() {
-    log.trace "leakWatCheck..."
+    //log.trace "leakWatCheck..."
     try {
         if (disableAutomation) { return }
         else {
@@ -5908,7 +5908,7 @@ def leakWatCheck() {
                                     if(leakWatTstatMir) { 
                                         leakWatTstatMir?.each { tstat ->
                                             if(setTstatMode(tstat, lastMode)) {
-                                                LogAction("Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
+                                                LogAction("leakWatCheck: Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
                                             }
                                         }
                                     }
@@ -5937,16 +5937,16 @@ def leakWatCheck() {
                 if(!modeOff) {
                     if(leakWatRestoreOnDry) { 
                         atomicState?.leakWatRestoreMode = curMode
-                        LogAction("Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
+                        LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                     }
-                    log.debug("${wetCtDesc} ${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'")
+                    LogAction("leakWatCheck: ${wetCtDesc} ${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
                     atomicState?.leakWatTstatTurnedOff = true
                     atomicState?.leakWatTstatOffRequested = true
                     leakWatTstat?.off()
                     if(leakWatTstatMir) { 
                         leakWatTstatMir?.each { tstat ->
                             tstat?.off()
-                            log.debug("Mirrored Off Command to ${tstat}")
+                            LogAction("leakWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                         }
                     }
                     if(canSchedule()) { runIn(20, "leakWatFollowupCheck", [overwrite: true]) }
@@ -6114,10 +6114,10 @@ def nModeModeEvt(evt) {
     if (disableAutomation) { return }
     else if(!nModePresSensor && !nModeSwitch) {
         if(nModeDelay) {
-            LogAction("NestMode Event: ST Location Mode is ${evt?.value.toString().toUpperCase()} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+            LogAction("Mode Event: ST Mode is ${evt?.value.toString().toUpperCase()} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
             runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
         } else {
-            LogAction("NestMode Event | ST Location Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
+            LogAction("Mode Event | ST Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
             checkNestMode()
         }
     } 
@@ -6126,7 +6126,7 @@ def nModeModeEvt(evt) {
 def nModePresEvt(evt) {
     if (disableAutomation) { return }
     else if(nModeDelay) {
-        LogAction("NestMode Event | Presence: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+        LogAction("Mode Event | Presence: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
         runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
     } else {
         LogAction("NestMode Event | Presence is (${evt?.value.toString().toUpperCase()})", "trace", true)
@@ -6138,10 +6138,10 @@ def nModeSwitchEvt(evt) {
     if (disableAutomation) { return }
     else if(nModeSwitch && !nModePresSensor) {
         if(nModeDelay) {
-            LogAction("NestMode Event | ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+            LogAction("Mode Event | ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
             runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
         } else {
-            LogAction("NestMode Event | Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})", "trace", true)
+            LogAction("Mode Event | Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})", "trace", true)
             checkNestMode()
         }
     }
@@ -6160,7 +6160,7 @@ def checkNestMode() {
     try {
         if (disableAutomation) { return }
         else if(!nModeScheduleOk()) { 
-            LogAction("Check NestMode: Skipping because of Schedule Restrictions...", "info", true)
+            LogAction("checkNestMode: Skipping because of Schedule Restrictions...", "info", true)
         } else {
             def curStMode = location?.mode
             def nestModeAway = (getNestLocPres() == "home") ? false : true
@@ -6394,10 +6394,10 @@ def tModeModeEvt(evt) {
     if (disableAutomation) { return }
     else {
         if(tModeDelay) {
-            LogAction("TstatSetpoint Event | ST Location Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
+            LogAction("TstatSetpoint Event | ST Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
             runIn( tModeDelayVal.toInteger(), "checkTstatMode", [overwrite: true] )
         } else {
-            LogAction("TstatSetpoint Event | ST Location Mode is: (${evt?.value})", "trace", true)
+            LogAction("TstatSetpoint Event | ST Mode is: (${evt?.value})", "trace", true)
             checkTstatMode()
         }
     } 
