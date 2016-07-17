@@ -3511,7 +3511,7 @@ def alarmTestPage () {
                     input "alarmCoTestDeviceSimSmoke", "bool", title: "Simulate a Smoke Event?", defaultValue: false, submitOnChange: true, image: getDevImg("smoke_emergency.png")
                     if(alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimLowBatt) {
                         href "simulateSmokeEventPage", title: "Simulate Smoke Event", description: null, state: null  
-                    } 
+                    }
                     input "alarmCoTestDeviceSimCo", "bool", title: "Simulate a Carbon Event?", defaultValue: false, submitOnChange: true, image: getDevImg("co_emergency.png")
                     if(alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimLowBatt) {
                         href "simulateCarbonEventPage", title: "Simulate Carbon Event", description: null, state: null
@@ -3519,7 +3519,7 @@ def alarmTestPage () {
                     input "alarmCoTestDeviceSimLowBatt", "bool", title: "Simulate a Low Battery Event?", defaultValue: false, submitOnChange: true, image: getDevImg("battery_low.png")
                     if(alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
                         href "simulateBatteryEventPage", title: "Simulate Battery Event", description: null, state: null
-                    } 
+                    }
                 }
             }
         }
@@ -4235,7 +4235,6 @@ def nameAutoPage() {
 def initAutoApp() {
     unschedule()
     unsubscribe()
-    atomicState?.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
     automationsInst()
     subscribeToEvents()
     scheduler()
@@ -4332,7 +4331,7 @@ def subscribeToEvents() {
     //External Temp Subscriptions
     if (autoType == "extTmp") {
         if(!extTmpUseWeather && extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpTempEvt, [filterEvents: false]) }
-        if(extTmpTstat ) {
+        if(extTmpTstat) {
             subscribe(extTmpTstat, "thermostatMode", extTmpTstatModeEvt) 
         }
     }
@@ -4360,6 +4359,7 @@ def subscribeToEvents() {
     if (autoType == "tMode") {
         if(isTstatModesConfigured()) {
             subscribe(location, "mode", tModeModeEvt, [filterEvents: false])
+            subscribe(tModeTstats, "presence", tModePresEvt)
         }
     }
 }
@@ -4370,7 +4370,6 @@ def scheduler() {
     def random_dint = random.nextInt(9)
     LogAction("watchDogAutomation scheduled using Cron (${random_int} ${random_dint}/30 * * * ?)", "info", true)
     schedule("${random_int} ${random_dint}/30 * * * ?", watchDogAutomation)
-//    schedule("0 4/30 * * * ?", "watchDogAutomation")
 
     def autoType = atomicState?.automationType  
     if (autoType == "remSen") {   }  
@@ -4385,6 +4384,32 @@ def scheduler() {
 }
 
 def watchDogAutomation() {
+    LogAction("watchDogAutomation...", "trace", false)
+    runAutomationEval()
+}
+
+def updateWeather() {
+    if(extTmpUseWeather && extTmpTstat) { 
+        getExtConditions() 
+        extTmpTempEvt(null)
+    }
+}
+
+def scheduleAutomationEval(schedtime = 15) {
+//
+// This method minimizes calls to runIn
+//
+    if (schedtime < 15) { schedtime = 15 }
+    if (getLastAutomationSchedSec() > 10) {
+        atomicState?.lastAutomationSchedDt = getDtNow()
+        runIn(schedtime, "runAutomationEval", [overwrite: true])
+    }
+}
+
+def getLastAutomationSchedSec() { return !atomicState?.lastAutomationSchedDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAutomationSchedDt).toInteger() }
+
+def runAutomationEval() {
+    LogAction("runAutomationEval...", "trace", false)
     def autoType = atomicState?.automationType
     switch(autoType) {
         case "remSen":
@@ -4420,15 +4445,8 @@ def watchDogAutomation() {
             }
             break
         default:
-            LogAction("watchDogAutomation: Invalid Option Received... ${autoType}", "warn", true)
+            LogAction("runAutomationEval: Invalid Option Received... ${autoType}", "warn", true)
         break
-    }
-}
-
-def updateWeather() {
-    if(extTmpUseWeather && extTmpTstat) { 
-        getExtConditions() 
-        extTmpTempEvt(null)
     }
 }
 
@@ -4654,70 +4672,78 @@ def remSenMotionEvt(evt) {
     LogAction("RemoteSensor Event | Motion Sensor: ${evt?.displayName} Motion State is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
+        def dorunIn = false
+        def delay = remSenMotionDelayVal.toInteger()
+        
         if(remSenMotionModes) {
             if(isInMode(remSenMotionModes) && remSenMotionDelayVal) {
-                LogAction("remSenMotionEvt: Scheduling Motion Check for (${remSenMotionDelayVal} Seconds)", "info", true)
-                runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
+                dorunIn = true
             } else {
                 LogAction("remSenMotionEvt: Skipping Motion Check because the current mode is not allowed", "info", true)
             }
         } 
         else {
-            LogAction("remSenMotionEvt: Scheduling Motion Check for (${remSenMotionDelayVal} Seconds)", "info", true)
-            runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
+            dorunIn = true
+        }
+        if (dorunIn) {
+            if (delay > 15) {
+                LogAction("remSenMotionEvt: Scheduling Motion Check for (${remSenMotionDelayVal} Seconds)", "info", true)
+                scheduleAutomationEval(delay)
+            } else { scheduleAutomationEval() }
         }
     }
+}
+
+def remSenCheckMotion() {
+    if(isMotionActive(remSenMotion)) { scheduleAutomationEval() }
 }
 
 def remSenTempSenEvt(evt) {
     LogAction("RemoteSensor Event | Sensor Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${atomicState?.tempUnit})", "trace", true)
     if(disableAutomation) { return }
-    else { remSenCheck() }
+    else { scheduleAutomationEval() }
 }
 
 def remSenTstatTempEvt(evt) {
     LogAction("RemoteSensor Event | Thermostat Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${atomicState?.tempUnit})", "trace", true)
     if(disableAutomation) { return }
-    else { remSenCheck() }
+    else { scheduleAutomationEval() }
 }
 
 def remSenTstatModeEvt(evt) {
     LogAction("RemoteSensor Event | Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
-    else { remSenCheck() }
+    else { scheduleAutomationEval() }
 }
 
 def remSenTstatPresenceEvt(evt) {  
     LogAction("RemoteSensor Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }  
-    else { remSenCheck() }  
+    else { scheduleAutomationEval() }
 }  
 
 def remSenFanSwitchEvt(evt) {
     LogAction("RemoteSensor Event | Fan Switch: ${evt?.displayName} - is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
-    else { remSenCheck() }  
+    else { scheduleAutomationEval() }
 }
 
 def remSenTstatFanEvt(evt) {
     LogAction("RemoteSensor Event | Thermostat Fan: ${evt?.displayName} - Fan is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
-    else { 
-        remSenCheck()
-    }
+    else { scheduleAutomationEval() }
 }
 
 def remSenTstatOperEvt(evt) {
     LogAction("RemoteSensor Event | Thermostat Operating State: ${evt?.displayName} - OperatingState is  (${evt?.value.toString().toUpperCase()})", "trace", true)
-    def isTstatIdle = (evt?.value == "idle") ? true : false
     if(disableAutomation) { return }
-    else { remSenCheck() }
+    else { scheduleAutomationEval() }
 }
 
 def remSenSunEvtHandler(evt) {
     if(disableAutomation) { return }
     else if(remSenUseSunAsMode) { 
-        remSenCheck() 
+        scheduleAutomationEval()
     } else { return }
 }
 
@@ -4729,13 +4755,13 @@ def remSenSwitchEvt(evt) {
         def swOpt = settings?.remSenSwitchOpt
         switch(swOpt.toInteger()) {
             case 0:
-                if(evtType == "off") { remSenCheck() }
+                if(evtType == "off") { scheduleAutomationEval() }
                 break
             case 1:
-                if (evtType == "on") { remSenCheck() }
+                if (evtType == "on") { scheduleAutomationEval() }
                 break
             case 2:
-                if(evtType in ["on", "off"]) { remSenCheck() }
+                if(evtType in ["on", "off"]) { scheduleAutomationEval() }
                 break
             default:
                 LogAction("remSenSwitchEvt: Invalid Option Received... ${swOpt.toInteger()}", "warn", true)
@@ -4747,7 +4773,7 @@ def remSenSwitchEvt(evt) {
 def remSenModeEvt(evt) {
     LogAction("RemoteSensor Event | ST Mode is (${evt?.value.toString().toUpperCase()})", "trace", false)
     if(disableAutomation) { return }
-    else { remSenCheck() }
+    else { scheduleAutomationEval() }
 }
 
 def coolingSetpointHandler(evt) { log.debug "coolingSetpointHandler()" }
@@ -4756,10 +4782,6 @@ def heatingSetpointHandler(evt) { log.debug "heatingSetpointHandler()" }
 
 def isMotionActive(sensors) {
     return sensors?.currentState("motion")?.value.contains("active") ? true : false
-}
-
-def remSenCheckMotion() {
-    if(isMotionActive(remSenMotion)) { remSenCheck() }
 }
 
 def getUseNightSensor() {
@@ -4930,7 +4952,8 @@ private remSenCheck() {
     def remWaitVal = remSenWaitVal?.toInteger() ?: 60
     if (getLastRemSenEvalSec() < remWaitVal) {
         def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 8) ? 8 : (remWaitVal - getLastRemSenEvalSec())
-        runIn( schChkVal.toInteger(), "remSenCheck", [overwrite: true] )
+        if (schChkVal < 15) { schChkVal = 15 }
+        scheduleAutomationEval(schChkVal)
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
     else { 
@@ -5118,6 +5141,7 @@ private remSenEvtEval() {
 
                 if(!modeOk || !getRemSenModeOk()) { 
                     if (fanOn) {
+                        LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan as modes do not match evaluation", "info", true)
                         remSenTstat?.fanAuto()
                         if(remSenTstatsMirror) { remSenTstatsMir*.fanAuto() }
                     }
@@ -5130,6 +5154,13 @@ private remSenEvtEval() {
             }
         }
         else {
+//
+// if all thermostats (primary and mirrors) are Nest, then AC/HEAT & fan will be off (or set back) with away mode.
+// if thermostats were not all Nest, then non Nest units could still be on for AC/HEAT or FAN...
+// current presumption in this implementation is:
+//      they are all nests or integrated with Nest (Works with Nest) as we don't have away/home temps for each mirror thermostats.   (They could be mirrored from primary)
+//      all thermostats in an automation are in the same Nest structure, so that all react to home/away changes
+//
             LogAction("Remote Sensor: Skipping Evaluation... Thermostat is set to away...", "info", true)
         }
     }
@@ -5491,6 +5522,12 @@ def getExtTmpWeatherUpdVal() { return !extTmpWeatherUpdateVal ? 15 : extTmpWeath
 def extTmpTempCheck() {
     //log.trace "extTmpTempCheck..."
     if(disableAutomation) { return }
+//
+// Should consider not turning thermostat off, as much as setting it more toward away settings?
+// There should be min and max interior temperature settings to ensure settings never get too hot or too cold
+// There should be monitoring of actual temps for min and max warnings given on/off automations
+//   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
+//
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
     def modeOff = (curMode == "off") ? true : false
     def allowNotif = (extTmpPushMsgOn || settings?."${getPagePrefix()}PushMsgOn") ? true : false
@@ -5517,7 +5554,7 @@ def extTmpTempCheck() {
                     if(setTstatMode(extTmpTstat, lastMode)) {
                         atomicState?.extTmpTstatTurnedOff = false
                         atomicState?.extTmpTstatOffRequested = false
-                        runIn(20, "extTmpFollowupCheck", [overwrite: true])
+                        extTmpFollowupCheck()
                         if(allowNotif) {
                             sendNofificationMsg("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info", 
                                     settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
@@ -5546,7 +5583,7 @@ def extTmpTempCheck() {
                 extTmpTstat?.off()
                 atomicState?.extTmpTstatTurnedOff = true
                 atomicState?.extTmpTstatOffRequested = true
-                runIn(20, "extTmpFollowupCheck", [overwrite: true])
+                extTmpFollowupCheck()
                 LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
                 if(allowNotif) {
                     sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", 
@@ -5568,14 +5605,12 @@ def extTmpTstatModeEvt(evt) {
         def modeOff = (evt?.value == "off") ? true : false
         if(!modeOff) { atomicState?.extTmpTstatTurnedOff = false }
     }
+    scheduleAutomationEval()
 }
 
 def extTmpFollowupCheck() {
     //log.trace "extTmpFollowupCheck..."
-    def curMode = extTmpTstat?.currentThermostatMode.toString()
-    def modeOff = (curMode == "off") ? true : false
-    def extTmpTstatReqOff = atomicState?.extTmpTstatOffRequested ? true : false
-    if (modeOff != extTmpTstatReqOff) { extTmpTempCheck() }
+    scheduleAutomationEval()
 }
 
 def extTmpTempEvt(evt) {
@@ -5609,10 +5644,11 @@ def extTmpTempEvt(evt) {
             if (canSched) {
                 //log.debug "timeVal: $timeVal"
                 LogAction("extTmpTempEvt() ${!evt ? "" : "'${evt?.displayName}': (${evt?.value}°${atomicState?.tempUnit}) received... | "}External Temp Check scheduled for (${timeVal?.valLabel})...", "info", true)
-                runIn(timeVal?.valNum, "extTmpTempCheck", [overwrite: true])
+                if (timeVal?.valNum > 15) {
+                    scheduleAutomationEval(timeVal?.valNum)
+                } else { scheduleAutomationEval() }
             } else {
-                unschedule("extTmpTempCheck")
-                LogAction("extTmpTempEvt: Skipping Event... All External Temps are above the threshold... Any existing schedules have been cancelled...", "info", true)
+                LogAction("extTmpTempEvt: Skipping Event... All External Temps are above the threshold...", "info", true)
             }
         } else {
             LogAction("extTmpTempEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
@@ -5716,6 +5752,12 @@ def getConWatOnDelayVal() { return !conWatOnDelay ? 300 : (conWatOnDelay.toInteg
 
 def conWatCheck() {
     //log.trace "conWatCheck..."
+//
+// Should consider not turning thermostat off, as much as setting it more toward away settings?
+// There should be min and max interior temperature settings to ensure settings never get too hot or too cold
+// There should be monitoring of actual temps for min and max warnings given on/off automations
+//   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
+//
     try {
         if (disableAutomation) { return }
         else {
@@ -5754,7 +5796,7 @@ def conWatCheck() {
                                         }
                                     }
                                 }
-                                if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                                conWatFollowupCheck()
                                 LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
                                 if(allowNotif) {
                                     sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
@@ -5791,7 +5833,7 @@ def conWatCheck() {
                                 LogAction("conWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                             }
                         }
-                        if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                        conWatFollowupCheck()
                         LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
                         if(allowNotif) {
                             sendNofificationMsg("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", 
@@ -5813,10 +5855,7 @@ def conWatCheck() {
 
 def conWatFollowupCheck() {
     //log.trace "conWatFollowupCheck..."
-    def curMode = conWatTstat?.currentThermostatMode.toString()
-    def modeOff = (curMode == "off") ? true : false
-    def conWatTstatReqOff = atomicState?.conWatTstatOffRequested ? true : false
-    if (modeOff != conWatTstatReqOff) { conWatCheck() }
+    scheduleAutomationEval()
 }
 
 def conWatTstatModeEvt(evt) {
@@ -5824,7 +5863,8 @@ def conWatTstatModeEvt(evt) {
     if (disableAutomation) { return }
     else { 
         def modeOff = (evt?.value == "off") ? true : false
-        //if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
+        if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
+        scheduleAutomationEval()
     }
 }
 
@@ -5855,10 +5895,11 @@ def conWatContactEvt(evt) {
             }
             if(canSched) {
                 LogAction("conWatContactEvt: ${!evt ? "A monitored Contact is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Contact Check scheduled for (${timeVal?.valLabel})...", "info", true)
-                runIn(timeVal?.valNum, "conWatCheck", [overwrite: true]) 
+                if (timeVal?.valNum > 15) {
+                    scheduleAutomationEval(timeVal?.valNum)
+                } else { scheduleAutomationEval() }
             } else {
-                unschedule("conWatCheck")
-                LogAction("conWatContactEvt: Skipping Event... Any existing schedules have been cancelled...", "info", true)
+                LogAction("conWatContactEvt: Skipping Event...", "info", true)
             }
         } else {
             LogAction("conWatContactEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
@@ -5947,11 +5988,15 @@ def getLeakWatSensorsOk() { return leakWatSensors?.currentState("water")?.value.
 def leakWatSensorsOk() { return (!leakWatSensors && !leakWatTstat) ? false : true }
 def leakWatScheduleOk() { return autoScheduleOk(leakWatPrefix()) }
 def getLeakWatOnDelayVal() { return !leakWatOnDelay ? 300 : (leakWatOnDelay.toInteger()) }
-def getLeakWatWetDtSec() { return !atomicState?.leakWatWetDt ? 100000 : GetTimeDiffSeconds(atomicState?.leakWatWetDt).toInteger() }
 def getLeakWatDryDtSec() { return !atomicState?.leakWatDryDt ? 100000 : GetTimeDiffSeconds(atomicState?.leakWatDryDt).toInteger() }
 
 def leakWatCheck() {
     //log.trace "leakWatCheck..."
+//
+// There should be min and max interior temperature settings to ensure settings never get too hot or too cold
+// There should be monitoring of actual temps for min and max warnings given on/off automations
+//   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
+//
     try {
         if (disableAutomation) { return }
         else {
@@ -5982,7 +6027,7 @@ def leakWatCheck() {
                                             }
                                         }
                                     }
-                                    if(canSchedule()) { runIn(20, "leakWatFollowupCheck", [overwrite: true]) }
+                                    leakWatFollowupCheck()
                                     LogAction("Restoring '${leakWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL leak sensors have been 'Dry' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "info", true)
                                     if(allowNotif) {
                                         sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL leak sensors have been 'Dry' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "Info", 
@@ -6019,7 +6064,7 @@ def leakWatCheck() {
                             LogAction("leakWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                         }
                     }
-                    if(canSchedule()) { runIn(20, "leakWatFollowupCheck", [overwrite: true]) }
+                    leakWatFollowupCheck()
                     LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "warning", true)
                     if(allowNotif) {
                         sendNofificationMsg("'${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "Info", 
@@ -6042,10 +6087,7 @@ def leakWatCheck() {
 
 def leakWatFollowupCheck() {
     //log.trace "leakWatFollowupCheck..."
-    def curMode = leakWatTstat?.currentThermostatMode.toString()
-    def modeOff = (curMode == "off") ? true : false
-    def leakWatTstatReqOff = atomicState?.leakWatTstatOffRequested ? true : false
-    if (modeOff != leakWatTstatReqOff) { leakWatCheck() }
+    scheduleAutomationEval()
 }
 
 def leakWatTstatModeEvt(evt) {
@@ -6053,7 +6095,7 @@ def leakWatTstatModeEvt(evt) {
     if (disableAutomation) { return }
     else { 
         def modeOff = (evt?.value == "off") ? true : false
-        //if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
+        scheduleAutomationEval()
     }
 }
 
@@ -6082,10 +6124,11 @@ def leakWatSensorEvt(evt) {
         
         if(canSched) {
             LogAction("leakWatSensorEvt: ${!evt ? "A monitored Leak Sensor is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Leak Check scheduled for (${timeVal?.valLabel})...", "info", true)
-            runIn(timeVal?.valNum, "leakWatCheck", [overwrite: true]) 
+            if (timeVal?.valNum > 15) {
+                scheduleAutomationEval(timeVal?.valNum)
+            } else { scheduleAutomationEval() }
         } else {
-            unschedule("leakWatCheck")
-            LogAction("leakWatSensorEvt: Skipping Event... Any existing schedules have been cancelled...", "info", true)
+            LogAction("leakWatSensorEvt: Skipping Event...", "info", true)
         }
     }
 }
@@ -6184,11 +6227,15 @@ def nModeModeEvt(evt) {
     if (disableAutomation) { return }
     else if(!nModePresSensor && !nModeSwitch) {
         if(nModeDelay) {
-            LogAction("Mode Event: ST Mode is ${evt?.value.toString().toUpperCase()} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
-            runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
+            def delay = nModeDelayVal.toInteger()
+
+            if (delay > 15) {
+                LogAction("Mode Event: ST Mode is ${evt?.value.toString().toUpperCase()} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+                scheduleAutomationEval(delay)
+            } else { scheduleAutomationEval() }
         } else {
             LogAction("Mode Event | ST Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
-            checkNestMode()
+            scheduleAutomationEval()
         }
     } 
 }
@@ -6196,11 +6243,15 @@ def nModeModeEvt(evt) {
 def nModePresEvt(evt) {
     if (disableAutomation) { return }
     else if(nModeDelay) {
-        LogAction("Mode Event | Presence: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
-        runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
+        def delay = nModeDelayVal.toInteger()
+
+        if (delay > 15) {
+            LogAction("Mode Event | Presence: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+            scheduleAutomationEval(delay)
+        } else { scheduleAutomationEval() }
     } else {
         LogAction("NestMode Event | Presence is (${evt?.value.toString().toUpperCase()})", "trace", true)
-        checkNestMode()
+        scheduleAutomationEval()
     }
 }
 
@@ -6208,25 +6259,30 @@ def nModeSwitchEvt(evt) {
     if (disableAutomation) { return }
     else if(nModeSwitch && !nModePresSensor) {
         if(nModeDelay) {
-            LogAction("Mode Event | ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
-            runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
+            def delay = nModeDelayVal.toInteger()
+
+            if (delay > 15) {
+                LogAction("Mode Event | ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+                scheduleAutomationEval(delay)
+            } else { scheduleAutomationEval() }
         } else {
             LogAction("Mode Event | Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})", "trace", true)
-            checkNestMode()
+            scheduleAutomationEval()
         }
     }
 }
 
 def nModeFollowupCheck() {
-    def nestModeAway = (getNestLocPres() == "home") ? false : true
-    def nModeAwayState = atomicState?.nModeTstatLocAway
-    if(nestModeAway && !nModeAwayState) { checkNestMode() }
+    scheduleAutomationEval()
 }
 
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
 
 def checkNestMode() {
     LogAction("checkNestMode...", "trace", false)
+//
+// This automation only works with Nest as it toggles non-ST standard home/away
+//
     try {
         if (disableAutomation) { return }
         else if(!nModeScheduleOk()) { 
@@ -6276,7 +6332,7 @@ def checkNestMode() {
                 } else {
                     LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
                 }
-                runIn(20, "nModeFollowupCheck", [overwrite: true])
+                nModeFollowupCheck()
             }
             else if (home) {
                 LogAction("${homeDesc} Nest 'Home'", "info", true)
@@ -6288,7 +6344,7 @@ def checkNestMode() {
                 } else {
                     LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
                 }
-                runIn(20, "nModeFollowupCheck", [overwrite: true])
+                nModeFollowupCheck()
             } 
             else {
                 LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
@@ -6309,7 +6365,7 @@ def getNestLocPres() {
 }
 
 /********************************************************************************  
-|                   ST MODE THERMOSTAT SETPOINT AUTOMATION CODE	     		    |
+|       ST MODE CHANGES ADJUST THERMOSTAT SETPOINTS (AND THERMOSTAT MODE) AUTOMATION CODE	 |
 *********************************************************************************/
 def tModePrefix() { return "tMode" }
 
@@ -6464,22 +6520,55 @@ def tModeModeEvt(evt) {
     if (disableAutomation) { return }
     else {
         if(tModeDelay) {
-            LogAction("TstatSetpoint Event | ST Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
-            runIn( tModeDelayVal.toInteger(), "checkTstatMode", [overwrite: true] )
+            def delay = tModeDelayVal.toInteger()
+
+            if (delay > 15) {
+                LogAction("TstatSetpoint Event | ST Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
+                scheduleAutomationEval(delay)
+            } else { scheduleAutomationEval() }
         } else {
             LogAction("TstatSetpoint Event | ST Mode is: (${evt?.value})", "trace", true)
-            checkTstatMode()
+            scheduleAutomationEval()
+        }
+    } 
+}
+
+def tModePresEvt(evt) { 
+    if (disableAutomation) { return }
+    else {
+        if(tModeDelay) {
+            def delay = tModeDelayVal.toInteger()
+
+            if (delay > 15) {
+                LogAction("TstatSetpoint Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()}) | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "trace", true)
+                scheduleAutomationEval(delay)
+            } else { scheduleAutomationEval() }
+        } else {
+            LogAction("TstatSetpoint Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()})", "trace", true)
+            scheduleAutomationEval()
         }
     } 
 }
 
 def checkTstatMode() {
     LogAction("checkTstatMode...", "trace", false)
+//
+// This automation only works with Nest as it checks non-ST presence & thermostat capabilities
+// Presumes:
+//       all thermostats in an automation are in the same Nest structure, so that all react to home/away changes
+//
     try {
         if (disableAutomation) { return }
+
+        def away = (getNestLocPres() == "home") ? false : true
+        
         //else if(!tModeScheduleOk()) { 
-          //  LogAction("checkNestMode: Skipping because of Schedule Restrictions...")
+          //  LogAction(": Skipping because of Schedule Restrictions...")
         //} 
+        if (away) {
+            LogAction("checkTstatMode: Skipping because Nest is set AWAY", "info", true)
+            return
+        } 
         else {
             def curStMode = location?.mode
             def heatTemp = 0
@@ -6493,18 +6582,18 @@ def checkTstatMode() {
                         if(newHvacMode && (newHvacMode.toString() != tstatHvacMode)) {
                             if(setTstatMode(ts, newHvacMode)) {
                                 sendEvent(device: ts, name: 'thermostatMode', value: newHvacMode, descriptionText: "HVAC mode is ${newHvacMode.toString().capitalize()}", displayed: true, isStateChange: true )
-                                LogAction("Setting Thermostat Mode to '${newHvacMode?.toString().capitalize()}' on ($ts)", "info", true)
+                                LogAction("checkTstatMode: Setting Thermostat Mode to '${newHvacMode?.toString().capitalize()}' on ($ts)", "info", true)
                             }
                         }
                         def tstatHvacMode = ts?.currentThermostatMode.toString()
                         if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat") {
                             heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
-                            LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
+                            LogAction("checkTstatMode Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
                             ts?.setHeatingSetpoint(heatTemp.toInteger())
                         }
                         if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool") {
                             coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
-                            LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
+                            LogAction("checkTstatMode: Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
                             ts?.setCoolingSetpoint(coolTemp.toInteger())
                         }
                         //log.debug "tStatModes: $modes | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp | curStMode: $curStMode"
@@ -6826,7 +6915,7 @@ def autoScheduleOk(autoType) {
         //dayOk
         def dayOk = true
         def dayFmt = new SimpleDateFormat("EEEE")
-            dayFmt.setTimeZone(getTimeZone())
+        dayFmt.setTimeZone(getTimeZone())
         def today = dayFmt.format(new Date())
         def inDay = (today in settings?."${autoType}Days") ? true : false
         dayOk = (!settings?."${autoType}Days" || ((inDay && !inverted) || (!inDay && inverted))) ? true : false
