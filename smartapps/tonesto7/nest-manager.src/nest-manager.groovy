@@ -5607,7 +5607,7 @@ def extTmpTempOk() {
                 if (oldMode == "cool" && extTempHigh) { retval = false }
                 if (oldMode == "heat" && extTempLow) { retval = false }
             }
-            else if (!withinThresh) { retval = false }
+            if (!withinThresh) { retval = false }
         }
         LogAction("extTmpTempOk: Inside Temp: ${intTemp} is ${retval ? "" : "Not"} within $diffThresh of Outside Temp: ${extTemp}", "info", true)
         return retval
