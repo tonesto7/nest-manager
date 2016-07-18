@@ -4496,6 +4496,9 @@ def runAutomationEval() {
                 //               getExtConditions() 
                 //               extTmpTempEvt(null)
             }
+            if (isExtTmpConfigured()) {
+                extTmpTempCheck() 
+            }
             break
         case "conWat":
             if (isConWatConfigured()) {
@@ -5562,7 +5565,7 @@ def getExtConditions() {
     atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
     //log.debug "${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}"
-    if (isExtTmpConfigured() && !disableAutomation) { extTmpTempCheck() }
+    if (isExtTmpConfigured() && !disableAutomation) { scheduleAutomationEval() }
 }
 
 def extTmpTempOk() { 
@@ -5702,7 +5705,7 @@ def extTmpTstatModeEvt(evt) {
 }
 
 def extTmpTstatTempEvt(evt) {
-    LogAction("extTmpTstatTempEvt Event | Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
+    LogAction("extTmpTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
         if(evt?.value.toDouble() < extTmpMinimumTemp?.toDouble() || evt?.value.toDouble() > extTmpMaximumTemp?.toDouble()) {
@@ -5718,6 +5721,7 @@ def extTmpFollowupCheck() {
 }
 
 def extTmpTempEvt(evt) {
+    LogAction("extTmpTempEvt Event | External Sensor Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     //log.debug "extTmpTempEvt: ${evt?.value}"
     if(disableAutomation) { return }
     else {
@@ -5993,7 +5997,7 @@ def conWatTstatModeEvt(evt) {
 }
 
 def conWatTstatTempEvt(evt) {
-    LogAction("conWatTstatTempEvt Event | Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
+    LogAction("conWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
         if(evt?.value.toDouble() < conWatMinimumTemp?.toDouble() || evt?.value.toDouble() > conWatMaximumTemp?.toDouble()) {
@@ -6255,7 +6259,7 @@ def leakWatTstatModeEvt(evt) {
 }
 
 def leakWatTstatTempEvt(evt) {
-    LogAction("leakWatTstatTempEvt Event | Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
+    LogAction("leakWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
         if(evt?.value.toDouble() < leakWatMinimumTemp?.toDouble() || evt?.value.toDouble() > leakWatMaximumTemp?.toDouble()) {
