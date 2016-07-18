@@ -4381,9 +4381,9 @@ def subscribeToEvents() {
         if(!extTmpUseWeather && extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpTempEvt, [filterEvents: false]) }
         if(extTmpTstat) {
             subscribe(extTmpTstat, "thermostatMode", extTmpTstatModeEvt)
-            if(extTmpMinimumTemp || extTmpMaximumTemp) {
+//            if(extTmpMinimumTemp || extTmpMaximumTemp) {
                 subscribe(extTmpTstat, "temperature", extTmpTstatTempEvt)
-            }
+//            }
         }
     }
     //Contact Watcher Subscriptions
@@ -5563,30 +5563,6 @@ def getExtConditions( doEvent = false ) {
     }
 }
 
-def extTmpTempOk() { 
-    //log.trace "getExtTmpTempOk..."
-    try {
-        def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
-        def extTemp = getExtTmpTemperature()
-        def curMode = extTmpTstat.currentThermostatMode.toString()
-        def diffThresh = getExtTmpTempDiffVal()
-        
-        if(intTemp && extTemp && diffThresh) { 
-            def tempDiff = Math.abs(extTemp - intTemp)
-            def extTempHigh = (extTemp >= intTemp) ? true : false
-            def reachedThresh = (diffThresh >= tempDiff && !extTempHigh) ? true : false
-            //log.debug "extTempHigh: $extTempHigh | reachedThresh: $reachedThresh"
-            //log.debug "Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff}"
-            if (extTempHigh) { return false }
-            else if (reachedThresh) { return false }
-        }
-        return true
-    } catch (ex) { 
-        LogAction("getExtTmpTempOk Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "extTmpTempOk")
-    }
-}
-
 def getExtTmpTemperature() {
     def extTemp = 0.0
     if (!extTmpUseWeather && extTmpTempSensor) {
@@ -5598,6 +5574,47 @@ def getExtTmpTemperature() {
         }
     }
     return extTemp
+}
+
+def extTmpTempOk() { 
+    //log.trace "getExtTmpTempOk..."
+    try {
+        def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
+        def extTemp = getExtTmpTemperature()
+        def curMode = extTmpTstat.currentThermostatMode.toString()
+        def diffThresh = getExtTmpTempDiffVal()
+        def modeOff = (curMode == "off") ? true : false
+        def modeCool = (curMode == "cool") ? true : false
+        def modeHeat = (curMode == "heat") ? true : false
+        def modeAuto = (curMode == "auto") ? true : false
+        def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
+
+        def retval = true
+        if(intTemp && extTemp && diffThresh) { 
+            def tempDiff = Math.abs(extTemp - intTemp)
+            def extTempHigh = (extTemp >= intTemp) ? true : false
+            def extTempLow = (extTemp <= intTemp) ? true : false
+            //def withinThresh = (diffThresh >= tempDiff && !extTempHigh) ? true : false
+            def withinThresh = (diffThresh >= tempDiff) ? true : false
+
+            LogAction("extTmpTempOk: extTempHigh: $extTempHigh | extTempLow: $extTempLow | withinThresh: $withinThresh", "debug", false)
+            LogAction("extTmpTempOk: Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff}", "debug", false)
+
+            if (extTempHigh && modeCool ) { retval = false }
+            if (extTempLow && modeHeat) { retval = false }
+            if (okToRestore) {
+                def oldMode = atomicState?.extTmpRestoreMode
+                if (oldMode == "cool" && extTempHigh) { retval = false }
+                if (oldMode == "heat" && extTempLow) { retval = false }
+            }
+            else if (!withinThresh) { retval = false }
+        }
+        LogAction("extTmpTempOk: Inside Temp: ${intTemp} is ${retval ? "" : "Not"} within $diffThresh of Outside Temp: ${extTemp}", "info", true)
+        return retval
+    } catch (ex) { 
+        LogAction("getExtTmpTempOk Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "extTmpTempOk")
+    }
 }
 
 def extTmpScheduleOk() { return autoScheduleOk(extTmpPrefix()) }
@@ -5622,7 +5639,7 @@ def extTmpTempCheck() {
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
     def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
     
-    if(extTmpTempOk()) {
+    if(!extTmpTempOk()) {
         if(okToRestore || !getSafetyTempsOk(extTmpTstat)) {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || !getSafetyTempsOk(extTmpTstat)) {
                 def lastMode = null
@@ -5663,7 +5680,7 @@ def extTmpTempCheck() {
             } 
         }
     }
-    if (!extTmpTempOk()) {
+    if (extTmpTempOk()) {
         if(!modeOff) {
             if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
                 if(extTmpRestoreOnTemp) { 
@@ -5703,9 +5720,9 @@ def extTmpTstatTempEvt(evt) {
     LogAction("extTmpTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
-        if(evt?.value.toDouble() < extTmpMinimumTemp?.toDouble() || evt?.value.toDouble() > extTmpMaximumTemp?.toDouble()) {
+//        if(evt?.value.toDouble() < extTmpMinimumTemp?.toDouble() || evt?.value.toDouble() > extTmpMaximumTemp?.toDouble()) {
             scheduleAutomationEval()
-        }
+//        }
     }
 }
 
@@ -5730,15 +5747,15 @@ def extTmpTempEvt(evt) {
         def canSched = false
         //log.debug "extTmpOk: $extTmpOk | modeOff: $modeOff | extTmpTstatTurnedOff: ${atomicState?.extTmpTstatTurnedOff}"
         if(extTmpScheduleOk()) {
-            if (!extTmpOk) { 
+            if (extTmpOk) { 
                 if (!modeOff) {
                     atomicState.extTmpGoodDt = getDtNow()
                     timeVal = ["valNum":offVal, "valLabel":getEnumValue(longTimeSecEnum(), offVal)]
                     canSched = true
                 } 
             }
-            else if (extTmpOk) {
-                if(modeOff && atomicState?.extTmpTstatTurnedOff) {
+            else if (!extTmpOk) {
+                if(modeOff) {
                     atomicState.extTmpBadDt = getDtNow()
                     timeVal = ["valNum":onVal, "valLabel":getEnumValue(longTimeSecEnum(), onVal)]
                     canSched = true
