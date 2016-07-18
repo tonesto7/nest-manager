@@ -127,7 +127,7 @@ preferences {
     page(name: "simulateSmokeEventPage")
     page(name: "simulateCarbonEventPage")
     page(name: "simulateBatteryEventPage")
-    page(name: "safetyValuesPage")
+    page(name: "safetyTempsPage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
     page(name: "devPrefPage")
@@ -136,7 +136,6 @@ preferences {
     page(name: "uninstallPage")
     page(name: "custWeatherPage")
     page(name: "automationsPage")
-    page(name: "automationGlobalPrefsPage")
     
     //Automation Pages
     page(name: "selectAutoPage" )
@@ -338,6 +337,47 @@ def mainPage() {
     }
 }
 
+def buttonsPage() {
+    dynamicPage(name: "buttonsPage", title: "Every 'button' type") {
+        section("Simple Buttons") {
+            paragraph "If there are an odd number of buttons, the last button will span the entire view area."
+            buttons(name: "buttons1", title: "1 button", buttons: [
+                    [label: "bar", action: "bar"]
+            ])
+            buttons(name: "buttons2", title: "2 buttons", buttons: [
+                    [label: "foo", action: "foo"],
+                    [label: "bar", action: "bar"]
+            ])
+            buttons(name: "buttons3", title: "3 buttons", buttons: [
+                    [label: "foo", action: "foo"],
+                    [label: "bar", action: "bar"],
+                    [label: "baz", action: "baz"]
+            ])
+            buttons(name: "buttonsWithImage", title: "This element has an image and a long title.", description: "I am setting long title and descriptions to test the offset", image: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png", buttons: [
+                    [label: "foo", action: "foo"],
+                    [label: "bar", action: "bar"]
+            ])
+        }
+        section("Colored Buttons") {
+            buttons(name: "buttonsColoredSpecial", title: "special strings", description: "SmartThings highly recommends using these colors", buttons: [
+                    [label: "complete", action: "bar", backgroundColor: "complete"],
+                    [label: "required", action: "bar", backgroundColor: "required"]
+            ])
+            buttons(name: "buttonsColoredHex", title: "hex values work", buttons: [
+                    [label: "bg: #000dff", action: "foo", backgroundColor: "#000dff"],
+                    [label: "fg: #ffac00", action: "foo", color: "#ffac00"],
+                    [label: "both fg and bg", action: "foo", color: "#ffac00", backgroundColor: "#000dff"]
+            ])
+            buttons(name: "buttonsColoredString", title: "strings work too", buttons: [
+                    [label: "green", action: "foo", backgroundColor: "green"],
+                    [label: "red", action: "foo", backgroundColor: "red"],
+                    [label: "both fg and bg", action: "foo", color: "red", backgroundColor: "green"]
+            ])
+        }
+    }
+
+}
+
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
         def structs = getNestStructures()
@@ -402,6 +442,10 @@ def reviewSetupPage() {
             str += !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
             str += getDevicesDesc() ?: ""
             paragraph "${str}"
+            if(atomicState?.thermostats) {
+                href "safetyTempsPage", title: "Configure Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "${getSafetyTempsDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
+                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
+            }
             if(atomicState?.weatherDevice) {
                 if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
                     href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
@@ -494,30 +538,6 @@ def automationsPage() {
             def rText = "NOTICE:\nAutomations is still in BETA!!!\nIt may contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "${rText}"//, required: true, state: null
-        }
-        section() {
-            def descStr = ""
-            descStr += getSafetyValuesDesc() ?: ""
-            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\nDesired Temps:" : ""
-            descStr += locDesiredHeatTemp ? "\n • Desired Heat Temp: ($locDesiredHeatTemp°${getTemperatureScale()})" : ""
-            descStr += locDesiredCoolTemp ? "\n • Desired Cool Temp: ($locDesiredCoolTemp°${getTemperatureScale()})" : ""
-            def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
-            href "automationGlobalPrefsPage", title: "Global Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
-        }
-    }
-}
-
-def automationGlobalPrefsPage() {
-    dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
-        section("Global Preferences:") {
-            if(atomicState?.thermostats) {
-                href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
-                state: (getSafetyValuesDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
-                input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
-                        submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
-                input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
-                        submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
-            }
         }
     }
 }
@@ -3299,6 +3319,9 @@ def devPrefPage() {
                 input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()],
                     description: tempChgWaitValDesc, submitOnChange: true)
                 atomicState.needChildUpd = true
+                href "safetyTempsPage", title: "Configure Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "Tap to Modify..." : " Tap to configure..."), 
+                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
+                //paragraph "Nothing to see here yet!!!"
             }
         }
         if(atomicState?.protects) {
@@ -3326,6 +3349,7 @@ def devPrefPage() {
 def devCustomizePageDesc() {
     def str = ""
     str += weathAlertNotif  ? "• Weather Alerts: Enabled" : ""
+    str += getSafetyTempsDesc() ? "\n\n• Safefy Temps: ${getSafetyTempsDesc()}" : ""
     return (str != "") ? "${str}" : null
 }
 
@@ -3587,8 +3611,8 @@ def simulateBatteryEventPage() {
     }
 }
 
-def safetyValuesPage() {
-    dynamicPage(name: "safetyValuesPage", title: "Configure Location Safety Values", uninstall: false) {
+def safetyTempsPage() {
+    dynamicPage(name: "safetyTempsPage", title: "Configure your Thermostat Safety Temps", uninstall: false) {
         if(atomicState?.thermostats) {
             atomicState?.thermostats?.each { ts ->
                 def dev = getChildDevice(ts?.key)
@@ -3597,31 +3621,28 @@ def safetyValuesPage() {
                 section("${dev?.displayName} - Safety Temps:") {
                     if(canHeat) {
                         input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Minimum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
-                        submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
+                        submitOnChange: true, image: getAppImg("cool_icon.png")
                     }
                     if(canCool) {
-                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
-                        submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
+                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed(°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
+                        submitOnChange: true, image: getAppImg("heat_icon.png")
                     }
-                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Maximum Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
                 }
             }
         }
     }
 }
 
-def getSafetyValuesDesc() {
+def getSafetyTempsDesc() {
     def str = ""
     def tstats = atomicState?.thermostats
     if(tstats) {
         tstats?.each { ts ->
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
-            def maxHum = settings?."${ts?.key}_safety_humidity_max" ?: 0
-            str += ts ? "(${ts?.value}) Safety Values:" : ""
-            str += minTemp ? "\n • Minimum Temp: (${minTemp}°${getTemperatureScale()})" : ""
-            str += maxTemp ? "\n • Maximum Temp: (${maxTemp}°${getTemperatureScale()})" : ""
-            str += maxHum ? "\n • Maximum Humidity: (${maxTemp}%)" : ""
+            str += ts ? "${ts?.value}:" : ""
+            str += minTemp ? "\n • Low Safety Temp: (${minTemp}°${getTemperatureScale()})" : ""
+            str += maxTemp ? "\n • High Safety Temp: (${maxTemp}°${getTemperatureScale()})" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
         }
     }
@@ -4429,12 +4450,14 @@ def scheduler() {
     def autoType = atomicState?.automationType  
     if (autoType == "remSen") {   }  
     if (autoType == "extTmp") {  
-        def wVal = getExtTmpWeatherUpdVal()
-        //log.debug "wVal: ${wVal}"   
         if(extTmpUseWeather && extTmpTstat) { 
-            schedule("0 2/${wVal} * * * ?", "updateWeather")
+            random_int = random.nextInt(60)
+            random_dint = random.nextInt(9)
+            def wVal = getExtTmpWeatherUpdVal()
+            //log.debug "wVal: ${wVal}"   
+            schedule("${random_int} ${random_dint}/${wVal} * * * ?", "updateWeather")
+            updateWeather()
         }
-        updateWeather()
     }
 }
 
@@ -4445,8 +4468,7 @@ def watchDogAutomation() {
 
 def updateWeather() {
     if(extTmpUseWeather && extTmpTstat) { 
-        getExtConditions() 
-        extTmpTempEvt(null)
+        getExtConditions(true) 
     }
 }
 
@@ -4472,8 +4494,7 @@ def runAutomationEval() {
         case "extTmp":
             if(extTmpUseWeather && extTmpTstat) {
                 //   scheduled updateWeather covers this
-                //               getExtConditions() 
-                //               extTmpTempEvt(null)
+                //getExtConditions() 
             }
             if (isExtTmpConfigured()) {
                 extTmpTempCheck() 
@@ -4569,10 +4590,8 @@ def remSensorPage() {
                             multiple: true, image: getAppImg("temperature_icon.png")
                     if(remSensorDay) {
                         def tempStr = !remSensorNight ? "" : "Day "
-                        input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
-                                submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
-                        input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
-                                submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
+                        input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
+                        input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         
                         def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
@@ -4585,10 +4604,8 @@ def remSensorPage() {
                     section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
                         input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", description: "Tap to configure...", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
                         if(remSensorNight) {
-                            input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
-                                    submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
-                            input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
-                                    submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+                            input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
+                            input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
                             //paragraph " ", image: " "
                             def tmpVal = "Evening Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
                             if(remSensorNight.size() > 1) {
@@ -5540,15 +5557,24 @@ def isExtTmpConfigured() {
     return devOk
 }
 
-def getExtConditions() {
+def getExtConditions( doEvent = false ) {
+    def origTempF = atomicState?.curWeatherTemp_f
+    def origTempC = atomicState?.curWeatherTemp_c
     def cur = parent?.getWData()
     atomicState?.curWeather = cur?.current_observation
     atomicState?.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
     atomicState?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
     atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
-    //log.debug "${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}"
-    if (isExtTmpConfigured() && !disableAutomation) { scheduleAutomationEval() }
+    if (doEvent) {
+        if (origTempF != atomicState?.curWeatherTemp_f || origTempC != atomicState?.curWeatherTemp_c) {
+            LogAction("${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}", "debug", false)
+            if (isExtTmpConfigured() && !disableAutomation) {
+                def evtset = ["displayName":"Nest Weather Device", "value": (atomicState?.tempUnit == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f]
+                extTmpTempEvt(evtset)
+            }
+        }
+    }
 }
 
 def extTmpTempOk() { 
