@@ -4429,12 +4429,15 @@ def scheduler() {
     def autoType = atomicState?.automationType  
     if (autoType == "remSen") {   }  
     if (autoType == "extTmp") {  
-        def wVal = getExtTmpWeatherUpdVal()
-        //log.debug "wVal: ${wVal}"   
         if(extTmpUseWeather && extTmpTstat) { 
-            schedule("0 2/${wVal} * * * ?", "updateWeather")
+            random_int = random.nextInt(60)
+            random_dint = random.nextInt(9)
+            def wVal = getExtTmpWeatherUpdVal()
+            //log.debug "wVal: ${wVal}"   
+            schedule("${random_int} ${random_dint}/${wVal} * * * ?", "updateWeather")
+            updateWeather()
+
         }
-        updateWeather()
     }
 }
 
@@ -4445,8 +4448,7 @@ def watchDogAutomation() {
 
 def updateWeather() {
     if(extTmpUseWeather && extTmpTstat) { 
-        getExtConditions() 
-        extTmpTempEvt(null)
+        getExtConditions(true) 
     }
 }
 
@@ -4472,8 +4474,7 @@ def runAutomationEval() {
         case "extTmp":
             if(extTmpUseWeather && extTmpTstat) {
                 //   scheduled updateWeather covers this
-                //               getExtConditions() 
-                //               extTmpTempEvt(null)
+                //getExtConditions() 
             }
             if (isExtTmpConfigured()) {
                 extTmpTempCheck() 
@@ -5540,15 +5541,24 @@ def isExtTmpConfigured() {
     return devOk
 }
 
-def getExtConditions() {
+def getExtConditions( doEvent = false ) {
+    def origTempF = atomicState?.curWeatherTemp_f
+    def origTempC = atomicState?.curWeatherTemp_c
     def cur = parent?.getWData()
     atomicState?.curWeather = cur?.current_observation
     atomicState?.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
     atomicState?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
     atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
-    //log.debug "${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}"
-    if (isExtTmpConfigured() && !disableAutomation) { scheduleAutomationEval() }
+    if (doEvent) {
+        if (origTempF != atomicState?.curWeatherTemp_f || origTempC != atomicState?.curWeatherTemp_c) {
+            LogAction("${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}", "debug", false)
+            if (isExtTmpConfigured() && !disableAutomation) {
+                def evtset = ["displayName":"Nest Weather Device", "value": (atomicState?.tempUnit == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f]
+                extTmpTempEvt(evtset)
+            }
+        }
+    }
 }
 
 def extTmpTempOk() { 
