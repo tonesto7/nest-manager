@@ -796,7 +796,7 @@ def forcedPoll(type = null) {
 
 def postCmd() {
     //log.trace "postCmd()"
-    poll(true)
+    poll()
 }
 
 def getApiData(type = null) {
@@ -5578,6 +5578,10 @@ def getExtTmpTemperature() {
 
 def extTmpTempOk() { 
     //log.trace "getExtTmpTempOk..."
+/*
+   Really should check "desired interior temp" vs. "actual interior temp" is near exterior temp
+       May be issues with internal and external temperatures rising or falling together
+*/
     try {
         def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
         def extTemp = getExtTmpTemperature()
@@ -5594,10 +5598,9 @@ def extTmpTempOk() {
             def tempDiff = Math.abs(extTemp - intTemp)
             def extTempHigh = (extTemp >= intTemp) ? true : false
             def extTempLow = (extTemp <= intTemp) ? true : false
-            //def withinThresh = (diffThresh >= tempDiff && !extTempHigh) ? true : false
             def withinThresh = (diffThresh >= tempDiff) ? true : false
 
-            LogAction("extTmpTempOk: extTempHigh: $extTempHigh | extTempLow: $extTempLow | withinThresh: $withinThresh", "debug", false)
+            LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | withinThresh: ${withinThresh}", "debug", false)
             LogAction("extTmpTempOk: Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff}", "debug", false)
 
             if (extTempHigh && modeCool ) { retval = false }
@@ -5631,6 +5634,7 @@ def extTmpTempCheck() {
 //
 // Should consider not turning thermostat off, as much as setting it more toward away settings?
 //   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
+// if we cannot save/restore settings, don't bother turning things off
 //
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
     def modeOff = (curMode == "off") ? true : false
@@ -5638,9 +5642,10 @@ def extTmpTempCheck() {
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
     def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
+    def tempWithinThreshold = extTmpTempOk()
     
-    if(!extTmpTempOk()) {
-        if(okToRestore || !getSafetyTempsOk(extTmpTstat)) {
+    if(!tempWithinThreshold || !getSafetyTempsOk(extTmpTstat)) {
+        if(okToRestore) {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || !getSafetyTempsOk(extTmpTstat)) {
                 def lastMode = null
                 if(extTmpRestoreOnTemp) {
@@ -5657,7 +5662,7 @@ def extTmpTempCheck() {
                     if(setTstatMode(extTmpTstat, lastMode)) {
                         atomicState?.extTmpTstatTurnedOff = false
                         atomicState?.extTmpTstatOffRequested = false
-                        extTmpFollowupCheck()
+                        scheduleAutomationEval(30)
                         if(!getSafetyTempsOk(extTmpTstat)) {
                             LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
                         } else {
@@ -5677,11 +5682,13 @@ def extTmpTempCheck() {
                 } else {
                     LogAction("extTmpTempCheck() | Skipping Restore because the Mode to Restore is same as Current Mode", "info", true)
                 }
-            } 
+            } else { scheduleAutomationEval(30) } 
+        } else { 
+            if (modeOff) { LogAction("extTmpTempCheck() | Unable to restore settings okToRestore is false", "warn", true) }
         }
     }
-    if (extTmpTempOk()) {
-        if(!modeOff) {
+    if (tempWithinThreshold && getSafetyTempsOk(extTmpTstat)) {
+        if(!modeOff && (extTmpRestoreOnTemp || extTmpRestoreAutoMode)) {
             if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
                 if(extTmpRestoreOnTemp) { 
                     atomicState?.extTmpRestoreMode = curMode
@@ -5691,7 +5698,7 @@ def extTmpTempCheck() {
                 extTmpTstat?.off()
                 atomicState?.extTmpTstatTurnedOff = true
                 atomicState?.extTmpTstatOffRequested = true
-                extTmpFollowupCheck()
+                scheduleAutomationEval(30)
                 LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
                 if(allowNotif) {
                     sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", 
@@ -5701,8 +5708,11 @@ def extTmpTempCheck() {
                         sendTTS(msg)
                     }
                 }
-            }
-        } else { LogAction("extTmpTempCheck() | Skipping change because '${extTmpTstat?.label}' mode is already 'OFF'", "info", true) }
+            } else { scheduleAutomationEval(30) }
+        } else {
+           if (!(extTmpRestoreOnTemp || extTmpRestoreAutoMode)) { LogAction("extTmpTempCheck() | Skipping off change because '${extTmpTstat?.label}' because mode cannot be restored", "warn", true) }
+           else { LogAction("extTmpTempCheck() | Skipping change because '${extTmpTstat?.label}' mode is already 'OFF'", "info", true) }
+        }
     }
 }
 
@@ -5719,17 +5729,7 @@ def extTmpTstatModeEvt(evt) {
 def extTmpTstatTempEvt(evt) {
     LogAction("extTmpTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
-    else {
-//        if(evt?.value.toDouble() < extTmpMinimumTemp?.toDouble() || evt?.value.toDouble() > extTmpMaximumTemp?.toDouble()) {
-            scheduleAutomationEval()
-//        }
-    }
-}
-
-
-def extTmpFollowupCheck() {
-    //log.trace "extTmpFollowupCheck..."
-    scheduleAutomationEval()
+    else { scheduleAutomationEval() }
 }
 
 def extTmpTempEvt(evt) {
@@ -5745,7 +5745,7 @@ def extTmpTempEvt(evt) {
         def onVal = getExtTmpOnDelayVal()
         def timeVal
         def canSched = false
-        //log.debug "extTmpOk: $extTmpOk | modeOff: $modeOff | extTmpTstatTurnedOff: ${atomicState?.extTmpTstatTurnedOff}"
+        LogAction("extTmpTempEvt: extTmpOk: ${extTmpOk} | modeOff: ${modeOff} | extTmpTstatTurnedOff: ${atomicState?.extTmpTstatTurnedOff}", "debug", false)
         if(extTmpScheduleOk()) {
             if (extTmpOk) { 
                 if (!modeOff) {
@@ -5899,6 +5899,7 @@ def conWatCheck(timeOut = false) {
 // There should be monitoring of actual temps for min and max warnings given on/off automations
 //
 // Should have some check for stuck contacts
+// if we cannot save/restore settings, don't bother turning things off
 //
     try {
         if (disableAutomation) { return }
@@ -5908,13 +5909,13 @@ def conWatCheck(timeOut = false) {
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def safetyOk = getSafetyTempsOk(conWatTstat)
-            def okToRestore = (timeOut || !safetyOk || ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode)))) ? true : false
+            def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
-            if(getConWatContactsOk() || !safetyOk) {
+            if(getConWatContactsOk() || !safetyOk || timeOut) {
                 if(okToRestore) {
                     if(timeOut || !safetyOk || (getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5))) {
                         def lastMode = null
@@ -5924,11 +5925,9 @@ def conWatCheck(timeOut = false) {
                                     lastMode = "auto"
                                     LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
                                 }
-                            } else {
-                                lastMode = atomicState?.conWatRestoreMode
-                            }
+                            } else { lastMode = atomicState?.conWatRestoreMode }
                         }
-                        if((lastMode && lastMode != curMode) || timeOut || !safetyOk) {
+                        if(lastMode && ((lastMode != curMode) || timeOut || !safetyOk)) {
                             if(setTstatMode(conWatTstat, lastMode)) {
                                 atomicState.conWatTstatTurnedOff = false
                                 atomicState?.conWatTstatOffRequested = false
@@ -5939,43 +5938,38 @@ def conWatCheck(timeOut = false) {
                                         }
                                     }
                                 }
-                                
-                                conWatFollowupCheck()
+                                scheduleAutomationEval(30)
                                 unschedTimeoutRestore()
-                                
                                 if(!safetyOk) {
                                     LogAction("Restoring '${conWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
-                                }
-                                else if (timeOut) {
-                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because the (${getEnumValue(longTimeMinEnum(), conWatOffTimeout)}) Timeout has been reached...", "info", true)
-                                }
-                                else  {
-                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
+                                } else { 
+                                    if (timeOut) {
+                                        LogAction("Restoring '${conWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because the (${getEnumValue(longTimeMinEnum(), conWatOffTimeout)}) Timeout has been reached...", "info", true)
+                                    } else {
+                                        LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
+                                    }
                                 }
                                 if(allowNotif) {
                                     if(!timeOut && safetyOk) {
-                                        sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
-                                                settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                                        sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                                         if(allowSpeech && speakOnRestore) {
                                             def msg = voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")
                                             sendTTS(msg)
                                         }
                                     }
                                 }
-                            } else { 
-                                LogAction("conWatCheck() | There was problem restoring the last mode to '...", "error", true) 
-                            }
-                        } else {
-                            LogAction("conWatCheck() | Skipping Restore Mode is the same as Current Mode", "info", true)
-                        }
+                            } else { LogAction("conWatCheck() | There was problem restoring the last mode to ...", "error", true) }
+                        } else { LogAction("conWatCheck() | Skipping Restore Mode is the same as Current Mode", "info", true) }
                     } else { scheduleAutomationEval() }
-                } 
+                } else {
+                    if (modeOff) { LogAction("conWatCheck() | Unable to restore settings okToRestore is false", "warn", true) }
+                }
             }
             
-            if (!getConWatContactsOk()) {
-                if(!modeOff) {
+            if (!getConWatContactsOk() && safetyOk && !timeOut) {
+                if(!modeOff && (conWatRestoreOnClose || conWatRestoreAutoMode)) {
                     if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
-                        if(conWatRestoreOnClose) { 
+                        if(conWatRestoreOnClose) {
                             atomicState?.conWatRestoreMode = curMode
                             LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                         }
@@ -5990,10 +5984,9 @@ def conWatCheck(timeOut = false) {
                                     LogAction("conWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                                 }
                             }
-                            if(atomicState?.timeOutScheduled) { unschedule("restoreAfterTimeOut") }
-                            conWatFollowupCheck()
-                            if(timeOut) { scheduleTimeoutRestore() }
-                            LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
+                            scheduleAutomationEval(30)
+                            scheduleTimeoutRestore()
+                            LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warn", true)
                             if(allowNotif) {
                                 sendNofificationMsg("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", 
                                     settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
@@ -6002,20 +5995,18 @@ def conWatCheck(timeOut = false) {
                                     sendTTS(msg)
                                 }
                             }
-                        }
+                        } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
                     } else { scheduleAutomationEval() }
-                } else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
+                } else {
+                    if (!(conWatRestoreOnClose || conWatRestoreAutoMode)) { LogAction("conWatCheck() | Skipping off change because '${conWatTstat?.label}' because mode cannot be restored", "warn", true) }
+                    else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
+                }
             }
         }
     } catch (ex) {
         LogAction("conWatCheck Exception: (${ex})", "error", true)
         sendExceptionData(ex, "conWatCheck")
     }
-}
-
-def conWatFollowupCheck() {
-    //log.trace "conWatFollowupCheck..."
-    scheduleAutomationEval()
 }
 
 def scheduleTimeoutRestore() {
@@ -6033,6 +6024,7 @@ def unschedTimeoutRestore() {
         unschedule("restoreAfterTimeOut")
         LogAction("Scheduled TimeOut Mode Restoration has been cancelled because all Trigger are now clear...", "info", true)
     }
+    atomicState?.timeOutScheduled = false
 }
 
 def restoreAfterTimeOut() {
@@ -6040,6 +6032,7 @@ def restoreAfterTimeOut() {
     if(settings?."${pName}OffTimeout") {
         switch(pName) {
             case "conWat":
+                atomicState?.timeOutScheduled = false
                 conWatCheck(true)
                 break
             case "leakWat":
@@ -6217,6 +6210,7 @@ def leakWatCheck() {
 //   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
 //
 // Should have some check for stuck contacts
+// if we cannot save/restore settings, don't bother turning things off
 //
     try {
         if (disableAutomation) { return }
@@ -6231,7 +6225,7 @@ def leakWatCheck() {
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
          
             if(getLeakWatSensorsOk() || !getSafetyTempsOk(leakWatTstat)) {
-                if(okToRestore || !getSafetyTempsOk(leakWatTstat)) {
+                if(okToRestore) {
                     if(getLeakWatDryDtSec() >= (getLeakWatOnDelayVal() - 5) || !getSafetyTempsOk(leakWatTstat)) {
                         def lastMode = null
                         if(leakWatRestoreOnDry) {
@@ -6255,7 +6249,7 @@ def leakWatCheck() {
                                         }
                                     }
                                 }
-                                leakWatFollowupCheck()
+                                scheduleAutomationEval(30)
                                 if(!getSafetyTempsOk(leakWatTstat)) {
                                     LogAction("Restoring '${leakWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
                                 } else {
@@ -6276,11 +6270,13 @@ def leakWatCheck() {
                             LogAction("leakWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
                         }
                     } else { scheduleAutomationEval() }
-                } 
+                } else {
+                    if (modeOff) { LogAction("leakWatCheck() | Unable to restore settings okToRestore is false", "warn", true) }
+                }
             }
                
-            if (!getLeakWatSensorsOk()) {
-                if(!modeOff) {
+            if (!getLeakWatSensorsOk() && getSafetyTempsOk(leakWatTstat)) {
+                if(!modeOff && leakWatRestoreOnDry) {
                     if(leakWatRestoreOnDry) { 
                         atomicState?.leakWatRestoreMode = curMode
                         LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
@@ -6295,8 +6291,8 @@ def leakWatCheck() {
                             LogAction("leakWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                         }
                     }
-                    leakWatFollowupCheck()
-                    LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "warning", true)
+                    scheduleAutomationEval(30)
+                    LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "warn", true)
                     if(allowNotif) {
                         sendNofificationMsg("'${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "Info", 
                             settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
@@ -6305,8 +6301,9 @@ def leakWatCheck() {
                             sendTTS(msg)
                         }
                     }
-                } else { 
-                    LogAction("leakWatCheck() | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true)
+                } else {
+                    if (!leakWatRestoreOnDry) { LogAction("leakWatCheck() | Skipping off change because '${leakWatTstat?.label}' because mode cannot be restored", "warn", true) }
+                    else { LogAction("leakWatCheck() | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true) }
                 }
             }
         }
@@ -6314,11 +6311,6 @@ def leakWatCheck() {
         LogAction("leakWatCheck Exception: (${ex})", "error", true)
         sendExceptionData(ex, "leakWatCheck")
     }
-}
-
-def leakWatFollowupCheck() {
-    //log.trace "leakWatFollowupCheck..."
-    scheduleAutomationEval()
 }
 
 def leakWatTstatModeEvt(evt) {
