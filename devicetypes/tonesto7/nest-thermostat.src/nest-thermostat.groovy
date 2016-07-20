@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.4"}
+def devVer() { return "2.5.5"}
 
 // for the UI
 metadata {
@@ -1520,11 +1520,8 @@ void off() {
 void heat() {
     try {
         log.trace "heat()..."
-        def curPres = getNestPresence()
-        if (curPres == "home") {
-            hvacModeEvent("heat") 
-            runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
-        }
+        hvacModeEvent("heat") 
+        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
     }
     catch (ex) {
         log.error "heat Exception: ${ex}"
@@ -1540,11 +1537,8 @@ void emergencyHeat() {
 void cool() {
     try {
         log.trace "cool()..."
-        def curPres = getNestPresence()
-        if (curPres == "home") {
-            hvacModeEvent("cool") 
-            runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
-        }
+        hvacModeEvent("cool") 
+        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
     }
     catch (ex) {
         log.error "cool Exception: ${ex}"
@@ -1555,11 +1549,8 @@ void cool() {
 void auto() {
     try {
         log.trace "auto()..."
-        def curPres = getNestPresence()
-        if (curPres == "home" && ( state?.can_heat == true && state?.can_cool == true ) ) {
-            hvacModeEvent("auto") 
-            runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
-        }
+        hvacModeEvent("auto") 
+        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
     }
     catch (ex) {
         log.error "auto Exception: ${ex}"
@@ -1604,12 +1595,9 @@ void setThermostatMode(modeStr) {
 void fanOn() {
     try {
         log.trace "fanOn()..."
-        def curPres = getNestPresence()
-        if( (curPres == "home") && state?.has_fan.toBoolean() ) {
+        if ( state?.has_fan.toBoolean() ) {
             if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
-        } else {
-            log.error "Error setting fanOn" 
-        }
+        } else { log.error "Error setting fanOn" }
     }
     catch (ex) {
         log.error "fanOn Exception: ${ex}"
@@ -1620,12 +1608,9 @@ void fanOn() {
 void fanOff() {
     try {
         log.trace "fanOff()..."
-        def curPres = getNestPresence()
-        if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+        if ( state?.has_fan.toBoolean() ) {
             if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
-        } else {
-            log.error "Error setting fanOff" 
-        }
+        } else { log.error "Error setting fanOff" }
     }
     catch (ex) {
         log.error "fanOff Exception: ${ex}"
@@ -1641,12 +1626,9 @@ void fanCirculate() {
 void fanAuto() {
     try {
         log.trace "fanAuto()..."
-        def curPres = getNestPresence()
-        if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+        if ( state?.has_fan.toBoolean() ) {
             if (parent.setFanMode(this,false) ) { fanModeEvent("false") }
-        } else {
-            log.error "Error setting fanAuto" 
-        }
+        } else { log.error "Error setting fanAuto" }
     }
     catch (ex) {
         log.error "fanAuto Exception: ${ex}"
