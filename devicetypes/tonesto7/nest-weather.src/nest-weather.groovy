@@ -56,6 +56,7 @@ metadata {
         attribute "feelsLike", "string"
         attribute "percentPrecip", "string"
         attribute "uvindex", "string"
+        attribute "dewpoint", "string"
         attribute "visibility", "string"
         attribute "alert", "string"
         attribute "alertKeys", "string"
@@ -321,6 +322,21 @@ def illuminanceEvent(illum) {
     }
 }
 
+def dewpointEvent(Double tempVal) {
+    try {
+        def temp = device.currentState("dewpoint")?.value.toString()
+        def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+        if(!temp.equals(rTempVal.toString())) {
+            log.debug("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
+            sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+        } else { Logger("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+    }
+    catch (ex) {
+        log.error "dewpointEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "dewpointEvent")
+    }
+}
+
 def temperatureEvent(Double tempVal, Double feelsVal) {
     try {
         def temp = device.currentState("temperature")?.value.toString()
@@ -347,6 +363,19 @@ def getTemp() {
     }       
     } catch (ex) { 
         parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getTemp")
+        return 0 
+    }
+}
+
+def getDewpoint() { 
+    try { 
+     if ( wantMetric() ) {
+         return "${state?.curWeatherDewPoint_c}°C"
+     } else {
+         return	"${state?.curWeatherDewPoint_f}°F"
+    }       
+    } catch (ex) { 
+        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getDewpoint")
         return 0 
     }
 }
@@ -395,6 +424,11 @@ def getWeatherConditions(Map weatData) {
                 temperatureEvent( (wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f), (wantMetric() ? state?.curFeelsTemp_c : state?.curFeelsTemp_f) )
                 humidityEvent(state?.curWeatherHum)
                 illuminanceEvent(estimateLux(state?.curWeatherIcon))
+                def hum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "") as Double
+                def Tc = Math.round(cur?.current_observation?.feelslike_c as Double) as Double
+                state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
+                state.curWeatherDewPoint_f =  Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
+                dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
                 sendEvent(name: "weather", value: cur?.current_observation?.weather)
                 sendEvent(name: "weatherIcon", value: state?.curWeatherIcon, displayed:false)
                 def wspeed = 0.0
@@ -569,6 +603,22 @@ private pad(String s, size = 25) {
         parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "pad")
     }
 }
+
+
+private estimateDewPoint(double rh,double t) {
+    def L = Math.log(rh/100)
+    def M = 17.27 * t
+    def N = 237.3 + t
+    def B = (L + (M/N)) / 17.27
+    def dp = (237.3 * B) / (1 - B)
+
+    def t1 = t * 9.0/5.0 + 32
+    def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t1) / (243.04 + t1) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t1) / (243.04 + t1) ) ) 
+    dp1 = (dp1 - 32) * 5.0/9.0
+    log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)}" 
+    return dp1.round(1)
+}
+
 
 private estimateLux(weatherIcon) {
     //log.trace "estimateLux ( ${weatherIcon} )"
@@ -871,6 +921,7 @@ def getWeatherHtml() {
                             <b>Feels Like:</b> ${getFeelslike()} <br>
                             <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
                             <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+                            <b>Dew Point: </b>${getDewpoint()}<br>
                             <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
                             <b>Visibility:</b> ${getVisibility()} <br>
                             <b>Lux:</b> ${getLux()}<br>
