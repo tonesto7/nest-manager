@@ -4991,24 +4991,24 @@ def remSenTstatFanSwitchCheck() {
                         if(!swOn) {
                             if(checkFanSpeedSupport(sw)) {
                                 if(tempDiff < remSenTstatFanSwitchLowSpeed.toDouble()) {
-                                    sw?.off()
+                                    sw.off()
                                     LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch (OFF)", "info", true)
                                 }
                                 else if(tempDiff >= remSenTstatFanSwitchLowSpeed.toDouble() && tempDiff < remSenTstatFanSwitchMedSpeed.toDouble()) {
-                                    sw?.lowSpeed()
+                                    sw.lowSpeed()
                                     LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch on (LOW SPEED)", "info", true)
                                 }
                                 else if(tempDiff >= remSenTstatFanSwitchMedSpeed.toDouble() && tempDiff < remSenTstatFanSwitchHighSpeed.toDouble()) {
-                                    sw?.medSpeed()
+                                    sw.medSpeed()
                                     LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of ($remSenTstatFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (MEDIUM SPEED)", "info", true)
                                 }
                                 else if(tempDiff >= remSenTstatFanSwitchHighSpeed.toDouble()) {
-                                    sw?.highSpeed()
+                                    sw.highSpeed()
                                     LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of ($remSenTstatFanSwitchHighSpeed) | Turning '${sw.label}' Fan Switch on (HIGH SPEED)", "info", true)
                                 }
                             } else {
                                 LogAction("remSenTstatFanSwitchCheck: Thermostat (${remSenTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw.label}' Switch (ON)", "info", true)
-                                sw?.on()
+                                sw.on()
                             }
                         }
                     }
@@ -5019,7 +5019,7 @@ def remSenTstatFanSwitchCheck() {
                     def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
                     if(swOn) {
                         LogAction("remSenTstatFanSwitchCheck: Thermostat (${remSenTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw?.label}' Switch (OFF)", "info", true)
-                        sw?.off()
+                        sw.off()
                     }
                 }
             }
@@ -5603,7 +5603,9 @@ def extTmpTempOk() {
         def modeCool = (curMode == "cool") ? true : false
         def modeHeat = (curMode == "heat") ? true : false
         def modeAuto = (curMode == "auto") ? true : false
-        def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
+        def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatOffRequested || (!atomicState?.extTmpTstatOffRequested && extTmpRestoreAutoMode))) ? true : false
+
+        LogAction("extTmpTempOk: modeOff: ${modeOff} | atomicState.extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
         def retval = true
         if(intTemp && extTemp && diffThresh) { 
@@ -5653,7 +5655,7 @@ def extTmpTempCheck() {
     def allowNotif = (extTmpPushMsgOn || settings?."${getPagePrefix()}PushMsgOn") ? true : false
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
-    def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
+    def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatOffRequested || (!atomicState?.extTmpTstatOffRequested && extTmpRestoreAutoMode))) ? true : false
     def tempWithinThreshold = extTmpTempOk()
     
     if(!tempWithinThreshold || !getSafetyTempsOk(extTmpTstat)) {
@@ -5661,18 +5663,16 @@ def extTmpTempCheck() {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || !getSafetyTempsOk(extTmpTstat)) {
                 def lastMode = null
                 if(extTmpRestoreOnTemp) {
-                    if(!atomicState?.extTmpRestoreMode) {
-                        if(extTmpRestoreAutoMode || !getSafetyTempsOk(extTmpTstat)) {
+                    if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
+                    else if(extTmpRestoreAutoMode || !getSafetyTempsOk(extTmpTstat)) {
                             lastMode = "auto"
                             LogAction("extTmpTempCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                        }
-                    } else {
-                        lastMode = atomicState?.extTmpRestoreMode
                     }
                 }
                 if((lastMode && lastMode != curMode) || !getSafetyTempsOk(extTmpTstat)) {
                     if(setTstatMode(extTmpTstat, lastMode)) {
-                        atomicState?.extTmpTstatTurnedOff = false
+                        //atomicState?.extTmpTstatTurnedOff = false
+                        atomicState?.extTmpRestoreMode = null
                         atomicState?.extTmpTstatOffRequested = false
                         scheduleAutomationEval(30)
                         if(!getSafetyTempsOk(extTmpTstat)) {
@@ -5707,10 +5707,10 @@ def extTmpTempCheck() {
                     LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
                 }
                 //log.debug("External Temp has reached the temp threshold turning 'Off' ${extTmpTstat}")
-                extTmpTstat?.off()
-                atomicState?.extTmpTstatTurnedOff = true
+                extTmpTstat.off()
+                //atomicState?.extTmpTstatTurnedOff = true
                 atomicState?.extTmpTstatOffRequested = true
-                scheduleAutomationEval(30)
+                scheduleAutomationEval(75)
                 LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
                 if(allowNotif) {
                     sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", 
@@ -5734,6 +5734,7 @@ def extTmpTstatModeEvt(evt) {
     else {
         def modeOff = (evt?.value == "off") ? true : false
         if(!modeOff) { atomicState?.extTmpTstatTurnedOff = false }
+        else { atomicState?.extTmpTstatTurnedOff = true }
     }
     scheduleAutomationEval()
 }
@@ -5996,7 +5997,7 @@ def conWatCheck(timeOut = false) {
             
                             if(conWatTstatMir) { 
                                 conWatTstatMir?.each { tstat ->
-                                    tstat?.off()
+                                    tstat.off()
                                     LogAction("conWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                                 }
                             }
@@ -6300,10 +6301,10 @@ def leakWatCheck() {
                     LogAction("leakWatCheck: ${wetCtDesc} ${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
                     atomicState?.leakWatTstatTurnedOff = true
                     atomicState?.leakWatTstatOffRequested = true
-                    leakWatTstat?.off()
+                    leakWatTstat.off()
                     if(leakWatTstatMir) { 
                         leakWatTstatMir?.each { tstat ->
-                            tstat?.off()
+                            tstat.off()
                             LogAction("leakWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                         }
                     }
@@ -7367,10 +7368,10 @@ def setTstatMode(tstat, mode) {
     def result = false
     try {
         if(mode) {
-            if (mode == "auto") { tstat?.auto(); result = true }
-            else if (mode == "heat") { tstat?.heat(); result = true }
-            else if (mode == "cool") { tstat?.cool(); result = true }
-            else if (mode == "off") { tstat?.off(); result = true }
+            if (mode == "auto") { tstat.auto(); result = true }
+            else if (mode == "heat") { tstat.heat(); result = true }
+            else if (mode == "cool") { tstat.cool(); result = true }
+            else if (mode == "off") { tstat.off(); result = true }
             
             if(result) { LogAction("setThermostatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
             else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
