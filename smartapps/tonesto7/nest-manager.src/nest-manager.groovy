@@ -4491,9 +4491,9 @@ def updateWeather() {
     }
 }
 
-def scheduleAutomationEval(schedtime = 15) {
-    if (schedtime < 15) { schedtime = 15 }
-    if (getLastAutomationSchedSec() > 10) {
+def scheduleAutomationEval(schedtime = 20) {
+    if (schedtime < 20) { schedtime = 20 }
+    if (getLastAutomationSchedSec() > (20-8)) {
         atomicState?.lastAutomationSchedDt = getDtNow()
         runIn(schedtime, "runAutomationEval", [overwrite: true])
     }
@@ -4795,7 +4795,7 @@ def remSenMotionEvt(evt) {
             dorunIn = true
         }
         if (dorunIn) {
-            if (delay > 15) {
+            if (delay > 20) {
                 LogAction("remSenMotionEvt: Scheduling Motion Check for (${remSenMotionDelayVal} Seconds)", "info", true)
                 scheduleAutomationEval(delay)
             } else { scheduleAutomationEval() }
@@ -5061,7 +5061,6 @@ private remSenCheck() {
     def remWaitVal = remSenWaitVal?.toInteger() ?: 60
     if (getLastRemSenEvalSec() < remWaitVal) {
         def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 8) ? 8 : (remWaitVal - getLastRemSenEvalSec())
-        if (schChkVal < 15) { schChkVal = 15 }
         scheduleAutomationEval(schChkVal)
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
@@ -5118,7 +5117,7 @@ private remSenEvtEval() {
 // check that requested setpoints make sense & notify 
                 def coolheatDiff = Math.abs(reqSenCoolSetPoint - reqSenHeatSetPoint)
                 if( !((reqSenCoolSetPoint >= reqSenHeatSetPoint) && (coolheatDiff > 2)) ) {
-                    LogAction("Remote Sensor: Bad requested setpoints with auto mode ${reqSenCoolSetPoint} ${reqSenHeatSetPoint}...", "warn", true)
+                    LogAction("remSenEvtEval: Bad requested setpoints with auto mode ${reqSenCoolSetPoint} ${reqSenHeatSetPoint}...", "warn", true)
                     return
                 }
             }
@@ -5652,8 +5651,8 @@ def extTmpTempOk() {
             LogAction("extTmpTempOk: Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff}", "debug", false)
 
             if (extTempHigh && modeCool ) { retval = false }
-            else if (extTempLow && modeHeat) { retval = false }
-            else if (okToRestore) {
+            if (extTempLow && modeHeat) { retval = false }
+            if (okToRestore) {
                 def oldMode = atomicState?.extTmpRestoreMode
                 if (oldMode == "cool" && extTempHigh) { retval = false }
                 if (oldMode == "heat" && extTempLow) { retval = false }
@@ -5696,18 +5695,16 @@ def extTmpTempCheck() {
         if(okToRestore) {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || !getSafetyTempsOk(extTmpTstat)) {
                 def lastMode = null
-                if(extTmpRestoreOnTemp) {
-                    if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
-                    else if(extTmpRestoreAutoMode || !getSafetyTempsOk(extTmpTstat)) {
-                            lastMode = "auto"
-                            LogAction("extTmpTempCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                    }
+                if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
+                else if(extTmpRestoreAutoMode || !getSafetyTempsOk(extTmpTstat)) {
+                        lastMode = "auto"
+                        LogAction("extTmpTempCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
                 }
                 if((lastMode && lastMode != curMode) || !getSafetyTempsOk(extTmpTstat)) {
+                    scheduleAutomationEval(180)
                     if(setTstatMode(extTmpTstat, lastMode)) {
                         atomicState?.extTmpRestoreMode = null
                         atomicState?.extTmpTstatOffRequested = false
-                        scheduleAutomationEval(30)
                         if(!getSafetyTempsOk(extTmpTstat)) {
                             LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
                         } else {
@@ -5735,13 +5732,13 @@ def extTmpTempCheck() {
     if (tempWithinThreshold && getSafetyTempsOk(extTmpTstat)) {
         if(!modeOff && (extTmpRestoreOnTemp || extTmpRestoreAutoMode)) {
             if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
+                scheduleAutomationEval(180)
                 if(extTmpRestoreOnTemp) { 
                     atomicState?.extTmpRestoreMode = curMode
                     LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
                 }
                 extTmpTstat.off()
                 atomicState?.extTmpTstatOffRequested = true
-                scheduleAutomationEval(75)
                 LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
                 if(allowNotif) {
                     sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", 
@@ -5808,7 +5805,7 @@ def extTmpTempEvt(evt) {
             if (canSched) {
                 //log.debug "timeVal: $timeVal"
                 LogAction("extTmpTempEvt() ${!evt ? "" : "'${evt?.displayName}': (${evt?.value}°${atomicState?.tempUnit}) received... | "}External Temp Check scheduled for (${timeVal?.valLabel})...", "info", true)
-                if (timeVal?.valNum > 15) {
+                if (timeVal?.valNum > 20) {
                     scheduleAutomationEval(timeVal?.valNum)
                 } else { scheduleAutomationEval() }
             } else {
@@ -5952,29 +5949,26 @@ def conWatCheck(timeOut = false) {
             def curNestPres = getTstatPresence(conWatTstat)
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
-            def safetyOk //= getSafetyTempsOk(conWatTstat)
+            def safetyOk = getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
-            //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
+            //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
             if(getConWatContactsOk() || !safetyOk || timeOut) {
                 if(okToRestore) {
                     if(timeOut || !safetyOk || (getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5))) {
                         def lastMode = null
-                        if(timeOut || !safetyOk || conWatRestoreOnClose) {
-                            if(!atomicState?.conWatRestoreMode) {
-                                if(conWatRestoreAutoMode) {
-                                    lastMode = "auto"
-                                    LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                                }
-                            } else { lastMode = atomicState?.conWatRestoreMode }
-                        }
+                        if(!atomicState?.conWatRestoreMode) {
+                            if(conWatRestoreAutoMode) {
+                                lastMode = "auto"
+                                LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
+                            }
+                        } else { lastMode = atomicState?.conWatRestoreMode }
                         if(lastMode && ((lastMode != curMode) || timeOut || !safetyOk)) {
+                            scheduleAutomationEval(180)
                             if(setTstatMode(conWatTstat, lastMode)) {
-                                //atomicState.conWatTstatTurnedOff = false
-                                atomicState?.conWatTstatOffRequested = false
                                 if(conWatTstatMir) { 
                                     conWatTstatMir?.each { tstat ->
                                         if(setTstatMode(tstat, lastMode)) {
@@ -5982,7 +5976,8 @@ def conWatCheck(timeOut = false) {
                                         }
                                     }
                                 }
-                                scheduleAutomationEval(30)
+                                atomicState?.conWatRestoreMode = null
+                                atomicState?.conWatTstatOffRequested = false
                                 unschedTimeoutRestore()
                                 if(!safetyOk) {
                                     LogAction("Restoring '${conWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
@@ -6022,8 +6017,8 @@ def conWatCheck(timeOut = false) {
                             LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                         }
                         LogAction("conWatCheck: ${openCtDesc} ${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
+                        scheduleAutomationEval(180)
                         if(setTstatMode(conWatTstat, "off")) {
-                            //atomicState?.conWatTstatTurnedOff = true
                             atomicState?.conWatTstatOffRequested = true
             
                             if(conWatTstatMir) { 
@@ -6032,7 +6027,6 @@ def conWatCheck(timeOut = false) {
                                     LogAction("conWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                                 }
                             }
-                            scheduleAutomationEval(30)
                             scheduleTimeoutRestore()
                             LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warn", true)
                             if(allowNotif) {
@@ -6099,7 +6093,7 @@ def conWatTstatModeEvt(evt) {
     else { 
         def modeOff = (evt?.value == "off") ? true : false
         if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
-        else { atomicState?.conWatpTstatTurnedOff = true }
+        else { atomicState?.conWatTstatTurnedOff = true }
         scheduleAutomationEval()
     }
 }
@@ -6107,17 +6101,7 @@ def conWatTstatModeEvt(evt) {
 def conWatTstatTempEvt(evt) {
     LogAction("conWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
-    else {
-        if(settings?."${getPagePrefix()}UseSafetyTemps") {
-            def sTemps = getSafetyTemps(settings?."${getPagePrefix()}Tstat")
-            log.debug "sTemps: $sTemps"
-            if(sTemps) {
-                if(evt?.value.toDouble() < sTemps?.min?.toDouble() || evt?.value.toDouble() > sTemps?.max?.toDouble()) {
-                    scheduleAutomationEval()
-                }
-            }
-        }
-    }
+    scheduleAutomationEval()
 }
 
 def conWatContactEvt(evt) {
@@ -6147,7 +6131,7 @@ def conWatContactEvt(evt) {
             }
             if(canSched) {
                 LogAction("conWatContactEvt: ${!evt ? "A monitored Contact is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Contact Check scheduled for (${timeVal?.valLabel})...", "info", true)
-                if (timeVal?.valNum > 15) {
+                if (timeVal?.valNum > 20) {
                     scheduleAutomationEval(timeVal?.valNum)
                 } else { scheduleAutomationEval() }
             } else {
@@ -6277,20 +6261,15 @@ def leakWatCheck() {
                 if(okToRestore) {
                     if(getLeakWatDryDtSec() >= (getLeakWatOnDelayVal() - 5) || !getSafetyTempsOk(leakWatTstat)) {
                         def lastMode = null
-                        if(leakWatRestoreOnDry) {
-                            if(!atomicState?.leakWatRestoreMode) {
-                                if(leakWatRestoreOnDry || !getSafetyTempsOk(leakWatTstat)) {
-                                    lastMode = "auto"
-                                    LogAction("leakWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                                }
-                            } else {
-                                lastMode = atomicState?.leakWatRestoreMode
+                        if(!atomicState?.leakWatRestoreMode) {
+                            if(leakWatRestoreOnDry || !getSafetyTempsOk(leakWatTstat)) {
+                                lastMode = "auto"
+                                LogAction("leakWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
                             }
-                        }
+                        } else { lastMode = atomicState?.leakWatRestoreMode }
                         if((lastMode && lastMode != curMode) || !getSafetyTempsOk(leakWatTstat)) {
+                            scheduleAutomationEval(180)
                             if(setTstatMode(leakWatTstat, lastMode)) {
-                                //atomicState.leakWatTstatTurnedOff = false
-                                atomicState?.leakWatTstatOffRequested = false
                                 if(leakWatTstatMir) { 
                                     leakWatTstatMir?.each { tstat ->
                                         if(setTstatMode(tstat, lastMode)) {
@@ -6298,7 +6277,8 @@ def leakWatCheck() {
                                         }
                                     }
                                 }
-                                scheduleAutomationEval(30)
+                                atomicState?.leakWatTstatOffRequested = false
+                                atomicState?.leakWatRestoreMode = null
                                 if(!getSafetyTempsOk(leakWatTstat)) {
                                     LogAction("Restoring '${leakWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
                                 } else {
@@ -6331,8 +6311,7 @@ def leakWatCheck() {
                         LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                     }
                     LogAction("leakWatCheck: ${wetCtDesc} ${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
-                    //atomicState?.leakWatTstatTurnedOff = true
-                    atomicState?.leakWatTstatOffRequested = true
+                    scheduleAutomationEval(180)
                     leakWatTstat.off()
                     if(leakWatTstatMir) { 
                         leakWatTstatMir?.each { tstat ->
@@ -6340,7 +6319,7 @@ def leakWatCheck() {
                             LogAction("leakWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
                         }
                     }
-                    scheduleAutomationEval(30)
+                    atomicState?.leakWatTstatOffRequested = true
                     LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "warn", true)
                     if(allowNotif) {
                         sendNofificationMsg("'${leakWatTstat.label}' has been turned 'OFF' because ${wetCtDesc} has reported it's WET...", "Info", 
@@ -6367,7 +6346,7 @@ def leakWatTstatModeEvt(evt) {
     if (disableAutomation) { return }
     else { 
         def modeOff = (evt?.value == "off") ? true : false
-        if (!modeOff) { atomicState?.leakWatTstatTurnedOff = false }
+        if(!modeOff) { atomicState?.leakWatTstatTurnedOff = false }
         else { atomicState?.leakWatTstatTurnedOff = true }
         scheduleAutomationEval()
     }
@@ -6376,11 +6355,7 @@ def leakWatTstatModeEvt(evt) {
 def leakWatTstatTempEvt(evt) {
     LogAction("leakWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
-    else {
-        if(evt?.value.toDouble() < leakWatMinimumTemp?.toDouble() || evt?.value.toDouble() > leakWatMaximumTemp?.toDouble()) {
-            scheduleAutomationEval()
-        }
-    }
+    scheduleAutomationEval()
 }
 
 def leakWatSensorEvt(evt) {
@@ -6408,7 +6383,7 @@ def leakWatSensorEvt(evt) {
         
         if(canSched) {
             LogAction("leakWatSensorEvt: ${!evt ? "A monitored Leak Sensor is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Leak Check scheduled for (${timeVal?.valLabel})...", "info", true)
-            if (timeVal?.valNum > 15) {
+            if (timeVal?.valNum > 20) {
                 scheduleAutomationEval(timeVal?.valNum)
             } else { scheduleAutomationEval() }
         } else {
@@ -6513,7 +6488,7 @@ def nModeModeEvt(evt) {
         if(nModeDelay) {
             def delay = nModeDelayVal.toInteger()
 
-            if (delay > 15) {
+            if (delay > 20) {
                 LogAction("Mode Event: ST Mode is ${evt?.value.toString().toUpperCase()} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
                 scheduleAutomationEval(delay)
             } else { scheduleAutomationEval() }
@@ -6529,7 +6504,7 @@ def nModePresEvt(evt) {
     else if(nModeDelay) {
         def delay = nModeDelayVal.toInteger()
 
-        if (delay > 15) {
+        if (delay > 20) {
             LogAction("Mode Event | Presence: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
             scheduleAutomationEval(delay)
         } else { scheduleAutomationEval() }
@@ -6545,7 +6520,7 @@ def nModeSwitchEvt(evt) {
         if(nModeDelay) {
             def delay = nModeDelayVal.toInteger()
 
-            if (delay > 15) {
+            if (delay > 20) {
                 LogAction("Mode Event | ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
                 scheduleAutomationEval(delay)
             } else { scheduleAutomationEval() }
@@ -6806,7 +6781,7 @@ def tModeModeEvt(evt) {
         if(tModeDelay) {
             def delay = tModeDelayVal.toInteger()
 
-            if (delay > 15) {
+            if (delay > 20) {
                 LogAction("TstatSetpoint Event | ST Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
                 scheduleAutomationEval(delay)
             } else { scheduleAutomationEval() }
@@ -6823,7 +6798,7 @@ def tModePresEvt(evt) {
         if(tModeDelay) {
             def delay = tModeDelayVal.toInteger()
 
-            if (delay > 15) {
+            if (delay > 20) {
                 LogAction("TstatSetpoint Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()}) | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "trace", true)
                 scheduleAutomationEval(delay)
             } else { scheduleAutomationEval() }
