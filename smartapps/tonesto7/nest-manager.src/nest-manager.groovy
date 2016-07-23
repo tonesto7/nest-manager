@@ -894,14 +894,14 @@ def updateChildData() {
         getAllChildDevices()?.each { 
             def devId = it?.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0), "max":(settings?."${devId}_safety_temp_max" ?: 0) ]
-                //def safetyHumidity = [ "min":(settings?."${devId}_safety_humidity_min" ?: 0), "max":(settings?."${devId}_safety_humidity_max" ?: 0) ]
-                def safetyHumidity = settings?."${devId}_safety_humidity_max" ?: 0
-                def safetyDewpoint = settings?."${devId}_safety_dewpoint_max" ?: 0 
+                def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0.0), "max":(settings?."${devId}_safety_temp_max" ?: 0.0) ]
+                //def comfortHumidity = [ "min":(settings?."${devId}_safety_humidity_min" ?: 0), "max":(settings?."${devId}_comfort_humidity_max" ?: 0) ]
+                def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
+                def comfortDewpoint = settings?."${devId}_comfort_dewpoint_max" ?: 0.0 
                 atomicState?.tDevVer = it?.devVer() ?: ""
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
-                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "safetyHumidity":safetyHumidity,
-                                "safetyDewpoint":safetyDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
+                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
+                                "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                     it.generateEvent(tData) //parse received message from parent
                     //atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
@@ -2194,10 +2194,10 @@ def getNestWeatherLabel() {
     else { return defName }
 }
 
-def isWeatherDeviceInst() {
-    def res = false
+def getWeatherDevice() {
+    def res = null
     def d = getChildDevice(getNestWeatherId())
-    if(d) { res = true }
+    if(d) { return d }
     return res
 }
 
@@ -3638,8 +3638,9 @@ def safetyValuesPage() {
                         input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
                         submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
                     }
-                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Max. Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
-                    input "${dev?.deviceNetworkId}_safety_dewpoint_max", "decimal", title: "Max. Dewpoint Allowed (60-66 °${getTemperatureScale()})", required: false,  range: (atomicState?.tempUnit == "C") ? "15..19" : "60..66", 
+                    input "${dev?.deviceNetworkId}_comfort_humidity_max", "number", title: "Max. Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
+                    def trange = getTemperatureScale() == "C" ? "15..19" : "60..66"
+                    input "${dev?.deviceNetworkId}_comfort_dewpoint_max", "decimal", title: "Max. Dewpoint Allowed (${trange} °${getTemperatureScale()})", required: false,  range: trange, 
                             submitOnChange: true, image: getAppImg("dewpoint_icon.png")
                 }
             }
@@ -3654,12 +3655,12 @@ def getSafetyValuesDesc() {
         tstats?.each { ts ->
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0.0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0.0
-            def maxHum = settings?."${ts?.key}_safety_humidity_max" ?: 0
-            def maxDew = settings?."${ts?.key}_safety_dewpoint_max" ?: 0.0
+            def maxHum = settings?."${ts?.key}_comfort_humidity_max" ?: 80
+            def maxDew = settings?."${ts?.key}_comfort_dewpoint_max" ?: 0.0
             str += ts ? "(${ts?.value}) Safety Values:" : ""
             str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
             str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
-            str += maxHum ? "\n • Max. Humidity: (${maxTemp}%)" : ""
+            str += maxHum ? "\n • Max. Humidity: (${maxHum}%)" : ""
             str += maxDew ? "\n • Max. Dewpoint: (${maxDew}°${getTemperatureScale()})" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
         }
@@ -4512,8 +4513,7 @@ def runAutomationEval() {
             break
         case "extTmp":
             if(extTmpUseWeather && extTmpTstat) {
-                //   scheduled updateWeather covers this
-                //getExtConditions() 
+                getExtConditions(true) 
             }
             if (isExtTmpConfigured()) {
                 extTmpTempCheck() 
@@ -5589,20 +5589,49 @@ def isExtTmpConfigured() {
 }
 
 def getExtConditions( doEvent = false ) {
+    //log.trace "getExtConditions..."
     def origTempF = atomicState?.curWeatherTemp_f
     def origTempC = atomicState?.curWeatherTemp_c
+    def origDpTempF = atomicState?.curWeatherDewpointTemp_f
+    def origDpTempC = atomicState?.curWeatherDewpointTemp_c
     def cur = parent?.getWData()
     atomicState?.curWeather = cur?.current_observation
     atomicState?.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
-    atomicState?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
+    atomicState?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c.toDouble())
     atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
+    if(parent?.getWeatherDeviceInst()) {
+        def weather = parent.getWeatherDevice()
+        def dp = 0.0
+        if (weather) {
+            dp = weather?.currentValue("dewpoint")?.toString().replaceAll("\\[|\\]", "").toDouble()
+        }
+        def c_temp = 0.0
+        def f_temp = 0 as Integer
+        if (getTemperatureScale() == "C") {
+            c_temp = dp as Double
+            f_temp = c_temp * 9/5 + 32
+        } else {
+            f_temp = dp as Integer
+            c_temp = (f_temp - 32) * 5/9 as Double
+        }
+        atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f
+        atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
+    }
+
     if (doEvent) {
         if (origTempF != atomicState?.curWeatherTemp_f || origTempC != atomicState?.curWeatherTemp_c) {
             LogAction("${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}", "debug", false)
             if (isExtTmpConfigured() && !disableAutomation) {
                 def evtset = ["displayName":"Nest Weather Device", "value": (atomicState?.tempUnit == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f]
                 extTmpTempEvt(evtset)
+            }
+        }
+        if (origDpTempF != atomicState?.curWeatherDewpointTemp_f || origDpTempC != atomicState?.curWeatherDewpointTemp_c) {
+            LogAction("${atomicState?.curWeatherLoc} Weather | Dew point temp_f: ${atomicState?.curWeatherDewpointTemp_f} | Dew point temp_c: ${atomicState?.curWeatherDewpointTemp_c}", "debug", false)
+            if (isExtTmpConfigured() && !disableAutomation) {
+                def evtset = ["displayName":"Nest Weather Device", "value": (atomicState?.tempUnit == "C") ? atomicState?.curWeatherDewpointTemp_c : atomicState?.curWeatherDewpointTemp_f]
+                extTmpDpEvt(evtset)
             }
         }
     }
@@ -5621,8 +5650,17 @@ def getExtTmpTemperature() {
     return extTemp
 }
 
+def getExtTmpDewPoint() {
+    def extDp = 0.0
+    if(extTmpUseWeather && (atomicState?.curWeatherDewpointTemp_f || atomicState?.curWeatherDewpointTemp_c)) {
+        if(location?.temperatureScale == "C" && atomicState?.curWeatherDewpointTemp_c) { extDp = atomicState?.curWeatherDewpointTemp_c.toDouble() }
+        else { extDp = atomicState?.curWeatherDewpointTemp_f.toDouble() }
+    }
+    return extDp
+}
+
 def extTmpTempOk() { 
-    //log.trace "getExtTmpTempOk..."
+    //log.trace "extTmpTempOk..."
 /*
    Really should check "desired interior temp" vs. "actual interior temp" is near exterior temp
        May be issues with internal and external temperatures rising or falling together
@@ -5631,6 +5669,8 @@ def extTmpTempOk() {
         def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
         def extTemp = getExtTmpTemperature()
         def curMode = extTmpTstat.currentThermostatMode.toString()
+        def dpLimit = getComfortDewpoint(extTmpTstat) ?: (getTemperatureScale() == "C" ? 19 : 66)
+        def curDp = getExtTmpDewPoint()
         def diffThresh = getExtTmpTempDiffVal()
         def modeOff = (curMode == "off") ? true : false
         def modeCool = (curMode == "cool") ? true : false
@@ -5646,9 +5686,11 @@ def extTmpTempOk() {
             def extTempHigh = (extTemp >= intTemp) ? true : false
             def extTempLow = (extTemp <= intTemp) ? true : false
             def withinThresh = (diffThresh >= tempDiff) ? true : false
+            def dpOk = (curDp < dpLimit) ? true : false
 
-            LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | withinThresh: ${withinThresh}", "debug", false)
+            LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | withinThresh: ${withinThresh} dpOk: ${dpOk}", "debug", false)
             LogAction("extTmpTempOk: Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff}", "debug", false)
+            LogAction("extTmpTempOk: Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
 
             if (extTempHigh && modeCool ) { retval = false }
             if (extTempLow && modeHeat) { retval = false }
@@ -5657,6 +5699,7 @@ def extTmpTempOk() {
                 if (oldMode == "cool" && extTempHigh) { retval = false }
                 if (oldMode == "heat" && extTempLow) { retval = false }
             }
+            if (!dpOk) { retval = false }
             if (!withinThresh) { retval = false }
         }
         LogAction("extTmpTempOk: Inside Temp: ${intTemp} is ${retval ? "" : "Not"} within $diffThresh of Outside Temp: ${extTemp}", "info", true)
@@ -5790,14 +5833,14 @@ def extTmpTempEvt(evt) {
         if(extTmpScheduleOk()) {
             if (extTmpOk) { 
                 if (!modeOff) {
-                    atomicState.extTmpGoodDt = getDtNow()
+                    atomicState.extTmpTempGoodDt = getDtNow()
                     timeVal = ["valNum":offVal, "valLabel":getEnumValue(longTimeSecEnum(), offVal)]
                     canSched = true
                 } 
             }
             else if (!extTmpOk) {
                 if(modeOff) {
-                    atomicState.extTmpBadDt = getDtNow()
+                    atomicState.extTmpTempBadDt = getDtNow()
                     timeVal = ["valNum":onVal, "valLabel":getEnumValue(longTimeSecEnum(), onVal)]
                     canSched = true
                 }
@@ -5813,6 +5856,50 @@ def extTmpTempEvt(evt) {
             }
         } else {
             LogAction("extTmpTempEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
+        }
+    }
+}
+
+def extTmpDpEvt(evt) {
+    LogAction("extTmpDpEvt Event | External Sensor Dew point: ${evt?.displayName} - Dew point Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
+    //log.debug "extTmpDpEvt: ${evt?.value}"
+    if(disableAutomation) { return }
+    else {
+        def pName = extTmpPrefix()
+        def curMode = extTmpTstat?.currentThermostatMode.toString()
+        def modeOff = (curMode == "off") ? true : false
+        def extTmpOk = extTmpTempOk()
+        def offVal = getExtTmpOffDelayVal()
+        def onVal = getExtTmpOnDelayVal()
+        def timeVal
+        def canSched = false
+        LogAction("extTmpDpEvt: extTmpOk: ${extTmpOk} | modeOff: ${modeOff} | extTmpTstatTurnedOff: ${atomicState?.extTmpTstatTurnedOff}", "debug", false)
+        if(extTmpScheduleOk()) {
+            if (extTmpOk) { 
+                if (!modeOff) {
+                    atomicState.extTmpTempGoodDt = getDtNow()
+                    timeVal = ["valNum":offVal, "valLabel":getEnumValue(longTimeSecEnum(), offVal)]
+                    canSched = true
+                } 
+            }
+            else if (!extTmpOk) {
+                if(modeOff) {
+                    atomicState.extTmpTempBadDt = getDtNow()
+                    timeVal = ["valNum":onVal, "valLabel":getEnumValue(longTimeSecEnum(), onVal)]
+                    canSched = true
+                }
+            }
+            if (canSched) {
+                //log.debug "timeVal: $timeVal"
+                LogAction("extTmpDpEvt() ${!evt ? "" : "'${evt?.displayName}': (${evt?.value}°${atomicState?.tempUnit}) received... | "}External Temp Check scheduled for (${timeVal?.valLabel})...", "info", true)
+                if (timeVal?.valNum > 20) {
+                    scheduleAutomationEval(timeVal?.valNum)
+                } else { scheduleAutomationEval() }
+            } else {
+                LogAction("extTmpDpEvt: Skipping Event... All External Temps are outside the threshold...", "info", true)
+            }
+        } else {
+            LogAction("extTmpDpEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
         }
     }
 }
@@ -7274,9 +7361,9 @@ def getSafetyTemps(tstat) {
     return null
 }
 
-def getSafetyHumidity(tstat) {
+def getComfortHumidity(tstat) {
     //def minHumidity = tstat?.currentValue("safetyHumidityMin") ?: 0
-    def maxHumidity = tstat?.currentValue("safetyHumidityMax") ?: 0
+    def maxHum = tstat?.currentValue("comfortHumidityMax") ?: 0
     if(maxHum) {
         //return ["min":minHumidity, "max":maxHumidity]
         return maxHum
@@ -7284,12 +7371,12 @@ def getSafetyHumidity(tstat) {
     return null
 }
 
-def getSafetyDewpoint(tstat) {
+def getComfortDewpoint(tstat) {
     //def minHumidity = tstat?.currentValue("safetyHumidityMin") ?: 0
-    def maxDew = tstat?.currentValue("safetyDewpointMax") ?: 0
+    def maxDew = tstat?.currentValue("comfortDewpointMax") ?: 0
     if(maxDew) {
         //return ["min":minHumidity, "max":maxHumidity]
-        return maxDew
+        return maxDew.toDouble()
     }
     return null
 }
