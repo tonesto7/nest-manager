@@ -328,7 +328,7 @@ def dewpointEvent(Double tempVal) {
         def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
         if(!temp.equals(rTempVal.toString())) {
             log.debug("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
-            sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+            sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Dew point Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
         } else { Logger("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
     }
     catch (ex) {
@@ -616,7 +616,7 @@ private estimateDewPoint(double rh,double t) {
     def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t1) / (243.04 + t1) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t1) / (243.04 + t1) ) ) 
     dp1 = (dp1 - 32) * 5.0/9.0
     def ave = (dp + dp1)/2
-    log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}" 
+    //log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}" 
     return ave.round(1)
 }
 
