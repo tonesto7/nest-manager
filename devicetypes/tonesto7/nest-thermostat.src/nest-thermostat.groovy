@@ -75,9 +75,9 @@ metadata {
         attribute "debugOn", "string"
         attribute "safetyTempMin", "string"
         attribute "safetyTempMax", "string"
-        attribute "safetyHumidityMax", "string"
+        attribute "comfortHumidityMax", "string"
         //attribute "safetyHumidityMin", "string"
-        attribute "safetyDewpointMax", "string"
+        attribute "comfortDewpointMax", "string"
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
@@ -329,9 +329,8 @@ def generateEvent(Map eventData) {
             state?.childWaitVal = eventData?.childWaitVal.toInteger()
             state?.cssUrl = eventData?.cssUrl.toString()
             if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
-            if(eventData?.safetyHumidity) { safetyHumidityEvent(eventData?.safetyHumidity) }
-            if(eventData?.safetyDewpoint) { safetyDewpointEvent(eventData?.safetyDewpoint) } 
-
+            if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
+            if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) } 
             def hvacMode = eventData?.data?.hvac_mode
             def tempUnit = state?.tempUnit
             switch (tempUnit) {
@@ -812,49 +811,49 @@ def safetyTempsEvent(safetyTemps) {
     }
 }
 
-def safetyHumidityEvent(safetyHum) {
+def comfortHumidityEvent(comfortHum) {
     try {
         //def curMinHum = device.currentState("safetyHumidityMin")?.integerValue
-        def curMaxHum = device.currentState("safetyHumidityMax")?.integerValue
+        def curMaxHum = device.currentState("comfortHumidityMax")?.integerValue
         //def newMinHum = safetyHum?.min.toInteger() ?: 0
         //def newMaxHum = safetyHum?.max.toInteger() ?: 0
-        def newMaxHum = safetyHum?.toInteger() ?: 0
+        def newMaxHum = comfortHum?.toInteger() ?: 0
         if(curMaxHum != newMaxHum) {
             //log.debug("UPDATED | Safety Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
             log.debug("UPDATED | Safety Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
             //sendEvent(name:'safetyHumidityMin', value: newMinHum, unit: "%", descriptionText: "Safety Humidity Minimum is ${newMinHum}" , displayed: true, isStateChange: true)
-            sendEvent(name:'safetyHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
+            sendEvent(name:'comfortHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
         } else { 
             //Logger("Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
             Logger("Humidity Maximum is (${newMaxHum}%) | Original Maximum Humidity: (${curMaxHum}%)") 
         }
     }
     catch (ex) {
-        log.error "safetyHumidityEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "safetyHumidityEvent")
+        log.error "comfortHumidityEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "comfortHumidityEvent")
     }
 }
 
-def safetyDewpointEvent(safetyDew) {
+def comfortDewpointEvent(comfortDew) {
     try {
         //def curMinDew = device.currentState("safetyDewpointMin")?.integerValue
-        def curMaxDew = device.currentState("safetyDewpointMax")?.integerValue
+        def curMaxDew = device.currentState("comfortDewpointMax")?.doubleValue
         //def newMinDew = safetyDew?.min.toInteger() ?: 0
         //def newMaxDew = safetyDew?.max.toInteger() ?: 0
-        def newMaxDew = safetyDew?.toInteger() ?: 0
+        def newMaxDew = comfortDew?.toDouble() ?: 0.0
         if(curMaxDew != newMaxDew) {
             //log.debug("UPDATED | Safety Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
             log.debug("UPDATED | Safety Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
             //sendEvent(name:'safetyDewpointMin', value: newMinDew, unit: "%", descriptionText: "Safety Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
-            sendEvent(name:'safetyDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Safety Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
+            sendEvent(name:'comfortDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Safety Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
         } else { 
             //Logger("Humidity Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
             Logger("Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})") 
         }
     }
     catch (ex) {
-        log.error "safetyDewpointEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "safetyDewpointEvent")
+        log.error "comfortDewpointEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "comfortDewpointEvent")
     }
 }
 
