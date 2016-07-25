@@ -411,8 +411,8 @@ def getWeatherConditions(Map weatData) {
             if(cur) {
                 state.curWeather = cur
                 
-                state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f)
-                state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c)
+                state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
+                state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c.toDouble())
                 state.curFeelsTemp_f = Math.round(cur?.current_observation?.feelslike_f as Double)
                 state.curFeelsTemp_c = Math.round(cur?.current_observation?.feelslike_c as Double)
                 state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
