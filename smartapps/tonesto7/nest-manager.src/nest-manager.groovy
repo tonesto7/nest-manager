@@ -5840,6 +5840,7 @@ def extTmpTempEvt(evt) {
     if(disableAutomation) { return }
     else {
         def pName = extTmpPrefix()
+        getExtConditions()
         def curMode = extTmpTstat?.currentThermostatMode.toString()
         def modeOff = (curMode == "off") ? true : false
         def extTmpOk = extTmpTempOk()
@@ -5884,6 +5885,7 @@ def extTmpDpEvt(evt) {
     if(disableAutomation) { return }
     else {
         def pName = extTmpPrefix()
+        getExtConditions()
         def curMode = extTmpTstat?.currentThermostatMode.toString()
         def modeOff = (curMode == "off") ? true : false
         def extTmpOk = extTmpTempOk()
