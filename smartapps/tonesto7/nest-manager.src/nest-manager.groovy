@@ -4479,6 +4479,7 @@ def subscribeToEvents() {
             subscribe(tModeTstats, "presence", tModePresEvt)
         }
     }
+//ERS
     if(settings["${autoType}AlarmDevices"]) {
         if(settings["${autoType}_Alert_1_Use_Alarm"] || settings["${autoType}_Alert_2_Use_Alarm"]) {
             subscribe(settings["${autoType}AlarmDevices"], "alarm", alarmAlertEvt)
@@ -4905,7 +4906,7 @@ def remSenSwitchEvt(evt) {
                 break
             default:
                 LogAction("remSenSwitchEvt: Invalid Option Received... ${swOpt.toInteger()}", "warn", true)
-            break
+                break
         }
     }
 }
@@ -5541,7 +5542,6 @@ def extTempPage() {
                 input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
                 if(extTmpUseWeather){
                     getExtConditions()
-                    def wReq = (extTmpTstat && !extTmpTempSensor) ? true : false
                     def tmpVal = (location?.temperatureScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
                     paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc} (${tmpVal}°${atomicState?.tempUnit})", state: "complete", image: getAppImg("instruct_icon.png")
                 }
@@ -6074,6 +6074,11 @@ def conWatCheck(timeOut = false) {
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
             if(getConWatContactsOk() || timeOut || !safetyOk) {
+                unschedule("alarm0FollowUp")
+                unschedule("alarm1FollowUp")
+                unschedule("alarm2FollowUp")
+                alarm3FollowUp()
+
                 if(okToRestore) {
                     if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
                         def lastMode = null
@@ -6155,7 +6160,8 @@ def conWatCheck(timeOut = false) {
                             if(allowNotif) {
                                 sendEventPushNotifications("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info")
                                 sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg"))
-                                if(getAlarmEvtNumber() > 0) { sendEventAlarmAction(getAlarmEvtNumber()) }
+                                scheduleAlarmOn()
+//                                if(getAlarmEvtNumber() > 0) { sendEventAlarmAction(getAlarmEvtNumber()) }
                                 
                             }
                         } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
@@ -6195,6 +6201,59 @@ def sendEventPushNotifications(message, type) {
     }
 }
 
+def sendEventVoiceNotifications(vMsg) {
+    def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+    def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+    def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+    if(allowNotif && allowSpeech) {
+        sendTTS(vMsg)
+    }
+}
+
+def scheduleAlarmOn() {
+    def timeVal = getAlert1DelayVal()
+    if (timeVal > 0) {
+        schedule(timeVal, "alarm0FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm0FollowUp() {
+    def timeVal = getAlert1AlarmEvtOffVal()
+    if (timeVal > 0 && sendEventAlarmAction(1)) {
+        schedule(timeVal, "alarm1FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm1FollowUp() {
+    def aDev = settings["${getPagePrefix()}AlarmDevices"]
+    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt1RuntimeDtSec >= (getAlert1AlarmEvtOffVal() - 2))
+    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"]
+    //if(okToTurnOff) {
+        aDev?.off()
+    //}
+    def timeVal = getAlert2DelayVal()
+    if (timeVal > 0) {
+        schedule(timeVal, "alarm2FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm2FollowUp() {
+    def timeVal = getAlert2AlarmEvtOffVal()
+    if (timeVal > 0 && sendEventAlarmAction(2)) {
+        schedule(timeVal, "alarm3FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm3FollowUp() {
+    def aDev = settings["${getPagePrefix()}AlarmDevices"]
+    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt2RuntimeDtSec >= (getAlert2AlarmEvtOffVal() - 2))
+    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"]
+    //if(okToTurnOff) {
+        aDev?.off()
+    //}
+}
+
+/*
 def getAlarmEvtNumber() {
     def evtNum = 0
     try {
@@ -6209,6 +6268,7 @@ def getAlarmEvtNumber() {
                 curOffTime = getExtTmpBadDtSec()
                 break
         }
+//ERS
         if(curOffTime > 0 && (alert1Delay > curOffTime) && (alert1Delay < alert2Delay)) {
             evtNum = 1
         }
@@ -6221,22 +6281,16 @@ def getAlarmEvtNumber() {
     }
     return evtNum
 }
-
-def sendEventVoiceNotifications(vMsg) {
-    def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
-    def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-    def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
-    if(allowNotif && allowSpeech) {
-        sendTTS(vMsg)
-    }
-}
+*/
 
 def sendEventAlarmAction(evtNum) {
     try {
+        def resval = false
         def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
         def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
         if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
             if(canSchedule()) {
+                resval = true
                 def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
                 def aDev = settings["${getPagePrefix()}AlarmDevices"]
                 switch (alarmType) {
@@ -6252,6 +6306,9 @@ def sendEventAlarmAction(evtNum) {
                         atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
                         aDev?.strobe()
                         break
+                    default:
+                        resval = false
+                        break
                 }
             }
         }
@@ -6259,10 +6316,12 @@ def sendEventAlarmAction(evtNum) {
         LogAction("sendEventAlarmAction Exception: ($evtNum) - (${ex})", "error", true)
         sendExceptionData(ex, "sendEventAlarmAction")
     }
+   return resval
 }
 
 def alarmAlertEvt(evt) {
     log.trace "alarmAlertEvt(${evt})"
+/*
     if (evt.value != "off") {
         def evtNum = getAlarmEvtNumber()
         def timeVal = 0
@@ -6278,6 +6337,7 @@ def alarmAlertEvt(evt) {
             schedule(timeVal, "alarmEvt${evtNum}FollowUp", [overwrite: true] )
         }
     }
+*/
 }
 
 def getAlert1DelayVal() { return !settings["${getPagePrefix()}_Alert_1_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_1_Delay"].toInteger()) }
@@ -6289,6 +6349,7 @@ def getAlert2AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_2_Ala
 def getAlarmEvt1RuntimeDtSec() { return !atomicState?.alarmEvt1StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt1StartDt).toInteger() }
 def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt2StartDt).toInteger() }
 
+/*
 def alarmEvt1FollowUp() {
     def aDev = settings["${getPagePrefix()}AlarmDevices"]
     def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt1RuntimeDtSec >= (getAlert1AlarmEvtOffVal() - 2))
@@ -6304,6 +6365,7 @@ def alarmEvt2FollowUp() {
         aDev?.off()
     }
 }
+*/
 
 def scheduleTimeoutRestore() {
     def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
@@ -7272,7 +7334,7 @@ def setNotificationPage(params) {
                             input "${pName}_Alert_1_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, 
                                     required: false, image: getAppImg("instruction_icon.png")
                             if(settings["${pName}_Alert_1_AlarmType"]) {
-                                input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
+                                input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in seconds)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
                                         image: getAppImg("delay_time_icon.png")
                             }
                         }
