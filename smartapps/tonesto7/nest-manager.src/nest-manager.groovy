@@ -586,7 +586,7 @@ def getSafetyValuesDesc() {
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0.0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0.0
             def maxHum = settings?."${ts?.key}_comfort_humidity_max" ?: 80
-            def maxDew = settings?."${ts?.key}_comfort_dewpoint_max" ?: 0.0
+            def maxDew = settings?.comfortDewpointMax ?: 0.0 
             str += ts ? "(${ts?.value}) Safety Values:" : ""
             str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
             str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
@@ -5693,6 +5693,9 @@ def extTmpTempOk() {
 /*
    Really should check "desired interior temp" vs. "actual interior temp" is near exterior temp
        May be issues with internal and external temperatures rising or falling together
+//ERS
+   getGlobalDesiredHeatTemp()
+   getGlobalDesiredCoolTemp()
 */
     try {
         def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
@@ -5989,10 +5992,10 @@ def contactWatchPage() {
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 
-                input name: "conWatOffTimeout", type: "enum", title: "Auto Restore Timer (Optional)", defaultValue: null, metadata: [values:longTimeMinEnum()], required: false, submitOnChange: true,
+                input name: "conWatOffTimeout", type: "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 
-                input name: "conWatRestoreOnClose", type: "bool", title: "Restore Prev. Mode on Close?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("restore_icon.png")
+                input name: "conWatRestoreOnClose", type: "bool", title: "Restore Prev. Mode on Close?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("restore_icon.png")
                 
                 if(conWatRestoreOnClose) {
                     if(atomicState?."${conWatPrefix()}TstatCanCool" && atomicState?."${conWatPrefix()}TstatCanHeat") {
@@ -6001,7 +6004,7 @@ def contactWatchPage() {
                     }
                     input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                    input name: "conWatRestoreDelayBetween", type: "enum", title: "Wait Before Restoring Again (Optional)", defaultValue: 600, metadata: [values:longTimeMinEnum()], required: false, submitOnChange: true,
+                    input name: "conWatRestoreDelayBetween", type: "enum", title: "Wait Before Restoring Again (Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
             }
@@ -6063,22 +6066,22 @@ def conWatCheck(timeOut = false) {
     try {
         if (disableAutomation) { return }
         else {
+            if(timeOut) { atomicState.timeOutOn = true }
             def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
             def curNestPres = getTstatPresence(conWatTstat)
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
-            def timeOutOk = timeOut && atomicState?.timeOutScheduled ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
-            if(getConWatContactsOk() || timeOutOk || !safetyOk) {
-                if(okToRestore || timeOutOk || !safetyOk) {
-                    if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOutOk || !safetyOk) {
+            if(getConWatContactsOk() || timeOut || !safetyOk) {
+                if(okToRestore) {
+                    if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
                         def lastMode = null
                         if(!atomicState?.conWatRestoreMode) {
                             if(conWatRestoreAutoMode) {
@@ -6086,37 +6089,39 @@ def conWatCheck(timeOut = false) {
                                 LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
                             }
                         } else { lastMode = atomicState?.conWatRestoreMode }
-                        if((lastMode && (lastMode != curMode)) || timeOutOk || !safetyOk) {
+                        if((lastMode && (lastMode != curMode)) || timeOut || !safetyOk) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(conWatTstat, lastMode)) {
+                                atomicState?.conWatRestoreMode = null
+                                atomicState?.conWatTstatOffRequested = false
+                                atomicState?.conWatRestoredDt = getDtNow()
+                                unschedTimeoutRestore()
+                                modeOff = false
+
                                 if(conWatTstatMir) { 
                                     if(setMultipleTstatMode(conWatTstatMir, lastMode)) {
                                         LogAction("Mirroring (${lastMode}) Restore to ${conWatTstatMir}", "info", true)
                                     }
                                 }
-                                //atomicState?.conWatRestoreMode = null
-                                atomicState?.conWatTstatOffRequested = false
-                                unschedTimeoutRestore()
-                                
                                 if(!safetyOk) {
                                     LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' mode because Global Safefy Values have been reached...", "info", true)    
                                 } 
-                                else if (timeOutOk) {
-                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' mode because the (${getEnumValue(longTimeMinEnum(), conWatOffTimeout)}) Timeout has been reached...", "info", true)
+                                else if (timeOut) {
+                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' mode because the (${getEnumValue(longTimeSecEnum(), conWatOffTimeout)}) Timeout has been reached...", "info", true)
                                 }
                                 else {
                                     LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
                                 }
 
                                 if(allowNotif) {
-                                    if(!timeOutOk && safetyOk) {
+                                    if(!timeOut && safetyOk) {
                                         sendEventPushNotifications("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info")
                                         sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg"))
                                     }
                                 }
                             } else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
-                        } else { if(!timeOutOk && safetyOk) { LogAction("conWatCheck() | Skipping...Restore Mode is the same as Current Mode", "info", true) } }
-                    } else { scheduleAutomationEval() }
+                        } else { if(!timeOut && safetyOk) { LogAction("conWatCheck() | Skipping...Restore Mode is the same as Current Mode", "info", true) } }
+                    } else { scheduleAutomationEval(60) }
                 } 
                 
                 else {
@@ -6132,9 +6137,10 @@ def conWatCheck(timeOut = false) {
                 }
             }
             
-            if (!getConWatContactsOk() && safetyOk) {
+            if (!getConWatContactsOk() && safetyOk && !timeOut) {
                 if(!modeOff && conWatRestoreOnClose) {
                     if((getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) && (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2))) {
+                        atomicState.timeOutOn = false
                         if(conWatRestoreOnClose) {
                             atomicState?.conWatRestoreMode = curMode
                             LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
@@ -6143,12 +6149,12 @@ def conWatCheck(timeOut = false) {
                         scheduleAutomationEval(180)
                         if(setTstatMode(conWatTstat, "off")) {
                             atomicState?.conWatTstatOffRequested = true
+                            scheduleTimeoutRestore()
                             if(conWatTstatMir) { 
                                 setMultipleTstatMode(conWatTstatMir, "off") {
                                     LogAction("Mirroring (${lastMode}) Mode to ${conWatTstatMir}", "info", true)
                                 }
                             }
-                            scheduleTimeoutRestore()
                             LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warn", true)
                             
                             
@@ -6160,10 +6166,10 @@ def conWatCheck(timeOut = false) {
                             }
                         } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
                     } else { 
-                        if (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2)) {
+                        if (getConWatRestoreDelayBetweenDtSec() < (getConWatRestoreDelayBetweenVal() - 2)) {
                             LogAction("conWatCheck() | Skipping change because the delay since last restore has been less than (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
-                        }
-                        scheduleAutomationEval() 
+                            scheduleAutomationEval(getConWatRestoreDelayBetweenVal() - getConWatRestoreDelayBetweenDtSec()) 
+                        } else { scheduleAutomationEval(60) }
                     }
                 } else {
                     if (!(conWatRestoreOnClose || conWatRestoreAutoMode)) { 
@@ -6299,7 +6305,7 @@ def scheduleTimeoutRestore() {
     def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
     if(timeOutVal && !atomicState?.timeOutScheduled) { 
         runIn(timeOutVal.toInteger(), "restoreAfterTimeOut", [overwrite: true])
-        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeMinEnum(), settings?."${getPagePrefix()}OffTimeout")})", "info", true)
+        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings?."${getPagePrefix()}OffTimeout")})", "info", true)
         atomicState?.timeOutScheduled = true
     }
 }
