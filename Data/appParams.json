@@ -1,36 +1,76 @@
 {
-  "state": {
-    "stateVarVer": 1
-  },
-  "versions": {
-    "app": {
-      "type": "rel",
-      "ver": "2.0.7"
+    "state": {
+        "stateVarVer": 2
     },
-    "autoapp": {
-      "type": "rel",
-      "ver": "1.2.1"
+    "versions": {
+        "app": {
+            "type": "rel",
+            "ver": "2.5.9"
+        },
+        "thermostat": {
+            "type": "rel",
+            "ver": "2.5.6"
+        },
+        "protect": {
+            "type": "rel",
+            "ver": "2.5.4"
+        },
+        "camera": {
+            "type": "rel",
+            "ver": "0.0.2"
+        },
+        "presence": {
+            "type": "rel",
+            "ver": "2.5.1"
+        },
+        "weather": {
+            "type": "rel",
+            "ver": "2.5.6"
+        }
     },
-    "thermostat": {
-      "type": "rel",
-      "ver": "2.0.2"
+    "token": {
+        "tokenNum": 1
     },
-    "protect": {
-      "type": "rel",
-      "ver": "2.0.0"
+    "broadcast": {
+        "msgId": "48vm9GiNju",
+        "message": "Nest Manager Broadcast: Please remember that after updating your code to v2.5 that you must update the device handler code as well.",
+        "type": "info"
     },
-    "presence": {
-      "type": "rel",
-      "ver": "2.0.1"
+    "updater": {
+        "updateVer": 1,
+        "updateMsg": "",
+        "updateDesc": "",
+        "updateType": "std",
+        "setupVersion": 1,
+        "versions": {
+            "app": {
+                "type": "rel",
+                "ver": "2.5.9"
+            },
+            "thermostat": {
+                "type": "rel",
+                "ver": "2.5.3"
+            },
+            "protect": {
+                "type": "rel",
+                "ver": "2.5.4"
+            },
+            "camera": {
+                "type": "rel",
+                "ver": "0.0.2"
+            },
+            "presence": {
+                "type": "rel",
+                "ver": "2.5.1"
+            },
+            "weather": {
+                "type": "rel",
+                "ver": "2.5.3"
+            }
+        }
     },
-    "weather": {
-      "type": "rel",
-      "ver": "1.1.0"
+    "css": {
+        "cssVer": 1,
+        "cssUrl": "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     }
-  },
-  "updater": {
-    "ver": 1,
-    "msg": "Update Message Placeholder",
-    "type": "std"
-  }
 }

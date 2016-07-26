@@ -40,7 +40,7 @@ ___(FYI: Only one location per Manager Install is supported at this time)___
 
 	**This will install a seperate device thats sole purpose is to pull in the local weather for that location and present it in a beautiful way with automatic refresh.**
 
- 	<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_dev_selected3.png" width="281" height="500">
+ 	<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_dev_selected2.png" width="281" height="500">
 * When New devices are found you will see the the option to Customize the Device Names.  Just Tap the link to open the customization page.  Follow the instructions and Press Done to return to the home screen.
 
 * Press __Done__ and your devices will be installed and you will be returned back to the marketplace list.
