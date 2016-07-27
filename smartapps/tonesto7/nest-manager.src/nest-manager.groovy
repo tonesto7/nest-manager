@@ -5897,7 +5897,7 @@ def extTmpTempCheck() {
 //
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
     def modeOff = (curMode == "off") ? true : false
-    def allowNotif = (extTmpNotificationsOn || settings?."${getPagePrefix()}NotificationsOn") ? true : false
+    def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
     def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
@@ -7236,7 +7236,7 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(getPagePrefix() in ["conWat", "leakWat"] && (settings["${pName}NotificationsOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+        if(getPagePrefix() in ["conWat", "leakWat"] && settings["${pName}NotificationsOn"] && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
                 input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
                         image: getAppImg("alert_icon2.png")
