@@ -6206,13 +6206,14 @@ def conWatCheck(timeOut = false) {
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+            def allowSiren = settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
             if(getConWatContactsOk() || timeOut || !safetyOk) {
-                alarmEvtSchedCleanup()
+                if (allowSiren) { alarmEvtSchedCleanup() }
                 
                 if(okToRestore) {
                     if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
@@ -6284,6 +6285,7 @@ def conWatCheck(timeOut = false) {
                         if(setTstatMode(conWatTstat, "off")) {
                             atomicState?.conWatTstatOffRequested = true
                             scheduleTimeoutRestore()
+                            if (allowSiren) { scheduleAlarmOn() }
                             if(conWatTstatMir) { 
                                 setMultipleTstatMode(conWatTstatMir, "off") {
                                     LogAction("Mirroring (${lastMode}) Mode to ${conWatTstatMir}", "info", true)
@@ -6294,7 +6296,6 @@ def conWatCheck(timeOut = false) {
                             if(allowNotif) {
                                 sendEventPushNotifications("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info")
                                 sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg"))
-                                scheduleAlarmOn()
                             }
                         } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
                     } else { 
