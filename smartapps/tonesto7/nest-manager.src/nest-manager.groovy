@@ -535,6 +535,7 @@ def automationsPage() {
 def automationGlobalPrefsPage() {
     dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
         if(atomicState?.thermostats) {
+//ERS why is required set to remSensor automation?
             section("Comfort Preferences:") {
                 input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
@@ -4611,7 +4612,7 @@ def subscribeToEvents() {
             subscribe(tModeTstats, "presence", tModePresEvt)
         }
     }
-//ERS
+
     if(settings["${autoType}AlarmDevices"]) {
         if(settings["${autoType}_Alert_1_Use_Alarm"] || settings["${autoType}_Alert_2_Use_Alarm"]) {
             subscribe(settings["${autoType}AlarmDevices"], "alarm", alarmAlertEvt)
@@ -6206,14 +6207,13 @@ def conWatCheck(timeOut = false) {
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
-            def allowSiren = settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
             if(getConWatContactsOk() || timeOut || !safetyOk) {
-                if (allowSiren) { alarmEvtSchedCleanup() }
+                if (allowAlarm) { alarmEvtSchedCleanup() }
                 
                 if(okToRestore) {
                     if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
@@ -6285,7 +6285,7 @@ def conWatCheck(timeOut = false) {
                         if(setTstatMode(conWatTstat, "off")) {
                             atomicState?.conWatTstatOffRequested = true
                             scheduleTimeoutRestore()
-                            if (allowSiren) { scheduleAlarmOn() }
+                            if (allowAlarm) { scheduleAlarmOn() }
                             if(conWatTstatMir) { 
                                 setMultipleTstatMode(conWatTstatMir, "off") {
                                     LogAction("Mirroring (${lastMode}) Mode to ${conWatTstatMir}", "info", true)
