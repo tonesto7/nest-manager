@@ -7623,12 +7623,12 @@ def alarm2FollowUp() {
 
 def alarm3FollowUp() {
     def aDev = settings["${getPagePrefix()}AlarmDevices"]
-        aDev?.off()
+    if (aDev) { aDev?.off() }
 }
 
 def alarmEvtSchedCleanup() {
     LogAction("Cleaning Up Alarm Event Schedules...", "info", true)
-    def items = ["alarm0FollowUp","alarm1FollowUp", "alarm2FollowUp"]
+    def items = ["alarm0FollowUp","alarm1FollowUp", "alarm2FollowUp", "alarm3FollowUp"]
     items.each { 
         unschedule("$it")
     }
@@ -7641,25 +7641,27 @@ def sendEventAlarmAction(evtNum) {
         def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
         def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
         if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
-            resval = true
-            def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
-            def aDev = settings["${getPagePrefix()}AlarmDevices"]
-            switch (alarmType) {
-                case "both":
-                    atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
-                    aDev?.both()
-                    break
-                case "siren":
-                    atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
-                    aDev?.siren()
-                    break
-                case "strobe":
-                    atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
-                    aDev?.strobe()
-                    break
-                default:
-                    resval = false
-                    break
+            if(settings["${getPagePrefix()}_Alert_${evtNum}_Use_Alarm"] && canSchedule()) {
+                resval = true
+                def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
+                def aDev = settings["${getPagePrefix()}AlarmDevices"]
+                switch (alarmType) {
+                    case "both":
+                        atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                        aDev?.both()
+                        break
+                    case "siren":
+                        atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                        aDev?.siren()
+                        break
+                    case "strobe":
+                        atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                        aDev?.strobe()
+                        break
+                    default:
+                        resval = false
+                        break
+                }
             }
         }
     } catch (ex) {
