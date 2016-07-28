@@ -5937,9 +5937,13 @@ def extTmpTempCheck() {
                         LogAction("extTmpTempCheck() | There was problem restoring the last mode to '...", "error", true) 
                     }
                 } else {
-                    LogAction("extTmpTempCheck() | Skipping Restore because the Mode to Restore is same as Current Mode", "info", true)
+                    if(!safetyOk) {
+                        LogAction("extTmpTempCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true)
+                    } else {
+                        LogAction("extTmpTempCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true)
+                    }
                 }
-            } else { scheduleAutomationEval(30) } 
+            } else { if (safetyOk) { scheduleAutomationEval(60) } }
         } else { 
             if (modeOff && extTmpRestoreOnTemp && atomicState?.extTmpTstatOffRequested) {
                 LogAction("extTmpTempCheck() | Unable to restore settings okToRestore is false", "warn", true)
@@ -6215,8 +6219,13 @@ def conWatCheck(timeOut = false) {
                                     }
                                 }
                             } else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
-                        } else { if(!timeOut && safetyOk) { LogAction("conWatCheck() | Skipping...Restore Mode is the same as Current Mode", "info", true) } }
-                    } else { scheduleAutomationEval(60) }
+                        } else {
+                            if(!timeOut && safetyOk) { LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
+                            if(!safetyOk) {
+                                LogAction("conWatCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true)
+                            }
+                        }
+                    } else { if (safetyOk) { scheduleAutomationEval(60) } }
                 } else {
                     if (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatOffRequested) { 
                         LogAction("conWatCheck() | Unable to restore settings okToRestore is false", "warn", true) 
@@ -6477,9 +6486,13 @@ def leakWatCheck() {
                                 LogAction("leakWatCheck() | There was problem restoring the last mode to ${lastMode}...", "error", true) 
                             }
                         } else {
-                            LogAction("leakWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
+                            if(!safetyOk) {
+                                LogAction("leakWatCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true)
+                            } else {
+                                LogAction("leakWatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true)
+                            }
                         }
-                    } else { scheduleAutomationEval() }
+                    } else { if (safetyOk) { scheduleAutomationEval(60) } }
                 } else {
                     if (modeOff && leakWatRestoreOnDry && atomicState?.leakWatTstatOffRequested) {
                         LogAction("leakWatCheck() | Unable to restore settings okToRestore is false", "warn", true)
@@ -6734,10 +6747,6 @@ def nModeSwitchEvt(evt) {
     }
 }
 
-def nModeFollowupCheck() {
-    scheduleAutomationEval()
-}
-
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
 
 def checkNestMode() {
@@ -6807,7 +6816,7 @@ def checkNestMode() {
                 } else {
                     LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
                 }
-                nModeFollowupCheck()
+                scheduleAutomationEval(60)
             }
             else if (home && nestModeAway) {
                 LogAction("${homeDesc} Nest 'Home'", "info", true)
@@ -6829,7 +6838,7 @@ def checkNestMode() {
                 } else {
                     LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
                 }
-                nModeFollowupCheck()
+                scheduleAutomationEval(60)
             } 
             else {
                 LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
