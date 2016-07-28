@@ -4348,7 +4348,6 @@ def mainAutoPage(params) {
                     extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
                     extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
-                    extDesc += extTmpRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
                     extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
@@ -4370,7 +4369,6 @@ def mainAutoPage(params) {
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
                     conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-                    conDesc += conWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
                     conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
@@ -4423,7 +4421,6 @@ def mainAutoPage(params) {
                     //  leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
                     leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
                     leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-                    leakDesc += leakWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
                     leakDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     leakDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
@@ -5726,10 +5723,6 @@ def extTempPage() {
                 input name: "extTmpRestoreOnTemp", type: "bool", title: "Restore Previous Mode when Temp is below Threshold?", description: "", required: false, defaultValue: true, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(extTmpRestoreOnTemp) {
-                    if(atomicState?."${extTmpPrefix()}TstatCanCool" && atomicState?."${extTmpPrefix()}TstatCanHeat") {
-                        input name: "extTmpRestoreAutoMode", type: "bool", title: "Restore to Auto Mode?", description: "", required: false, defaultValue: false, submitOnChange: true,
-                                image: getAppImg("restore_icon.png")
-                    }
                     input name: "extTmpOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                             image: getAppImg("delay_time_icon.png")
                 }
@@ -5848,7 +5841,7 @@ def extTmpTempOk() {
         def modeCool = (curMode == "cool") ? true : false
         def modeHeat = (curMode == "heat") ? true : false
         def modeAuto = (curMode == "auto") ? true : false
-        def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatOffRequested || (!atomicState?.extTmpTstatOffRequested && extTmpRestoreAutoMode))) ? true : false
+        def okToRestore = (modeOff && extTmpRestoreOnTemp && atomicState?.extTmpTstatOffRequested) ? true : false
 
         LogAction("extTmpTempOk: curMode: ${curMode} | modeOff: ${modeOff} | atomicState.extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
         LogAction("extTmpTempOk: Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff}", "debug", false)
@@ -5901,7 +5894,7 @@ def extTmpTempCheck() {
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
     def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
-    def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatOffRequested || (!atomicState?.extTmpTstatOffRequested && extTmpRestoreAutoMode))) ? true : false
+    def okToRestore = (modeOff && extTmpRestoreOnTemp && atomicState?.extTmpTstatOffRequested) ? true : false
     def tempWithinThreshold = extTmpTempOk()
     def safetyOk = getSafetyTempsOk(extTmpTstat)
     def schedOk = extTmpScheduleOk()
@@ -5911,11 +5904,7 @@ def extTmpTempCheck() {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || !safetyOk) {
                 def lastMode = null
                 if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
-                else if(extTmpRestoreAutoMode || !safetyOk) {
-                        lastMode = "auto"
-                        LogAction("extTmpTempCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                }
-                if((lastMode && lastMode != curMode) || !safetyOk) {
+                if(lastMode && (lastMode != curMode || !safetyOk)) {
                     scheduleAutomationEval(180)
                     if(setTstatMode(extTmpTstat, lastMode)) {
                         atomicState?.extTmpRestoreMode = null
@@ -5949,7 +5938,7 @@ def extTmpTempCheck() {
         }
     }
     if (tempWithinThreshold && safetyOk && schedOk) {
-        if(!modeOff && (extTmpRestoreOnTemp || extTmpRestoreAutoMode)) {
+        if(!modeOff && extTmpRestoreOnTemp) {
             if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
                 scheduleAutomationEval(180)
                 if(extTmpRestoreOnTemp) { 
@@ -5965,7 +5954,7 @@ def extTmpTempCheck() {
                 }
             } else { scheduleAutomationEval(30) }
         } else {
-           if (!(extTmpRestoreOnTemp || extTmpRestoreAutoMode)) { LogAction("extTmpTempCheck() | Skipping off change because '${extTmpTstat?.label}' because mode cannot be restored", "warn", true) }
+           if (!extTmpRestoreOnTemp) { LogAction("extTmpTempCheck() | Skipping off change because '${extTmpTstat?.label}' because mode cannot be restored", "warn", true) }
            else { LogAction("extTmpTempCheck() | Skipping change because '${extTmpTstat?.label}' mode is already 'OFF'", "info", true) }
         }
     } else {
@@ -6093,10 +6082,6 @@ def contactWatchPage() {
                 input name: "conWatRestoreOnClose", type: "bool", title: "Restore Previous Mode\nWhen Closed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("restore_icon.png")
                 
                 if(conWatRestoreOnClose) {
-                    if(atomicState?."${conWatPrefix()}TstatCanCool" && atomicState?."${conWatPrefix()}TstatCanHeat") {
-                        input name: "conWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode\nIf Already Off?", required: false, defaultValue: false, submitOnChange: true,
-                                image: getAppImg("restore_icon.png")
-                    }
                     input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                     input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Restorations\n(Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -6168,7 +6153,7 @@ def conWatCheck(timeOut = false) {
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def schedOk = conWatScheduleOk()
-            def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
+            def okToRestore = (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatOffRequested) ? true : false
             def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
@@ -6183,13 +6168,8 @@ def conWatCheck(timeOut = false) {
                 if(okToRestore) {
                     if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
                         def lastMode = null
-                        if(!atomicState?.conWatRestoreMode) {
-                            if(conWatRestoreAutoMode) {
-                                lastMode = "auto"
-                                LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                            }
-                        } else { lastMode = atomicState?.conWatRestoreMode }
-                        if((lastMode && (lastMode != curMode)) || timeOut || !safetyOk) {
+                        if(atomicState?.conWatRestoreMode) { lastMode = atomicState?.conWatRestoreMode }
+                        if(lastMode && (lastMode != curMode || timeOut || !safetyOk)) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(conWatTstat, lastMode)) {
                                 atomicState?.conWatRestoreMode = null
@@ -6268,7 +6248,7 @@ def conWatCheck(timeOut = false) {
                         } else { scheduleAutomationEval(60) }
                     }
                 } else {
-                    if (!(conWatRestoreOnClose || conWatRestoreAutoMode)) { 
+                    if (!conWatRestoreOnClose) { 
                         LogAction("conWatCheck() | Skipping off change because '${conWatTstat?.label}' because mode cannot be restored", "warn", true) 
                     }
                     else { 
@@ -6380,10 +6360,6 @@ def leakWatchPage() {
                 input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode when Dry?", description: "", required: false, defaultValue: true, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(leakWatRestoreOnDry) {
-                    if(atomicState?."${leakWatPrefix()}TstatCanCool" && atomicState?."${leakPrefix()}TstatCanHeat") {
-                        input name: "leakWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode if Already Off?", description: "", required: false, defaultValue: false, submitOnChange: true,
-                                image: getAppImg("restore_icon.png")
-                    }
                     input name: "leakWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
@@ -6441,7 +6417,7 @@ def leakWatCheck() {
             def curNestPres = getTstatPresence(leakWatTstat)  
             def modeOff = (curMode == "off") ? true : false
             def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
-            def okToRestore = ((modeOff && leakWatRestoreOnDry) && (atomicState?.leakWatTstatOffRequested )) ? true : false
+            def okToRestore = (modeOff && leakWatRestoreOnDry && atomicState?.leakWatTstatOffRequested) ? true : false
             def safetyOk = getSafetyTempsOk(leakWatTstat)
             def schedOk = leakWatScheduleOk()
             def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
@@ -6455,13 +6431,8 @@ def leakWatCheck() {
                 if(okToRestore) {
                     if(getLeakWatDryDtSec() >= (getLeakWatOnDelayVal() - 5) || !safetyOk) {
                         def lastMode = null
-                        if(!atomicState?.leakWatRestoreMode) {
-                            if(leakWatRestoreOnDry || !safetyOk) {
-                                lastMode = "auto"
-                                LogAction("leakWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
-                            }
-                        } else { lastMode = atomicState?.leakWatRestoreMode }
-                        if((lastMode && lastMode != curMode) || !safetyOk) {
+                        if(atomicState?.leakWatRestoreMode) { lastMode = atomicState?.leakWatRestoreMode }
+                        if(lastMode && (lastMode != curMode || !safetyOk)) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(leakWatTstat, lastMode)) {
                                 atomicState?.leakWatTstatOffRequested = false
@@ -6799,10 +6770,12 @@ def checkNestMode() {
                 }
             }
             
-            if (away) {
+            LogAction("checkNestMode: isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
+
+            if (away && !nestModeAway) {
                 LogAction("${awayDesc} Nest 'Away'", "info", true)
-                atomicState?.nModeTstatLocAway = true
                 if(parent?.setStructureAway(null, true)) { 
+                    atomicState?.nModeTstatLocAway = true
                     if(allowNotif) {
                         sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info")
                     }
@@ -6821,10 +6794,10 @@ def checkNestMode() {
                 }
                 nModeFollowupCheck()
             }
-            else if (home) {
+            else if (home && nestModeAway) {
                 LogAction("${homeDesc} Nest 'Home'", "info", true)
-                atomicState?.nModeTstatLocAway = false
                 if (parent?.setStructureAway(null, false)) { 
+                    atomicState?.nModeTstatLocAway = false
                     if(allowNotif) {
                         sendEventPushNotifications("${awayDesc} Nest 'Home'", "Info")
                     }
