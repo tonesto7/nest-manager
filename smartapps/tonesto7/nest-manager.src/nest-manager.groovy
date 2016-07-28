@@ -734,7 +734,7 @@ def getInstAutoTypesDesc() {
     def tModeCnt = 0
     def disCnt = 0
     childApps?.each { a ->
-        if(a?.name != getWatchdogAppChildName()) {    
+//        if(a?.name != getWatchdogAppChildName()) {    
             def type = a?.getAutomationType()
             def disabled = !a?.getIsAutomationDisabled() ? null : disCnt+1
             //log.debug "automation type: $type"
@@ -758,7 +758,7 @@ def getInstAutoTypesDesc() {
                     tModeCnt = tModeCnt+1
                     break
             }
-        }
+ //       }
     }
     def remSenDesc = (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
     def conWatDesc = (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
@@ -2329,6 +2329,16 @@ def getWeatherDevice() {
     def d = getChildDevice(getNestWeatherId())
     if(d) { return d }
     return res
+}
+
+def getTstats() {
+    return atomicState?.thermostats
+}
+
+def getThermostatDevice(dni) {
+    def d = getChildDevice(getNestTstatDni(dni))
+    if(d) { return d }
+    return null
 }
 
 def addRemoveDevices(uninst = null) {
