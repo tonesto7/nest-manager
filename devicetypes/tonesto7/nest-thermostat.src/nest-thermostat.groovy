@@ -75,9 +75,12 @@ metadata {
         attribute "debugOn", "string"
         attribute "safetyTempMin", "string"
         attribute "safetyTempMax", "string"
+        attribute "safetyTempExceeded", "string"
         attribute "comfortHumidityMax", "string"
+        attribute "comfortHumidtyExceeded", "string"
         //attribute "safetyHumidityMin", "string"
         attribute "comfortDewpointMax", "string"
+        attribute "comfortDewpointExceeded", "string"
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
@@ -601,6 +604,7 @@ def temperatureEvent(Double tempVal) {
             log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
             sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
         } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+        checkSafetyTemps()
     }
     catch (ex) {
         log.error "temperatureEvent Exception: ${ex}"
@@ -800,6 +804,7 @@ def safetyTempsEvent(safetyTemps) {
             log.debug("UPDATED | Safety Temperature Maximum is (${newMaxTemp}${state?.tempUnit}) | Original Temp: (${curMaxTemp}${state?.tempUnit})")
             sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
             sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+            checkSafetyTemps()
         } else { 
             Logger("Safety Temperature Minimum is  (${newMinTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
             Logger("Safety Temperature Maximum is  (${newMaxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})") 
@@ -808,6 +813,31 @@ def safetyTempsEvent(safetyTemps) {
     catch (ex) {
         log.error "safetyTempsEvent Exception: ${ex}"
         parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "safetyTempsEvent")
+    }
+}
+
+def checkSafetyTemps() {
+    try {
+        def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
+        def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
+        def curTemp = device.currentState("temperature")?.doubleValue
+        def curRangestr = device.currentState("safetyTempExceeded")?.toString()
+        def curRange = curRangestr?.toBoolean()
+        def inRange = true
+        if(curMinTemp && curMaxTemp) {
+            if((curMinTemp > curTemp || curMaxTemp < curTemp)) { inRange = false }
+        }
+        //log.debug("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curRange: ${curRange} inRange: ${inRange}")
+        if (curRangestr == null || inRange != !curRange) {
+            sendEvent(name:'safetyTempExceeded', value: (inRange ? "false" : "true"),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+            log.debug("UPDATED | Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
+        } else { 
+            Logger("Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
+        }
+    }
+    catch (ex) {
+        log.error "checkSafetyTemps Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "checkSafetyTemps")
     }
 }
 
