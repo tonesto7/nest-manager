@@ -5898,7 +5898,7 @@ def extTmpTempCheck() {
     def tempWithinThreshold = extTmpTempOk()
     def safetyOk = getSafetyTempsOk(extTmpTstat)
     def schedOk = extTmpScheduleOk()
-    
+
     if(!tempWithinThreshold || !safetyOk) {
         if(okToRestore) {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || !safetyOk) {
@@ -7041,32 +7041,57 @@ def checkTstatMode() {
         } 
         else {
             def curStMode = location?.mode
-            def heatTemp = 0
-            def coolTemp = 0
+            def heatTemp = 0.0
+            def coolTemp = 0.0
             if (tModeTstats) {
                 tModeTstats?.each { ts -> 
                     def modes = settings?."${getTstatModeInputName(ts)}" ?: null
                     if (modes && (curStMode in modes)) {
                         def newHvacMode = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HvacMode" ? 
                             (settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HvacMode" == "heat-cool" ? "auto" : settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HvacMode") : null 
+                        def tstatHvacMode = ts?.currentThermostatMode?.toString()
                         if(newHvacMode && (newHvacMode.toString() != tstatHvacMode)) {
                             if(setTstatMode(ts, newHvacMode)) {
-                                sendEvent(device: ts, name: 'thermostatMode', value: newHvacMode, descriptionText: "HVAC mode is ${newHvacMode.toString().capitalize()}", displayed: true, isStateChange: true )
                                 LogAction("checkTstatMode: Setting Thermostat Mode to '${newHvacMode?.toString().capitalize()}' on ($ts)", "info", true)
+                            } else { LogAction("checkTstatMode: Error Setting Thermostat Mode to '${newHvacMode?.toString().capitalize()}' on ($ts)", "warn", true) }
+                        }
+
+                        def curMode = ts?.currentThermostatMode?.toString()
+                        def isModeOff = (curMode == "off") ? true : false
+                        tstatHvacMode = curMode
+
+                        if(!isModeOff && atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat") {
+                            def oldHeat = ts?.currentHeatingSetpoint.toDouble()
+                            heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toDouble()
+                            def temp = 0.0
+                            if ( getTemperatureScale() == "C") {
+                                temp = Math.round(heatTemp.round(1) * 2) / 2.0f
+                            } else {
+                                temp = Math.round(heatTemp.round(0)).toInteger()
+                            }
+                            heatTemp = temp
+                            if(oldHeat != heatTemp) {
+                                LogAction("checkTstatMode Setting Heat Setpoint to '${heatTemp}' on ($ts) old: ${oldHeat}", "info", true)
+                                ts?.setHeatingSetpoint(heatTemp.toDouble())
                             }
                         }
-                        def tstatHvacMode = ts?.currentThermostatMode.toString()
-                        if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat") {
-                            heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
-                            LogAction("checkTstatMode Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
-                            ts?.setHeatingSetpoint(heatTemp.toInteger())
+
+                        if(!isModeOff && atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool") {
+                            def oldCool = ts?.currentCoolingSetpoint.toDouble()
+                            coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toDouble()
+                            def temp = 0.0
+                            if ( getTemperatureScale() == "C") {
+                                temp = Math.round(coolTemp.round(1) * 2) / 2.0f
+                            } else {
+                                temp = Math.round(coolTemp.round(0)).toInteger()
+                            }
+                            coolTemp = temp
+                            if(oldCool != coolTemp) {
+                                LogAction("checkTstatMode: Setting Cool Setpoint to '${coolTemp}' on ($ts) old: ${oldCool}", "info", true)
+                                ts?.setCoolingSetpoint(coolTemp.toDouble())
+                            }
                         }
-                        if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool") {
-                            coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
-                            LogAction("checkTstatMode: Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
-                            ts?.setCoolingSetpoint(coolTemp.toInteger())
-                        }
-                        //log.debug "tStatModes: $modes | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp | curStMode: $curStMode"
+                        LogAction("checkTstatMode: $modes | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp | curStMode: $curStMode", "info", true)
                     }
                 }
             }
