@@ -33,30 +33,33 @@ def appVerInfo() {
 }
 
 preferences {
-/*
-    if(disableAutomation) {
-	section("Title") {
-            paragraph "This Automation is currently disabled!!!\nTurn it back on to resume operation...", image: getAppImg("instruct_icon.png")
+    page(name: "startPage")
+}
+
+def startPage() {
+    return dynamicPage(name: "startPage", title: "Main Page", nextPage: "", install: false, uninstall: false) {
+        if(disableAutomation) {
+            section("Title") {
+                paragraph "This Automation is currently disabled!!!\nTurn it back on to resume operation...", image: getAppImg("instruct_icon.png")
+            }
         }
-    } else {
-
-                section("Enable/Disable this Automation") {
-                    input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
-                    if(!atomicState?.disableAutomation && disableAutomation) {
-                        LogAction("This Automation was Disabled at (${getDtNow()})", "info", true)
-                        atomicState?.disableAutomationDt = getDtNow()
-                    } else if (atomicState?.disableAutomation && !disableAutomation) {
-                        LogAction("This Automation was Restored at (${getDtNow()})", "info", true)
-                        atomicState?.disableAutomationDt = null
-                    }
+        else {
+            section("Enable/Disable this Automation") {
+                input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
+                if(!atomicState?.disableAutomation && disableAutomation) {
+                    LogAction("This Automation was Disabled at (${getDtNow()})", "info", true)
+                    atomicState.disableAutomationDt = getDtNow()
+                } else if (atomicState?.disableAutomation && !disableAutomation) {
+                    LogAction("This Automation was Restored at (${getDtNow()})", "info", true)
+                    atomicState.disableAutomationDt = null
                 }
-                section("Debug Options") {
-                    input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
-                    atomicState?.showDebug = showDebug
-                }
+            }
+            section("Debug Options") {
+                input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+                atomicState.showDebug = showDebug
+            }
+        }
     }
-*/
-
 }
 
 def installed() {
@@ -207,10 +210,10 @@ def sendFirebaseExceptionData(data, pathVal) {
 /******************************************************************************
 *                                       Keep These Methods                                                *
 *******************************************************************************/
-def getFirebaseAppUrl()         { return "https://st-nest-manager.firebaseio.com" }
-//def getAppImg(imgName, on = null)       { return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
-//def getDevImg(imgName, on = null)       { return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
-def getAppImg(imgName, on = null)       { return "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" }
+//def getFirebaseAppUrl()         { return "https://st-nest-manager.firebaseio.com" }
+def getFirebaseAppUrl()         { return "${parent.getFirebaseAppUrl()}" }
+//def getAppImg(imgName, on = null)       { return "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" }
+def getAppImg(imgName)       { return "${parent.getAppImg($imgName)}" }
 
 
 //Returns app State Info
@@ -219,7 +222,7 @@ def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round
 
 
 def getAutomationType() {
-    return atomicState?.automationType ? atomicState?.automationType : null
+    return atomicState?.automationType ? atomicState?.automationType : "watchDog"
 }
 
 def getIsAutomationDisabled() {
@@ -234,7 +237,7 @@ def getDtNow() {
 def getTimeZone() {
     def tz = null
     if (location?.timeZone) { tz = location?.timeZone }
-    else { tz = TimeZone.getTimeZone(getNestTimeZone()) }
+    else { tz = TimeZone.getTimeZone(parent.getNestTimeZone()) }
     if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true) }
     return tz
 }
