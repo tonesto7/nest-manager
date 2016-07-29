@@ -529,12 +529,6 @@ def automationsPage() {
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
         }
-        def watchdogApp = findChildAppByName( getWatchdogAppChildName() )
-        if(!watchdogApp) {
-            addChildApp(textNamespace(), getWatchdogAppChildName(), getWatchdogAppChildName())
-        } else {
-            watchdogApp?.update()
-        }
         app.subscriptions?.each {
             it.each { item ->
                 //log.debug "${item}"
@@ -667,7 +661,13 @@ def uninstalled() {
 def initialize() {
     //log.debug "initialize..."
     if(parent) { initAutoApp() }
-    else { initManagerApp() }
+    else {
+        initManagerApp()
+        def watchdogApp = findChildAppByName( getWatchdogAppChildName() )
+        if(!watchdogApp) {
+            addChildApp(textNamespace(), getWatchdogAppChildName(), getWatchdogAppChildName())
+        } else { watchdogApp?.update() }
+    }
 }
 
 def initManagerApp() {
@@ -720,7 +720,8 @@ def appBtnDesc(val) {
 def isAutoAppInst() {
     def chldCnt = 0
     childApps?.each { cApp ->
-        if(cApp?.name != getWatchdogAppChildName()) { chldCnt = chldCnt + 1 }
+//        if(cApp?.name != getWatchdogAppChildName()) { chldCnt = chldCnt + 1 }
+        chldCnt = chldCnt + 1
     }
     return (chldCnt > 0) ? true : false
 }
@@ -737,6 +738,7 @@ def getInstAutoTypesDesc() {
     def extTmpCnt = 0
     def nModeCnt = 0
     def tModeCnt = 0
+    def watchDogCnt = 0
     def disCnt = 0
     childApps?.each { a ->
 //        if(a?.name != getWatchdogAppChildName()) {    
@@ -762,6 +764,9 @@ def getInstAutoTypesDesc() {
                 case "tMode":
                     tModeCnt = tModeCnt+1
                     break
+                case "watchDog":
+                    watchDogCnt = watchDogCnt+1
+                    break
             }
  //       }
     }
@@ -771,9 +776,10 @@ def getInstAutoTypesDesc() {
     def extTmpDesc = (extTmpCnt > 0) ? "\n• External Sensor ($extTmpCnt)" : ""
     def nModeDesc = (nModeCnt > 0) ? "\n• Nest Modes ($nModeCnt)" : ""
     def tModeDesc = (tModeCnt > 0) ? "\n• Tstat Modes ($tModeCnt)" : ""
+    def watchDogDesc = (watchDogCnt > 0) ? "\n• Watch Dog ($watchDogCnt)" : ""
     def disabDesc = (disCnt > 0) ? "\n• Disabled Automations ($nModeCnt)" : ""
-    atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt]
-    return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
+    atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt, "watchDog":watchDogCnt]
+    return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}${watchDogDesc}"
 }
 
 def subscriber() {
