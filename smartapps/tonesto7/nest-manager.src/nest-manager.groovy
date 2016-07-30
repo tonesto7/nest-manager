@@ -5473,6 +5473,13 @@ private remSenEvtEval() {
                         chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
                         chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
                         if (chgval != curCoolSetpoint) {
+                            if (havcMode in ["auto"]) {
+                                if (curHeatSetpoint > chgval-5) {
+                                    remSenTstat?.setHeatingSetpoint(chgval-5)
+                                    LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(chgval-5)}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
+                                    if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(chgval-5) }
+                                }
+                            }
                             remSenTstat?.setCoolingSetpoint(chgval)
                             LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                             if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(chgval) }
@@ -5531,6 +5538,13 @@ private remSenEvtEval() {
                         chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
                         chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
                         if (chgval != curHeatSetpoint) {
+                            if (havcMode in ["auto"]) {
+                                if (curCoolSetpoint < chgval+5) {
+                                    remSenTstat?.setCoolingSetpoint(chgval+5)
+                                    LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(chgval+5)}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
+                                    if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(chgval+5) }
+                                }
+                            }
                             remSenTstat?.setHeatingSetpoint(chgval)
                             LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
                             if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(chgval) }
