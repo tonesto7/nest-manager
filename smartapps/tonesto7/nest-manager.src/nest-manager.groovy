@@ -543,7 +543,8 @@ def initWatchdogApp() {
     def watDogCnt = 0
     def watDogApp 
     childApps?.each { cApp -> 
-        if(cApp?.settings["watchDogFlag"] || cApp?.getAutomationType() == "watchDog") {
+        //if(cApp?.settings["watchDogFlag"] || cApp?.getAutomationType() == "watchDog") {
+        if(cApp?.getAutomationType() == "watchDog") {
             watDogCnt = watDogCnt+1
             watDogApp = cApp
         }
@@ -551,7 +552,7 @@ def initWatchdogApp() {
     
     if(watDogCnt <= 0) {
         log.debug "adding New WatchDogApp..."
-        addChildApp(textNamespace(), getAutoAppChildName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
+        addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
     } else { 
         log.debug "updating watDogApp..."
         watDogApp?.update() 
@@ -651,9 +652,6 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
-    if(parent) {
-        installAutoApp()
-    }
 }
 
 def updated() {
@@ -674,10 +672,12 @@ def uninstalled() {
 
 def initialize() {
     //log.debug "initialize..."
-    if(parent) { initAutoApp() }
+    if(parent) { 
+        initAutoApp()
+    }
     else {
-        initManagerApp()
         initWatchdogApp()
+        initManagerApp()
     }
 }
 
@@ -3128,7 +3128,7 @@ def getPresenceChildName()   { return getChildName("Nest Presence") }
 def getWeatherChildName()    { return getChildName("Nest Weather") }
 def getCameraChildName()     { return getChildName("Nest Camera") }
 def getAutoAppChildName()    { return getChildName("Nest Automations") }
-def getWatchdogAppChildName()    { return getChildName("Nest Location Watchdog") }
+def getWatchdogAppChildName()    { return getChildName("Nest Location ${location.name} Watchdog") }
 
 def getChildName(str)     { return "${str}${appDevName()}" }
 
@@ -4519,13 +4519,10 @@ def nameAutoPage() {
     }
 }
 
-def installAutoApp() {
+def initAutoApp() {
     if(settings["watchDogFlag"]) {
         atomicState?.automationType = "watchDog"
     }
-}
-
-def initAutoApp() {
     unschedule()
     unsubscribe()
     automationsInst()
@@ -4552,7 +4549,8 @@ def getAutoTypeLabel() {
     else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
     else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
     else if (type == "leakWat")  { typeLabel = "${newName} (LeakSensor)" }
-    //else if (type == "watchDog") { typeLabel = "Nest Location WatchDog"}
+//ERS
+    else if (type == "watchDog") { typeLabel = "Nest Location ${location.name} Watchdog"}
     
     if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
         newLbl = appLbl
@@ -4672,6 +4670,26 @@ def subscribeToEvents() {
             subscribe(tModeTstats, "presence", tModePresEvt)
         }
     }
+    //watchDog Subscriptions
+    if (autoType == "watchDog") {
+        def tstats = parent.getTstats()
+        def foundtstats
+
+        if(tstats) {
+            foundtstats = tstats.collect { dni ->
+                def d1 = parent.getThermostatDevice(dni)
+                if(d1) {
+                    LogAction("Found: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
+
+// temperature is for DEBUG
+           subscribe(d1, "temperature", watchDogsafetyEvt)
+
+                    subscribe(d1, "safetyTempExceeded", watchDogsafetyEvt)
+                }
+                return d1
+            }
+        }
+    }
     //Alarm status monitoring
     if(settings["${autoType}AlarmDevices"]) {
         if(settings["${autoType}_Alert_1_Use_Alarm"] || settings["${autoType}_Alert_2_Use_Alarm"]) {
@@ -4699,7 +4717,7 @@ def scheduler() {
 
 def watchDogAutomation() {
     LogAction("watchDogAutomation...", "trace", false)
-    //runAutomationEval()
+    runAutomationEval()
 }
 
 def scheduleAutomationEval(schedtime = 20) {
@@ -4767,8 +4785,8 @@ def runAutomationEval() {
             }
             break
         case "watchDog":
-            
             break
+
         default:
             LogAction("runAutomationEval: Invalid Option Received... ${autoType}", "warn", true)
             break
@@ -4776,17 +4794,41 @@ def runAutomationEval() {
 }
 
 /******************************************************************************  
-|                			REMOTE SENSOR AUTOMATION CODE	                  |
+|                			WATCHDOG AUTOMATION CODE	                  |
 *******************************************************************************/
 def watchDogPrefix() { return "watchDog" }
 
 def watchDogPage() {
     def pName = watchDogPrefix()
     dynamicPage(name: "watchDogPage", title: "Nest Location Watchdog", uninstall: true, install: true) {
-        paragraph "watch dog page here"
+        if(disableAutomation) {
+            section("Title") {
+                paragraph "This Automation is currently disabled!!!\nTurn it back on to resume operation...", image: getAppImg("instruct_icon.png")
+            }
+        }
+        else {
+            section("Enable/Disable this Automation") {
+                input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
+                if(!atomicState?.disableAutomation && disableAutomation) {
+                    LogAction("This Automation was Disabled at (${getDtNow()})", "info", true)
+                    atomicState.disableAutomationDt = getDtNow()
+                } else if (atomicState?.disableAutomation && !disableAutomation) {
+                    LogAction("This Automation was Restored at (${getDtNow()})", "info", true)
+                    atomicState.disableAutomationDt = null
+                }
+            }
+            section("Debug Options") {
+                input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+                atomicState.showDebug = showDebug
+            }
+        }
     }
 }
 
+def watchDogsafetyEvt(evt) {
+    LogAction("Safety Temp Exceeded Event | Thermostat Temp: ${evt?.displayName} (${evt?.value})", "trace", true)
+    if(disableAutomation) { return }
+}
 
 /*
     Add in dynamic remote sensor options > Select modes for the sensor and allow current choices and triggers for each
