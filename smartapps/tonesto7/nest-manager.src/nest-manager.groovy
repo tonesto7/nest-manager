@@ -5986,8 +5986,8 @@ def extTmpTempOk() {
         def tempOk = true
         def str = ""
         if(intTemp && extTemp && diffThresh) { 
-            def extTempHigh = (extTemp >= intTemp - diffThresh) ? true : false
-            def extTempLow = (extTemp <= intTemp + diffThresh) ? true : false
+            def extTempHigh = (extTemp > intTemp - diffThresh) ? true : false
+            def extTempLow = (extTemp < intTemp + diffThresh) ? true : false
             def oldMode = atomicState?.extTmpRestoreMode
             if (modeCool || oldMode == "cool") {
                 str = "greater than"
