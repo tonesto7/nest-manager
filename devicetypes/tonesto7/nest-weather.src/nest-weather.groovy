@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.5" }
+def devVer() { return "2.5.6" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -612,18 +612,24 @@ private estimateDewPoint(double rh,double t) {
     def B = (L + (M/N)) / 17.27
     def dp = (237.3 * B) / (1 - B)
 
-    def t1 = t * 9.0/5.0 + 32
-    def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t1) / (243.04 + t1) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t1) / (243.04 + t1) ) ) 
-    dp1 = (dp1 - 32) * 5.0/9.0
+    def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) ) 
     def ave = (dp + dp1)/2
     //log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}" 
+    ave = dp1
     return ave.round(1)
 }
 
+def luxUpdate() {
+    log.trace "luxUpdate"
+    poll()
+}
 
 private estimateLux(weatherIcon) {
-    //log.trace "estimateLux ( ${weatherIcon} )"
+    log.trace "estimateLux ( ${weatherIcon} )"
     try {
+        //log.debug "state.sunriseDate: ${state.sunriseDate} state.sunriseDate.time: ${state.sunriseDate.time}"
+        //log.debug "state.sunsetDate: ${state.sunsetDate} state.sunsetDate.time: ${state.sunsetDate.time}"
+
         if(!state?.sunriseDate?.time || !state?.sunsetDate?.time) { 
             log.warn "estimateLux: Weather Data missing..."
             return
@@ -631,10 +637,12 @@ private estimateLux(weatherIcon) {
             def lux = 0
             def twilight = 20 * 60 * 1000 // 20 minutes
             def now = new Date().time
-            def sunriseDate = state?.sunriseDate.time
-            def sunsetDate = state?.sunsetDate.time
+            def sunriseDate = (long) state?.sunriseDate.time
+            def sunsetDate = (long) state?.sunsetDate.time
             sunriseDate -= twilight
             sunsetDate += twilight
+            def oneHour = 1000 * 60 * 60
+            def fiveMin = 1000 * 60 * 5
             if (now > sunriseDate && now < sunsetDate) {
                 //day
                 switch(weatherIcon) {
@@ -655,21 +663,36 @@ private estimateLux(weatherIcon) {
                     default:
                         //sunny, clear
                         lux = 10000
-            }
+                }
 
-            //adjust for dusk/dawn
-            def afterSunrise = now - sunriseDate
-            def beforeSunset = sunsetDate - now
-            def oneHour = 1000 * 60 * 60
+                //adjust for dusk/dawn
+                def afterSunrise = now - sunriseDate
+                def beforeSunset = sunsetDate - now
 
-            if(afterSunrise < oneHour) {
-                //dawn
-                lux = (long)(lux * (afterSunrise/oneHour))
-            } else if (beforeSunset < oneHour) {
-                //dusk
-                lux = (long)(lux * (beforeSunset/oneHour))
-            }
+                log.debug "now: $now afterSunrise: $afterSunrise beforeSunset: $beforeSunset oneHour: $oneHour"
+                if(afterSunrise < oneHour) {
+                    //dawn
+                    lux = (long)(lux * (afterSunrise/oneHour))
+                    runIn(5*60, "luxUpdate", [overwrite: true])
+                } else if (beforeSunset < oneHour) {
+                    //dusk
+                    log.trace "dusk"
+                    lux = (long)(lux * (beforeSunset/oneHour))
+                    runIn(5*60, "luxUpdate", [overwrite: true])
+                } else if (beforeSunset < (oneHour*2)) {
+                    log.trace "before dusk"
+                    def newTim =  (beforeSunset - oneHour)/1000 // seconds
+                    if(newTim > 0 && newTim < 3600) {
+                        runIn(newTim, "luxUpdate", [overwrite: true])
+                    }
+                }
             } else {
+                if( (now > (sunriseDate-oneHour)) && now < sunsetDate) {
+                    def newTim =  (sunriseDate - now)/1000 // seconds
+                    if(newTim > 0 && newTim < 3600) {
+                        runIn(newTim, "luxUpdate", [overwrite: true])
+                    }
+                }
                 //night - always set to 10 for now
                 //could do calculations for dusk/dawn too
                 lux = 10
