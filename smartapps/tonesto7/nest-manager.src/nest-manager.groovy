@@ -920,7 +920,7 @@ def forcedPoll(type = null) {
         atomicState.needStrPoll = true
         atomicState.needDevPoll = true
     }
-    updateChildData()
+    updateChildData(true)
 }
 
 def postCmd() {
@@ -997,9 +997,10 @@ def schedUpdateChild() {
     runIn(25, "updateChildData", [overwrite: true])
 }
 
-def updateChildData() {
+def updateChildData(force = false) {
     LogAction("updateChildData()", "info", true)
     if (atomicState?.pollBlocked) { return }
+    def nforce = atomicState?.needChildUpd
     atomicState.needChildUpd = true
     unschedule("schedUpdateChild")
     runIn(40, "postCmd", [overwrite: true])
@@ -1020,9 +1021,12 @@ def updateChildData() {
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
                                 "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
-                    LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
-                    it.generateEvent(tData) //parse received message from parent
-                    //atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldtData = atomicState?."oldtData${devId}"
+                    if (force || nforce || oldtData != tData) {
+                        LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
+                        it.generateEvent(tData) //parse received message from parent
+                        atomicState."oldtData${devId}" = tData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Thermostat device because the device version (${versionStr2Int(atomicState?.tDevVer)}) is lower than the Minimum (v${minDevVersions()?.thermostat})... Please Update Thermostat Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1034,9 +1038,12 @@ def updateChildData() {
                 if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
-                    LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
-                    it.generateEvent(pData) //parse received message from parent
-                    //atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldpData = atomicState?."oldpData${devId}"
+                    if (force || nforce || oldpData != pData) {
+                        LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
+                        it.generateEvent(pData) //parse received message from parent
+                        atomicState."oldpData${devId}" = pData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Protect device because the device version (${versionStr2Int(atomicState?.pDevVer)}) is lower than the Minimum (v${minDevVersions()?.protect})... Please Update Protect Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1048,9 +1055,12 @@ def updateChildData() {
                 if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera)) {
                     def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestCamVer()?.ver?.toString()]
-                    LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
-                    it.generateEvent(camData) //parse received message from parent
-                    //atomicState?.camDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldcamData = atomicState?."oldcamData${devId}"
+                    if (force || nforce || oldcamData != camData) {
+                        LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
+                        it.generateEvent(camData) //parse received message from parent
+                        atomicState."oldcamData${devId}" = camData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Camera device because the device version (${versionStr2Int(atomicState?.camDevVer)}) is lower than the Minimum (v${minDevVersions()?.camera})... Please Update Camera Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1060,10 +1070,13 @@ def updateChildData() {
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 atomicState?.presDevVer = it?.devVer() ?: ""
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
-                    LogTrace("UpdateChildData >> Presence id: ${devId}")
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
-                    it.generateEvent(pData)
-                    //atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldpData = atomicState?."oldpData${devId}"
+                    if (force || nforce || oldpData != pData) {
+                        LogTrace("UpdateChildData >> Presence id: ${devId}")
+                        it.generateEvent(pData)
+                        atomicState."oldpData${devId}" = pData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Presence device because the device version (${versionStr2Int(atomicState?.presDevVer)}) is lower than the Minimum (v${minDevVersions()?.presence})... Please Update Presence Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1073,10 +1086,13 @@ def updateChildData() {
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 atomicState?.weatDevVer = it?.devVer() ?: ""
                 if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
-                    LogTrace("UpdateChildData >> Weather id: ${devId}")
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                    it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
-                    //atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldwData = atomicState?."oldwData${devId}"
+                    if (force || nforce || oldwData != wData) {
+                        LogTrace("UpdateChildData >> Weather id: ${devId}")
+                        it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
+                        atomicState."oldwData${devId}" = wData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Weather device because the device version (${versionStr2Int(atomicState?.weatDevVer)}) is lower than the Minimum (v${minDevVersions()?.weather})... Please Update Weather Device Handler Code to latest version to resolve this issue...", "error", true)
