@@ -4718,12 +4718,7 @@ def scheduler() {
 
     def autoType = atomicState?.automationType  
     if (autoType == "remSen") {   }  
-    if (autoType == "extTmp") {  
-        if(extTmpUseWeather && extTmpTstat) { 
-            random_int = random.nextInt(60)
-            random_dint = random.nextInt(9)
-        }
-    }
+    if (autoType == "extTmp") {  }
 }
 
 def watchDogAutomation() {
@@ -4796,6 +4791,7 @@ def runAutomationEval() {
             }
             break
         case "watchDog":
+            watchDogCheck()
             break
 
         default:
@@ -4845,7 +4841,31 @@ def watchdogSafetyTempEvt(evt) {
     if(disableAutomation) { return }
     else {
         if(evt?.value == "true") {
-            watchDogAlarmActions(evt?.device, "temp")
+            scheduleAutomationEval()
+//            watchDogAlarmActions(evt?.device, "temp")
+        }
+    }
+}
+
+//
+// Alarms will repeat in this current code, on events, and every 30 mins for ALL thermostats
+// DO WE NEED A TIMER PER DEVICE?
+//
+def watchDogCheck() {
+    if(disableAutomation) { return }
+    else {
+        def tstats = parent?.getTstats()
+        def foundTstats
+        if(tstats) {
+            foundTstats = tstats?.collect { dni ->
+                def d1 = parent.getThermostatDevice(dni)
+                if(d1) {
+                    def exceeded = dev?.currentValue("safetyTempExceeded")?.toString()
+                    LogAction("watchDogCheck() | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
+                    if (exceeded == "true") { watchDogAlarmActions(d1.displayName, "temp") }
+                    return d1
+                }
+            }
         }
     }
 }
@@ -4858,10 +4878,11 @@ def watchDogAlarmActions(dev, actType) {
     def evtVoiceMsg = ""
     switch(actType) {
         case "temp":
-            tempAlarmNotifMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
-            tempAlarmVoiceMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
+            evtNotifMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
+            evtVoiceMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
             break
     } 
+    LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "trace", true)
         
     if (allowNotif) {
         sendEventPushNotifications(evtNotifMsg, "Warning")
@@ -4869,7 +4890,7 @@ def watchDogAlarmActions(dev, actType) {
         sendNofificationMsg("Warning", evtNotifMsg)
     }
     if (allowSpeech) { 
-        sendEventVoiceNotifications(voiceNotifString(evtVoiceMsg) 
+        sendEventVoiceNotifications(voiceNotifString(evtVoiceMsg))
     }
     if (allowAlarm) {
         scheduleAlarmOn()
