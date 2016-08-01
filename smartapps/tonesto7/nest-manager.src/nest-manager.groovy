@@ -4856,7 +4856,6 @@ def watchdogSafetyTempEvt(evt) {
     else {
         if(evt?.value == "true") {
             scheduleAutomationEval()
-            watchDogAlarmActions(evt?.device, "temp")
         }
     }
 }
@@ -4876,7 +4875,7 @@ def watchDogCheck() {
                 if(d1) {
                     def exceeded = dev?.currentValue("safetyTempExceeded")?.toString()
                     LogAction("watchDogCheck() | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
-                    if (exceeded == "true") { watchDogAlarmActions(d1.displayName, "temp") }
+                    if (exceeded == "true") { watchDogAlarmActions(d1.displayName, dni, "temp") }
                     return d1
                 }
             }
@@ -4884,7 +4883,7 @@ def watchDogCheck() {
     }
 }
 
-def watchDogAlarmActions(dev, actType) {
+def watchDogAlarmActions(dev, dni, actType) {
     def allowNotif = (settings["${getAutoType()}NotificationsOn"] && (settings["${getAutoType()}NofifRecips"] || settings["${getAutoType()}NotifPhones"] || settings["${getAutoType()}UsePush"]))  ? true : false
     def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
     def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
@@ -4892,11 +4891,11 @@ def watchDogAlarmActions(dev, actType) {
     def evtVoiceMsg = ""
     switch(actType) {
         case "temp":
-            evtNotifMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
-            evtVoiceMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
+            evtNotifMsg = "Safety Temp has been exceeded on ${dev}."
+            evtVoiceMsg = "Safety Temp has been exceeded on ${dev}."
             break
     }
-    if((getLastWatDogSafetyAlertDtSec() > getWatDogRepeatMsgDelayVal()) || (evtNotifMsg != atomicState?.lastWatDogSafetyAlertMsg)) {
+    if(getLastWatDogSafetyAlertDtSec(dni) > getWatDogRepeatMsgDelayVal()) {
         LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "trace", true)
             
         if (allowNotif) {
@@ -4910,12 +4909,11 @@ def watchDogAlarmActions(dev, actType) {
         if (allowAlarm) {
             scheduleAlarmOn()
         }
-        atomicState?.lastWatDogSafetyAlertDt = getDtNow()
-        atomicState?.lastWatDogSafetyAlertMsg = evtNotifMsg
+        atomicState?."lastWatDogSafetyAlertDt${dni}" = getDtNow()
     }
 }
 
-def getLastWatDogSafetyAlertDtSec() { return !atomicState?.lastWatDogSafetyAlertDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastWatDogSafetyAlertDt).toInteger() }
+def getLastWatDogSafetyAlertDtSec(dni) { return !atomicState?."lastWatDogSafetyAlertDt{$dni}" ? 10000 : GetTimeDiffSeconds(atomicState?."lastWatDogSafetyAlertDt${dni}").toInteger() }
 def getWatDogRepeatMsgDelayVal() { return !watDogRepeatMsgDelay ? 3600 : watDogRepeatMsgDelay.toInteger() }
 
 
