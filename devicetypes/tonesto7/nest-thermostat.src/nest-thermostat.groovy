@@ -1560,7 +1560,8 @@ void off() {
     try {
         log.trace "off()..."
         hvacModeEvent("off")
-        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
+        //runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
+        doChangeMode()
     }
     catch (ex) {
         log.error "off Exception: ${ex}"
@@ -1572,7 +1573,8 @@ void heat() {
     try {
         log.trace "heat()..."
         hvacModeEvent("heat") 
-        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
+        //runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
+        doChangeMode()
     }
     catch (ex) {
         log.error "heat Exception: ${ex}"
@@ -1589,7 +1591,8 @@ void cool() {
     try {
         log.trace "cool()..."
         hvacModeEvent("cool") 
-        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
+        doChangeMode()
+        //runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
     }
     catch (ex) {
         log.error "cool Exception: ${ex}"
@@ -1601,7 +1604,8 @@ void auto() {
     try {
         log.trace "auto()..."
         hvacModeEvent("auto") 
-        runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
+        doChangeMode()
+        //runIn( getTempWaitVal() * 2, "doChangeMode", [overwrite: true] )
     }
     catch (ex) {
         log.error "auto Exception: ${ex}"
