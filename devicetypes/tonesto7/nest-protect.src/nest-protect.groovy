@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.5.5" }
+def devVer() { return "2.6.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -36,6 +36,9 @@ metadata {
         command "refresh"
         command "poll"
         command "log", ["string","string"]
+        command "runsmoketest"
+        command "runcotest"
+        command "runbatterytest"
         
         attribute "alarmState", "string"
         attribute "batteryState", "string"
@@ -173,6 +176,46 @@ def refresh() {
     log.debug "refreshing parent..."
     poll()
 }
+
+
+//ERS
+def runsmoketest() {
+    log.trace("runsmoketest()")
+//values from nest are ok, warning, emergency
+    testingStateEvent("true")
+    carbonSmokeStateEvent("ok", "emergency")
+    schedEndTest()
+}
+
+def runcotest() {
+    log.trace("runcotest()")
+//values from nest are ok, warning, emergency
+    testingStateEvent("true")
+    carbonSmokeStateEvent("emergency", "ok")
+    schedEndTest()
+}
+
+def runbatterytest() {
+    log.trace("runbatterytest()")
+//values from nest are ok, replace
+    testingStateEvent("true")
+    batteryStateEvent("replace")
+    schedEndTest()
+}
+
+def schedEndTest() {
+    runIn(5, "endTest", [overwrite: true])
+    refresh()  // this typically takes more than 5 seconds to complete
+}
+
+def endTest() {
+    carbonSmokeStateEvent("ok", "ok")
+    batteryStateEvent("ok")
+    testingStateEvent("false")
+    refresh()
+}
+
+
 
 def generateEvent(Map eventData) {
     //log.trace("generateEvent parsing data ${eventData}")
@@ -441,6 +484,8 @@ def testingStateEvent(test) {
 }
 
  def carbonSmokeStateEvent(coState, smokeState) {
+        //values in ST are tested, clear, detected
+        //values from nest are ok, warning, emergency
     try {
         def carbonVal = device.currentState("nestCarbonMonoxide")?.value
         def smokeVal = device.currentState("nestSmoke")?.value
