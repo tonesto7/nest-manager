@@ -568,13 +568,10 @@ def automationGlobalPrefsPage() {
     dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
         if(atomicState?.thermostats) {
             section("Comfort Preferences:") {
-//
-// This required: is not correct.  These variables can be used by many automations, not just Remote Sensor
-//
                 input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
-                        submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
+                        submitOnChange: true, required: false, image: getAppImg("heat_icon.png")
                 input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
-                        submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+                        submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
                 
                 def trange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
                 def wDev = getChildDevice(getNestWeatherId())
@@ -3699,7 +3696,7 @@ def nestInfoPage () {
                 href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view Camera info...", image: getAppImg("camera_icon.png")
             }
         }
-        if(atomicState?.protects || atomicState?.cameras) {
+        if(atomicState?.protects) {
             section("Perform Alarm Event Tests:") {
                 href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("test_icon.png")
             }
@@ -3720,6 +3717,7 @@ def nestInfoPage () {
     }
 }
 
+//ERS
 def alarmTestPage () {
     dynamicPage(name: "alarmTestPage", refreshInterval: ((alarmCoTestDevice && atomicState?.isAlarmCoTestActive && alarmCoTestDeviceDelay) ? alarmCoTestDeviceDelay : 0), install: false, uninstall: false) {
         if(atomicState?.protects) {
@@ -4433,7 +4431,7 @@ def mainAutoPage(params) {
                     extDesc += extTmpDiffVal ? "\n • Temp Threshold: (${extTmpDiffVal}°${atomicState?.tempUnit})" : ""
                     extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
-                    extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
+                    extDesc += extTmpTstat ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
                     extDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
@@ -4454,7 +4452,7 @@ def mainAutoPage(params) {
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
+                    conDesc += conWatTstat ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
                     conDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
                     conDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
@@ -4506,7 +4504,7 @@ def mainAutoPage(params) {
                     leakDesc += (leakWatSensors && leakWatTstat) ? "\n\nTrigger Status:" : ""
                     //  leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
                     leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
-                    leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
+                    leakDesc += leakWatTstat ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
                     leakDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
                     leakDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
@@ -4639,7 +4637,7 @@ def getIsAutomationDisabled() {
 
 def subscribeToEvents() {
     //Remote Sensor Subscriptions 
-    def autoType = atomicState?.automationType
+    def autoType = getAutoType()
     if (autoType == "remSen") {
         if((remSensorDay || remSensorNight) && remSenTstat) {
             //subscribe(location, remSenLocationEvt)
@@ -4748,7 +4746,7 @@ def scheduler() {
     LogAction("watchDogAutomation scheduled using Cron (${random_int} ${random_dint}/30 * * * ?)", "info", true)
     schedule("${random_int} ${random_dint}/30 * * * ?", watchDogAutomation)
 
-    def autoType = atomicState?.automationType  
+    def autoType = getAutoType()
     if (autoType == "remSen") {   }  
     if (autoType == "extTmp") {  }
 }
@@ -4760,7 +4758,7 @@ def watchDogAutomation() {
 
 def scheduleAutomationEval(schedtime = 20) {
     if (schedtime < 20) { schedtime = 20 }
-    if (getLastAutomationSchedSec() > (20-8)) {
+    if (getLastAutomationSchedSec() > 14) {
         atomicState?.lastAutomationSchedDt = getDtNow()
         runIn(schedtime, "runAutomationEval", [overwrite: true])
     }
@@ -4787,7 +4785,7 @@ def getLastAutomationSchedSec() { return !atomicState?.lastAutomationSchedDt ? 1
 
 def runAutomationEval() {
     LogAction("runAutomationEval...", "trace", false)
-    def autoType = atomicState?.automationType
+    def autoType = getAutoType()
     switch(autoType) {
         case "remSen":
             if (isRemSenConfigured()) {
@@ -4860,8 +4858,7 @@ def watchdogSafetyTempEvt(evt) {
 }
 
 //
-// Alarms will repeat in this current code, on events, and every 30 mins for ALL thermostats
-// DO WE NEED A TIMER PER DEVICE?
+// Alarms will repeat every watDogRepateMsgDelay (1 hr default) ALL thermostats
 //
 def watchDogCheck() {
     if(disableAutomation) { return }
@@ -4946,7 +4943,7 @@ def remSensorPage() {
             if(dupTstat) {
                 paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
             }
-            if(remSenTstat && remSenRuleType) { 
+            if(remSenTstat) { 
                 getTstatCapabilities(remSenTstat, remSenPrefix())
                 def str = ""
                 str += remSenTstat ? "Thermostat Status:" : ""
@@ -4987,15 +4984,16 @@ def remSensorPage() {
                             multiple: true, image: getAppImg("temperature_icon.png")
                     if(remSensorDay) {
                         def tempStr = !remSensorNight ? "" : "Day "
-//
-// if the thermostat can only do heat, or only cool, should we be asking for a temp the thermostat cannot do?
-//ERS
-//
-                        input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+
+                        if(remSenHeatTempsReq()) {
+                            input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
                                 submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
-                        input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                        }
+                        if(remSenCoolTempsReq()) {
+                            input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
                                 submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         
+                        }
                         def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
                             href "remSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
@@ -5007,10 +5005,14 @@ def remSensorPage() {
                     section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
                         input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", description: "Tap to configure...", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
                         if(remSensorNight) {
-                            input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                            if(remSenHeatTempsReq()) {
+                                input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
                                     submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
-                            input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                            }
+                            if(remSenCoolTempsReq()) {
+                                input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
                                     submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+                            }
                             //paragraph " ", image: " "
                             def tmpVal = "Evening Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
                             if(remSensorNight.size() > 1) {
@@ -5456,7 +5458,7 @@ private remSenCheck() {
     if(disableAutomation) { return }
     def remWaitVal = remSenWaitVal?.toInteger() ?: 60
     if (getLastRemSenEvalSec() < remWaitVal) {
-        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 8) ? 8 : (remWaitVal - getLastRemSenEvalSec())
+        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 30) ? 30 : (remWaitVal - getLastRemSenEvalSec())
         scheduleAutomationEval(schChkVal)
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
@@ -5604,6 +5606,8 @@ private remSenEvtEval() {
                             LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                         }
                         LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", true)
+                    } else {
+                        LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                     }
                 }
             }
@@ -5683,6 +5687,8 @@ private remSenEvtEval() {
                             LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
                         }
                         LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", true)
+                    } else {
+                        LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
                     }
                 }
             }
@@ -5990,16 +5996,13 @@ def extTempPage() {
                 input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
                 input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
+                if(!settings?."${getAutoType}OffTimeout") { atomicState?.timeOutScheduled = false }
             }
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "extTmpRestoreOnTemp", type: "bool", title: "Restore Previous Mode when Temp is below Threshold?", description: "", required: false, defaultValue: true, submitOnChange: true,
-                        image: getAppImg("restore_icon.png")
-                if(extTmpRestoreOnTemp) {
-                    input name: "extTmpOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
-                            image: getAppImg("delay_time_icon.png")
-                }
+                input name: "extTmpOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
             }
             section(getDmtSectionDesc(extTmpPrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
@@ -6109,7 +6112,6 @@ def extTmpTempOk() {
         def modeCool = (curMode == "cool") ? true : false
         def modeHeat = (curMode == "heat") ? true : false
         def modeAuto = (curMode == "auto") ? true : false
-        def okToRestore = (modeOff && extTmpRestoreOnTemp && atomicState?.extTmpTstatOffRequested) ? true : false
 
         def desiredTemp = 0
         if (desiredHeatTemp && modeHeat) { desiredTemp = desiredHeatTemp }
@@ -6179,7 +6181,7 @@ def extTmpTempCheck(cTimeOut = false) {
             def modeOff = (curMode == "off") ? true : false
             def safetyOk = getSafetyTempsOk(extTmpTstat)
             def schedOk = extTmpScheduleOk()
-            def okToRestore = (modeOff && extTmpRestoreOnTemp && atomicState?.extTmpTstatOffRequested) ? true : false
+            def okToRestore = (modeOff && atomicState?.extTmpTstatOffRequested) ? true : false
             def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
@@ -6233,25 +6235,20 @@ def extTmpTempCheck(cTimeOut = false) {
                             LogAction("extTmpTempCheck() | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
                             atomicState.timeOutOn = false
                         }
-                        else if (extTmpRestoreOnTemp && !atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) {
+                        else if (!atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) {
                             LogAction("extTmpTempCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
                             atomicState?.extTmpTstatOffRequested = false
-                        }
-                        else if (!extTmpRestoreOnTemp) {
-                            LogAction("extTmpTempCheck() | Skipping Restore since it is not enabled.", "warn", true)
                         }
                     }
                 }
             }
 
             if (tempWithinThreshold && !timeOut && safetyOk && schedOk) {
-                if(!modeOff && extTmpRestoreOnTemp) {
+                if(!modeOff) {
                     if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
                         atomicState.timeOutOn = false
-                        if(extTmpRestoreOnTemp) { 
-                            atomicState?.extTmpRestoreMode = curMode
-                            LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
-                        }
+                        atomicState?.extTmpRestoreMode = curMode
+                        LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
                         scheduleAutomationEval(180)
                         if(setTstatMode(extTmpTstat, "off")) {
                             atomicState?.extTmpTstatOffRequested = true
@@ -6262,11 +6259,10 @@ def extTmpTempCheck(cTimeOut = false) {
                                 sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
                                 if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
                             }
-                        } else { LogAction("extTmpCheck(): Error turning themostat Off", "warn", true) }
+                        } else { LogAction("extTmpTempCheck(): Error turning themostat Off", "warn", true) }
                     } else { scheduleAutomationEval(30) }
                 } else {
-                   if (!extTmpRestoreOnTemp) { LogAction("extTmpTempCheck() | Skipping off change because '${extTmpTstat?.label}' because mode cannot be restored", "warn", true) }
-                   else { LogAction("extTmpTempCheck() | Skipping change because '${extTmpTstat?.label}' mode is already 'OFF'", "info", true) }
+                   LogAction("extTmpTempCheck() | Skipping change because '${extTmpTstat?.label}' mode is already 'OFF'", "info", true)
                 }
             } else {
                 if (!schedOk) { LogAction("extTmpTempCheck: Skipping because of Schedule Restrictions...", "info", true) }
@@ -6274,8 +6270,8 @@ def extTmpTempCheck(cTimeOut = false) {
             }
         }
     } catch (ex) {
-        LogAction("extTmpCheck Exception: (${ex})", "error", true)
-        parent?.sendExceptionData(ex, "extTmpCheck", true, getAutoType())
+        LogAction("extTmpTempCheck Exception: (${ex})", "error", true)
+        parent?.sendExceptionData(ex, "extTmpTempCheck", true, getAutoType())
     }
 }
 
@@ -6385,19 +6381,17 @@ def contactWatchPage() {
                 input "${getAutoType()}UseSafetyTemps", "bool", title: "When Safety Temps are Reached Auto Restore?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
                 input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
+                if(!settings?."${getAutoType}OffTimeout") { atomicState?.timeOutScheduled = false }
             }
             section("Trigger Actions:") {
                 
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off When Opened\n(in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "conWatRestoreOnClose", type: "bool", title: "Restore Previous Mode\nWhen Closed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("restore_icon.png")
                 
-                if(conWatRestoreOnClose) {
-                    input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                    input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Restorations\n(Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Restorations\n(Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                }
             }
 
             section(getDmtSectionDesc(conWatPrefix())) {
@@ -6466,7 +6460,7 @@ def conWatCheck(cTimeOut = false) {
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def schedOk = conWatScheduleOk()
-            def okToRestore = (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatOffRequested) ? true : false
+            def okToRestore = (modeOff && atomicState?.conWatTstatOffRequested) ? true : false
             def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
@@ -6527,25 +6521,20 @@ def conWatCheck(cTimeOut = false) {
                             LogAction("conWatCheck() | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true) 
                             atomicState.timeOutOn = false
                         }
-                        else if (conWatRestoreOnClose && !atomicState?.conWatRestoreMode && atomicState?.conWatTstatOffRequested) {
+                        else if (!atomicState?.conWatRestoreMode && atomicState?.conWatTstatOffRequested) {
                             LogAction("conWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
                             atomicState?.conWatTstatOffRequested = false
-                        }
-                        else if (!conWatRestoreOnClose) { 
-                            LogAction("conWatCheck() | Skipping Restore since it is not enabled.", "warn", true) 
                         }
                     }
                 }
             }
             
             if (!getConWatContactsOk() && safetyOk && !timeOut && schedOk) {
-                if(!modeOff && conWatRestoreOnClose) {
+                if(!modeOff) {
                     if((getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) && (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2))) {
                         atomicState.timeOutOn = false
-                        if(conWatRestoreOnClose) {
-                            atomicState?.conWatRestoreMode = curMode
-                            LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
-                        }
+                        atomicState?.conWatRestoreMode = curMode
+                        LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                         LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
                         scheduleAutomationEval(180)
                         if(setTstatMode(conWatTstat, "off")) {
@@ -6571,8 +6560,7 @@ def conWatCheck(cTimeOut = false) {
                         } else { scheduleAutomationEval(60) }
                     }
                 } else {
-                    if (!conWatRestoreOnClose) { LogAction("conWatCheck() | Skipping off change because '${conWatTstat?.label}' because mode cannot be restored", "warn", true) }
-                    else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", false) }
+                    LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", false)
                 }
             } else {
                 if (!schedOk) { LogAction("conWatCheck: Skipping because of Schedule Restrictions...", "info", true) }
@@ -6677,12 +6665,8 @@ def leakWatchPage() {
                 input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
             }
             section("Restore on Dry:") {
-                input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode when Dry?", description: "", required: false, defaultValue: true, submitOnChange: true,
-                        image: getAppImg("restore_icon.png")
-                if(leakWatRestoreOnDry) {
-                    input name: "leakWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "leakWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                }
             }
             section("Notifications:") {
                 href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
@@ -6738,7 +6722,7 @@ def leakWatCheck() {
             def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
             def safetyOk = getSafetyTempsOk(leakWatTstat)
             def schedOk = leakWatScheduleOk()
-            def okToRestore = (modeOff && leakWatRestoreOnDry && atomicState?.leakWatTstatOffRequested) ? true : false
+            def okToRestore = (modeOff && atomicState?.leakWatTstatOffRequested) ? true : false
             def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
@@ -6790,12 +6774,9 @@ def leakWatCheck() {
                         if (!safetyOk) { 
                             LogAction("leakWatCheck() | Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
                         }
-                        else if (leakWatRestoreOnDry && !atomicState?.leakWatRestoreMode && atomicState?.leakWatTstatOffRequested) {
+                        else if (!atomicState?.leakWatRestoreMode && atomicState?.leakWatTstatOffRequested) {
                             LogAction("leakWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
                             atomicState?.leakWatTstatOffRequested = false
-                        }
-                        else if (!leakWatRestoreOnDry) {
-                            LogAction("leakWatCheck() | Skipping Restore since it is not enabled.", "warn", true)
                         }
                     }
                 }
@@ -6804,11 +6785,9 @@ def leakWatCheck() {
 // tough decision here:  there is a leak, do we care about schedule ?
 //            if (!getLeakWatSensorsOk() && safetyOk && schedOk) {
             if (!getLeakWatSensorsOk() && safetyOk) {
-                if(!modeOff && leakWatRestoreOnDry) {
-                    if(leakWatRestoreOnDry) { 
-                        atomicState?.leakWatRestoreMode = curMode
-                        LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
-                    }
+                if(!modeOff) {
+                    atomicState?.leakWatRestoreMode = curMode
+                    LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${atomicState?.leakWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                     LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
                     scheduleAutomationEval(180)
                     if(setTstatMode(leakWatTstat, "off")) {
@@ -6827,8 +6806,7 @@ def leakWatCheck() {
                         }
                     } else { LogAction("leakWatCheck(): Error turning themostat Off", "warn", true) }
                 } else {
-                    if (!leakWatRestoreOnDry) { LogAction("leakWatCheck() | Skipping off change because '${leakWatTstat?.label}' because mode cannot be restored", "warn", true) }
-                    else { LogAction("leakWatCheck() | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true) }
+                    LogAction("leakWatCheck() | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true)
                 }
             } else {
                 if (!schedOk) { LogAction("leakWatCheck: Skipping because of Schedule Restrictions...", "warn", true) }
@@ -8057,8 +8035,7 @@ def unschedTimeoutRestore() {
 }
 
 def restoreAfterTimeOut() {
-    def pName = getAutoType()
-    if(settings?."${pName}OffTimeout") {
+    if(settings?."${getAutoType()}OffTimeout") {
         switch(pName) {
             case "conWat":
                 atomicState?.timeOutScheduled = false
@@ -8069,7 +8046,7 @@ def restoreAfterTimeOut() {
                 break
             case "extTmp":
                 atomicState?.timeOutScheduled = false
-                extTmpCheck(true)
+                extTmpTempCheck(true)
                 break
         }
     }
