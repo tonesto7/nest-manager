@@ -3699,7 +3699,7 @@ def nestInfoPage () {
                 href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view Camera info...", image: getAppImg("camera_icon.png")
             }
         }
-        if(atomicState?.protects || atomicState?.cameras) {
+        if(atomicState?.protects) {
             section("Perform Alarm Event Tests:") {
                 href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("test_icon.png")
             }
@@ -5456,7 +5456,7 @@ private remSenCheck() {
     if(disableAutomation) { return }
     def remWaitVal = remSenWaitVal?.toInteger() ?: 60
     if (getLastRemSenEvalSec() < remWaitVal) {
-        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 8) ? 8 : (remWaitVal - getLastRemSenEvalSec())
+        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 30) ? 30 : (remWaitVal - getLastRemSenEvalSec())
         scheduleAutomationEval(schChkVal)
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
@@ -5604,6 +5604,8 @@ private remSenEvtEval() {
                             LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                         }
                         LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", true)
+                    } else {
+                        LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                     }
                 }
             }
@@ -5683,6 +5685,8 @@ private remSenEvtEval() {
                             LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
                         }
                         LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", true)
+                    } else {
+                        LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
                     }
                 }
             }
@@ -5990,6 +5994,7 @@ def extTempPage() {
                 input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
                 input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
+                if(!settings?."${getAutoType}OffTimeout") { atomicState?.timeOutScheduled = false }
             }
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -6262,7 +6267,7 @@ def extTmpTempCheck(cTimeOut = false) {
                                 sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
                                 if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
                             }
-                        } else { LogAction("extTmpCheck(): Error turning themostat Off", "warn", true) }
+                        } else { LogAction("extTmpTempCheck(): Error turning themostat Off", "warn", true) }
                     } else { scheduleAutomationEval(30) }
                 } else {
                    if (!extTmpRestoreOnTemp) { LogAction("extTmpTempCheck() | Skipping off change because '${extTmpTstat?.label}' because mode cannot be restored", "warn", true) }
@@ -6274,8 +6279,8 @@ def extTmpTempCheck(cTimeOut = false) {
             }
         }
     } catch (ex) {
-        LogAction("extTmpCheck Exception: (${ex})", "error", true)
-        parent?.sendExceptionData(ex, "extTmpCheck", true, getAutoType())
+        LogAction("extTmpTempCheck Exception: (${ex})", "error", true)
+        parent?.sendExceptionData(ex, "extTmpTempCheck", true, getAutoType())
     }
 }
 
@@ -6385,6 +6390,7 @@ def contactWatchPage() {
                 input "${getAutoType()}UseSafetyTemps", "bool", title: "When Safety Temps are Reached Auto Restore?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
                 input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
+                if(!settings?."${getAutoType}OffTimeout") { atomicState?.timeOutScheduled = false }
             }
             section("Trigger Actions:") {
                 
@@ -8057,8 +8063,7 @@ def unschedTimeoutRestore() {
 }
 
 def restoreAfterTimeOut() {
-    def pName = getAutoType()
-    if(settings?."${pName}OffTimeout") {
+    if(settings?."${getAutoType()}OffTimeout") {
         switch(pName) {
             case "conWat":
                 atomicState?.timeOutScheduled = false
@@ -8069,7 +8074,7 @@ def restoreAfterTimeOut() {
                 break
             case "extTmp":
                 atomicState?.timeOutScheduled = false
-                extTmpCheck(true)
+                extTmpTempCheck(true)
                 break
         }
     }
