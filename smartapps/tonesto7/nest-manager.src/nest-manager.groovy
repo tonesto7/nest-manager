@@ -5032,9 +5032,6 @@ def remSensorPage() {
             }
         }
         if(remSenRuleType) {
-            section("Turn On a Fan/Switch While your Thermostat is Running:") {
-                href "remSenTstatFanSwitchPage", title: "Control a Fan/Switch when Thermostat in Running?", description: getRemSenTstatFanSwitchDesc() ?: "", state: (getRemSenTstatFanSwitchDesc() ? "complete" : null), image: getAppImg("fan_ventilation_icon.png")
-            }
             if(remSenTstat) {
                 def dSenStr = !remSensorNight ? "Remote" : "Daytime"
                 section("Choose $dSenStr Sensor(s) to use instead of the Thermostat's...") {
@@ -5042,8 +5039,14 @@ def remSensorPage() {
                     input "remSensorDay", "capability.temperatureMeasurement", title: "${dSenStr} Temp Sensors", submitOnChange: true, required: dSenReq,
                             multiple: true, image: getAppImg("temperature_icon.png")
                     if(remSensorDay) {
-                        def tempStr = !remSensorNight ? "" : "Day "
 
+                        def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
+                        if(remSensorDay.size() > 1) {
+                            href "remSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
+                            //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
+                        } else { paragraph "${tmpVal}", state: "complete", image: getAppImg("instruct_icon.png") }
+
+                        def tempStr = !remSensorNight ? "" : "Day "
                         if(remSenHeatTempsReq()) {
                             input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
                                 submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
@@ -5053,11 +5056,12 @@ def remSensorPage() {
                                 submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         
                         }
-                        def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
-                        if(remSensorDay.size() > 1) {
-                            href "remSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
-                            //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
-                        } else { paragraph "${tmpVal}", state: "complete", image: getAppImg("instruct_icon.png") }
+                        paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
+                        input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                        if(remSenRuleType != "Circ") {
+                            paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
+                            input "remSenTstatTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 5.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                        }
                     }
                 }
                 if(remSensorDay && ((!remSenHeatTempsReq() || !remSenCoolTempsReq()) || (remSenDayHeatTemp && remSenDayCoolTemp))) {
@@ -5097,6 +5101,9 @@ def remSensorPage() {
                         }
                     }
                 }
+                section("Turn On a Fan/Switch While your Thermostat is Running:") {
+                    href "remSenTstatFanSwitchPage", title: "Control a Fan/Switch when Thermostat in Running?", description: getRemSenTstatFanSwitchDesc() ?: "", state: (getRemSenTstatFanSwitchDesc() ? "complete" : null), image: getAppImg("fan_ventilation_icon.png")
+                }
                 if(remSenTstat && (remSensorDay || remSensorNight)) {
                     if(remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                         section("Fan Settings:") {
@@ -5116,14 +5123,6 @@ def remSensorPage() {
                         input "remSenSwitches", "capability.switch", title: "Select Switches", description: "", required: false, multiple: true, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
                         if(remSenSwitches) { 
                             input "remSenSwitchOpt", "enum", title: "Switch Event to Trigger Evaluation?", required: true, defaultValue: 2, metadata: [values:switchEnumVals()], submitOnChange: true, image: getAppImg("settings_icon.png")
-                        }
-                    }
-                    section ("Optional Settings:") {
-                        paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
-                        input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
-                        if(remSenRuleType != "Circ") {
-                            paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
-                            input "remSenTstatTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 5.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         }
                     }
                     section("Rule Evaluation Options:") {
@@ -5572,8 +5571,8 @@ private remSenEvtEval() {
             atomicState?.lastRemSenEval = getDtNow()
 
             if(remSenUseSunAsMode) { getSunTimeState() }
-            def threshold = !remSenTempDiffDegrees ? 2 : remSenTempDiffDegrees.toDouble()
-            def tempChangeVal = !remSenTstatTempChgVal ? 5 : remSenTstatTempChgVal.toDouble()
+            def threshold = !remSenTempDiffDegrees ? 2.0 : remSenTempDiffDegrees.toDouble()
+            def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : remSenTstatTempChgVal.toDouble()
             def maxTempChangeVal = tempChangeVal * 3
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
             def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
@@ -6055,15 +6054,15 @@ def extTempPage() {
         if((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
-                input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore On when Safety Temps are Exceeded?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore after Time\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 if(!settings?."${getAutoType}OffTimeout") { atomicState?.timeOutScheduled = false }
             }
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "extTmpOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "extTmpOnDelay", type: "enum", title: "Delay Restore On (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
             }
             section(getDmtSectionDesc(extTmpPrefix())) {
@@ -6439,8 +6438,8 @@ def contactWatchPage() {
         if(conWatContacts && conWatTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getAutoType()}UseSafetyTemps", "bool", title: "When Safety Temps are Reached Auto Restore?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
-                input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore On when Safety Temps are Exceeded?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore after Time\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 if(!settings?."${getAutoType}OffTimeout") { atomicState?.timeOutScheduled = false }
             }
@@ -6449,9 +6448,9 @@ def contactWatchPage() {
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off When Opened\n(in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 
-                input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "conWatOnDelay", type: "enum", title: "Delay Restore On When Closed\n(in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Restorations\n(Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Off / On Cycles\n(Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
             }
 
@@ -6635,7 +6634,7 @@ def conWatCheck(cTimeOut = false) {
 }
 
 def conWatTstatModeEvt(evt) {
-    LogAction("ContactWatch Thermostat Mode Event | '${evt?.displayName}' Mode is now (${evt?.value.toString().toUpperCase()})", "trace", false)
+    LogAction("ContactWatch Thermostat Mode Event | '${evt?.displayName}' Mode is now (${evt?.value.toString().toUpperCase()})", "trace", true)
     if (disableAutomation) { return }
     else { 
         def modeOff = (evt?.value == "off") ? true : false
@@ -6652,7 +6651,7 @@ def conWatTstatTempEvt(evt) {
 }
 
 def conWatContactEvt(evt) {
-    LogAction("ContactWatch Contact Event | '${evt?.displayName}' is now (${evt?.value.toString().toUpperCase()})", "trace", false)
+    LogAction("ContactWatch Contact Event | '${evt?.displayName}' is now (${evt?.value.toString().toUpperCase()})", "trace", true)
     if (disableAutomation) { return }
     else {
         def pName = conWatPrefix()
@@ -6723,9 +6722,9 @@ def leakWatchPage() {
         if(leakWatSensors && leakWatTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
+                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore On when Safety Temps are Exceeded?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
             }
-            section("Restore on Dry:") {
+            section("Restore on when Dry:") {
                 input name: "leakWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
             }
@@ -7579,10 +7578,10 @@ def setNotificationPage(params) {
                             atomicState?."${pName}OffVoiceMsg" = settings?."${pName}CustomOffSpeechMessage" 
                             paragraph "Off Msg:\n" + voiceNotifString(atomicState?."${pName}OffVoiceMsg")
                         }
-                        input "${pName}CustomOnSpeechMessage", "text", title: "Restore Message?", required: false, defaultValue: atomicState?."${pName}OnVoiceMsg", submitOnChange: true, image: getAppImg("speech_icon.png")
+                        input "${pName}CustomOnSpeechMessage", "text", title: "Restore On Message?", required: false, defaultValue: atomicState?."${pName}OnVoiceMsg", submitOnChange: true, image: getAppImg("speech_icon.png")
                         if(settings?."${pName}CustomOnSpeechMessage" && getAutoType() in ["conWat", "extTmp"]) { 
                             atomicState?."${pName}OnVoiceMsg" = settings?."${pName}CustomOnSpeechMessage" 
-                            paragraph "Restore Msg:\n" + voiceNotifString(atomicState?."${pName}OnVoiceMsg")
+                            paragraph "Restore On Msg:\n" + voiceNotifString(atomicState?."${pName}OnVoiceMsg")
                         }
                     }
                 }
@@ -7718,23 +7717,25 @@ def voiceNotifString(phrase) {
 def getNotifConfigDesc() {
     def pName = getAutoType()
     def str = ""
-    str += (settings?."${pName}NotificationsOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ?
+    if (settings?."${pName}NotificationsOn") {
+        str += ( getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer"))) ?
             "Push Status:" : ""
-    str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
-    str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
-    str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
-    //str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
-    str += getNotifSchedDesc() ? ("${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected...") : ""
-    str += getVoiceNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc()}") : ""
-    str += getAlarmNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${getAlarmNotifConfigDesc()}") : ""
-    str += getAlertNotifConfigDesc() ? "\n${getAlertNotifConfigDesc()}" : ""
+        str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
+        str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
+        str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
+        //str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
+        str += getNotifSchedDesc() ? ("${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected...") : ""
+        str += getVoiceNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc()}") : ""
+        str += getAlarmNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${getAlarmNotifConfigDesc()}") : ""
+        str += getAlertNotifConfigDesc() ? "\n${getAlertNotifConfigDesc()}" : ""
+    }
     return (str != "") ? "${str}" : null
 }
 
 def getVoiceNotifConfigDesc() {
     def pName = getAutoType()
     def str = ""
-    if(settings["${pName}AllowSpeechNotif"]) {
+    if(settings?."${pName}NotificationsOn" && settings["${pName}AllowSpeechNotif"]) {
         def speaks = getInputToStringDesc(settings?."${pName}SpeechDevices", true)
         def medias = getInputToStringDesc(settings?."${pName}SpeechMediaPlayer", true)
         str += speaks ? "\n • Speech Devices:${speaks.size() > 1 ? "\n" : ""}${speaks}" : ""
@@ -7749,7 +7750,7 @@ def getVoiceNotifConfigDesc() {
 def getAlarmNotifConfigDesc() {
     def pName = getAutoType()
     def str = ""
-    if(settings["${pName}AllowAlarmNotif"]) {
+    if(settings?."${pName}NotificationsOn" && settings["${pName}AllowAlarmNotif"]) {
         def alarms = getInputToStringDesc(settings["${pName}AlarmDevices"], true)
         str += alarms ? "\n • Alarm Devices:${alarms.size() > 1 ? "\n" : ""}${alarms}" : ""
     }
@@ -7759,7 +7760,7 @@ def getAlarmNotifConfigDesc() {
 def getAlertNotifConfigDesc() {
     def pName = getAutoType()
     def str = ""
-    if(settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"] && (settings["${pName}NotificationsOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+    if(settings?."${pName}NotificationsOn" && (settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"]) && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
         str += settings["${pName}_Alert_1_Delay"] ? "\nAlert (1) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_1_Delay"])})" : ""
         str += settings["${pName}_Alert_1_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_1_Send_Push"]})" : ""
         str += settings["${pName}_Alert_1_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_1_Use_Speech"]})" : ""
