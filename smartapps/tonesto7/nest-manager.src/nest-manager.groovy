@@ -4806,7 +4806,7 @@ def remSensorPage() {
     def pName = remSenPrefix()
     dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false, nextPage: "mainAutoPage") {
         def req = (remSensorDay || remSensorNight || remSenTstat) ? true : false
-        def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatsMir)
+        def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatMir)
         def tStatHeatSp = getTstatSetpoint(remSenTstat, "heat")
         def tStatCoolSp = getTstatSetpoint(remSenTstat, "cool")
         def tStatMode = remSenTstat ? remSenTstat?.currentThermostatMode : "unknown"
@@ -4830,10 +4830,10 @@ def remSensorPage() {
                 str += remSenTstat ? "\n${settings?."${getAutoType()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(remSenTstat) == "present" ? "Home" : "Away"})" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 
-                input "remSenTstatsMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
+                input "remSenTstatMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
                         image: getAppImg("thermostat_icon.png")
-                if(remSenTstatsMir && !dupTstat) { 
-                    remSenTstatsMir?.each { t ->
+                if(remSenTstatMir && !dupTstat) { 
+                    remSenTstatMir?.each { t ->
                         paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
                     }
                 }
@@ -5503,14 +5503,14 @@ private remSenEvtEval() {
                                     cHeat = chgval - 5.0
                                     LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
                                     curHeatSetpoint =  cHeat
-                                    if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(cHeat) }
+                                    if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
                                 }
                             }
 
                             if (setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
                                 LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                                 curCoolSetpoint = chgval
-                                if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(chgval) }
+                                if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
                             }
 
                             return  // let all this take effect
@@ -5584,14 +5584,14 @@ private remSenEvtEval() {
                                     cCool = chgval + 5.0
                                     LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
                                     curCoolSetpoint = cCool
-                                    if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(cCool) }
+                                    if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
                                 }
                             }
 
                             if (setTstatAutoTemps(remSenTstat, cCool, chgval)) {
                                 LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
                                 curHeatSetpoint = chgval
-                                if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(chgval) }
+                                if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
                             }
 
                            return  // let all this take effect
@@ -5613,14 +5613,14 @@ private remSenEvtEval() {
                     if (fanOn) {
                         LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan as modes do not match evaluation", "info", true)
                         remSenTstat?.fanAuto()
-                        if(remSenTstatsMirror) { remSenTstatsMir*.fanAuto() }
+                        if(remSenTstatMir) { remSenTstatMir*.fanAuto() }
                     }
                     // with Nest, it automatically turns off fan after a defined time;  ensure we don't turn it on again
                     return
                 } 
 
                 def sTemp = getFanAutoModeTemp(hvacMode, curTstatOperState, reqSenHeatSetPoint, reqSenCoolSetPoint, curHeatSetpoint, curCoolSetpoint, curSenTemp)
-                remSenFanControl(remSenTstat, remSenTstatsMir, hvacMode, remSenRuleType, curTstatOperState, curTstatFanMode, sTemp?.type?.toString(), curSenTemp, sTemp?.req?.toDouble(), sTemp?.cur?.toDouble(), threshold, fanOn)
+                remSenFanControl(remSenTstat, remSenTstatMir, hvacMode, remSenRuleType, curTstatOperState, curTstatFanMode, sTemp?.type?.toString(), curSenTemp, sTemp?.req?.toDouble(), sTemp?.cur?.toDouble(), threshold, fanOn)
             }
         }
         else {
@@ -5891,16 +5891,12 @@ def extTempPage() {
         }
         if(extTmpUseWeather || extTmpTempSensor) {
             def req = (extTmpUseWeather || (!extTmpUseWeather && extTmpTempSensor)) ? true : false
-            def dupTstat = checkThermostatDupe(extTmpTstat, extTmpTstatsMir)
             section("When the Threshold Temp is Reached\nTurn Off this Thermostat...") {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
                 if(dupTstat) {
                     paragraph "Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", state: null, required: true, image: getAppImg("error_icon.png")
                 }
                 if(extTmpTstat) {
-                    input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-                                image: getAppImg("thermostat_icon.png")
-                    
                     getTstatCapabilities(extTmpTstat, extTmpPrefix())
                     def str = ""
                     str += extTmpTstat ? "Thermostat Status:" : ""
@@ -5912,8 +5908,9 @@ def extTempPage() {
 
                     input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
                             image: getAppImg("thermostat_icon.png")
-                    if(extTmpTstatsMir && !dupTstat) { 
-                        extTmpTstatsMir?.each { t ->
+                    
+                    if(extTmpTstatMir && !dupTstat) { 
+                        extTmpTstatMir?.each { t ->
                             paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
                         }
                     }
@@ -6299,10 +6296,6 @@ def contactWatchPage() {
             if(dupTstat) {
                 paragraph "Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", state: null, required: true, image: getAppImg("error_icon.png")
             }
-            if(conWatTstat) {
-                input name: "conWatTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-                        image: getAppImg("thermostat_icon.png")
-            }
             if (conWatContacts && conWatTstat) {
                 getTstatCapabilities(conWatTstat, conWatPrefix())
                 def str = ""
@@ -6313,6 +6306,16 @@ def contactWatchPage() {
                 str += conWatTstat ? "\n${(settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
                 str += (conWatTstat && settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "\n└ Safefy Temps: \n     └ Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+            }
+            if(conWatTstat) {
+                input name: "conWatTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+                        image: getAppImg("thermostat_icon.png")
+
+                if(conWatTstatMir && !dupTstat) { 
+                    conWatTstatMir?.each { t ->
+                        paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
+                    }
+                }
             }
         }
         if(conWatContacts && conWatTstat) {
@@ -6571,8 +6574,7 @@ def leakWatPrefix() { return "leakWat" }
 def leakWatchPage() {
     def pName = leakWatPrefix()
     dynamicPage(name: "leakWatchPage", title: "Thermostat/Leak Automation", uninstall: false, nextPage: "mainAutoPage") {
-     
-     def dupTstat = checkThermostatDupe(leakWatTstat, leakWatTstatMir)
+        def dupTstat = checkThermostatDupe(leakWatTstat, leakWatTstatMir)
         section("When Leak is Detected, Turn Off this Thermostat") {
             def req = (leakWatSensors || leakWatTstat) ? true : false
             input name: "leakWatSensors", type: "capability.waterSensor", title: "Which Leak Sensor(s)?", multiple: true, submitOnChange: true, required: req,
@@ -6586,9 +6588,6 @@ def leakWatchPage() {
                 paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
             }
             if(leakWatTstat) {
-                input name: "leakWatTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-                        image: getAppImg("thermostat_icon.png")
-                
                 getTstatCapabilities(leakWatTstat, leakWatPrefix())
                 def str = ""
                 str += leakWatTstat ? "Thermostat Status:" : ""
@@ -6596,8 +6595,16 @@ def leakWatchPage() {
                 str += leakWatTstat ? "\n${settings?."${getAutoType()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(leakWatTstat) == "present" ? "Home" : "Away"})" : ""
                 str += leakWatTstat && getSafetyTemps(leakWatTstat) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(leakWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(leakWatTstat).max}°${atomicState?.tempUnit}" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+
+                input name: "leakWatTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+                        image: getAppImg("thermostat_icon.png")
+
+                if(leakWatTstatMir && !dupTstat) { 
+                    leakWatTstatMir?.each { t ->
+                        paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
+                    }
+                }
             }
-            
         }
         if(leakWatSensors && leakWatTstat) {
 // need to check if safety temps are set and != to each other
@@ -6681,11 +6688,9 @@ def leakWatCheck() {
                                 atomicState?.leakWatTstatOffRequested = false
                                 atomicState?.leakWatRestoreMode = null
 
-                                if(leakWatTstatMir) { 
-                                    leakWatTstatMir?.each { tstat ->
-                                        if(setTstatMode(tstat, lastMode)) {
-                                            LogAction("leakWatCheck: Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
-                                        }
+                                if(leakWatTstatMir) {
+                                    if(setMultipleTstatMode(leakWatTstatMir, lastmode)) {
+                                        LogAction("leakWatCheck: Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
                                     }
                                 }
                                 if(!safetyOk) {
@@ -6733,10 +6738,10 @@ def leakWatCheck() {
                     if(setTstatMode(leakWatTstat, "off")) {
                         atomicState?.leakWatTstatOffRequested = true
                         if (allowAlarm) { scheduleAlarmOn() }
-                        if(leakWatTstatMir) { 
-                            leakWatTstatMir?.each { tstat ->
-                                tstat.off()
-                                LogAction("leakWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
+
+                        if(leakWatTstatMir) {
+                            if(setMultipleTstatMode(leakWatTstatMir, "off")) {
+                                LogAction("leakWatCheck: Mirroring (Off) Mode to ${tstat}", "info", true)
                             }
                         }
                         LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has reported it's WET...", "warn", true)
@@ -8205,14 +8210,14 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint) {
         def hvacMode = tstat?.currentThermostatMode.toString()
         def curCoolSetpoint = getTstatSetpoint(tstat, "cool")
         def curHeatSetpoint = getTstatSetpoint(tstat, "heat")
-        def diff = atomicState?.tempUnit == C ? 2.0 : 3.0
+        def diff = atomicState?.tempUnit == "C" ? 2.0 : 3.0
 
         def reqCool =  coolSetpoint?.toDouble() ?: null
         def reqHeat =  heatSetpoint?.toDouble() ?: null
 
         if (hvacMode in ["auto"]) {
-            if (!reqCool && reqHeat) { reqCool = (double) reqHeat + diff }
-            if (!reqHeat && reqCool) { reqHeat = (double) reqCool - diff }
+            if (!reqCool && reqHeat) { reqCool = (double) (curCoolSetpoint > (reqHeat + diff)) ? curCoolSetpoint : (reqHeat + diff) }
+            if (!reqHeat && reqCool) { reqHeat = (double) (curHeatSetpoint < (reqCool - diff)) ? curHeatSetpoint : (reqCool - diff) }
             if ((reqCool && reqHeat) && (reqCool >= (reqHeat + diff))) {
                 def heatFirst
                 if (reqHeat <= curHeatSetpoint) { heatFirst = true }
