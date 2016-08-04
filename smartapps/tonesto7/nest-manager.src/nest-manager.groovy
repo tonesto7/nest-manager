@@ -5472,6 +5472,7 @@ private remSenEvtEval() {
                     def turnOn = false
                     def turnOff = false
 
+                    LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", true)
                     if (curSenTemp <= offTemp) {
                         turnOff = true
                     } else if (curSenTemp >= onTemp) {
@@ -5523,7 +5524,7 @@ private remSenEvtEval() {
                             }
 
                             if (setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
-                                LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${curCoolSetpoint}°${atomicState?.tempUnit}) ", "info", true)
+                                LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                                 curCoolSetpoint = chgval
                                 if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
                             }
@@ -5533,9 +5534,8 @@ private remSenEvtEval() {
                         } else {
                             LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                         }
-                        LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", true)
                     } else {
-                        LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+                        LogAction("Remote Sensor: NO CHANGE TO COOL - CoolSetpoint is (${curCoolSetpoint}°${atomicState?.tempUnit}) ", "info", true)
                     }
                 }
             }
@@ -5553,6 +5553,7 @@ private remSenEvtEval() {
                     def turnOn = false
                     def turnOff = false
 
+                    LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", true)
                     if (curSenTemp <= onTemp) {
                         turnOn = true
                     } else if (curSenTemp >= offTemp) {
@@ -5604,7 +5605,7 @@ private remSenEvtEval() {
                             }
 
                             if (setTstatAutoTemps(remSenTstat, cCool, chgval)) {
-                                LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${curHeatSetpoint}°${atomicState?.tempUnit})", "info", true)
+                                LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
                                 curHeatSetpoint = chgval
                                 if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
                             }
@@ -5614,9 +5615,8 @@ private remSenEvtEval() {
                         } else {
                             LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
                         }
-                        LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", true)
                     } else {
-                        LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
+                        LogAction("Remote Sensor: NO CHANGE TO HEAT - HeatSetpoint is already (${curHeatSetpoint}°${atomicState?.tempUnit})", "info", true)
                     }
                 }
             }
@@ -5905,6 +5905,7 @@ def extTempPage() {
         }
         if(extTmpUseWeather || extTmpTempSensor) {
             def req = (extTmpUseWeather || (!extTmpUseWeather && extTmpTempSensor)) ? true : false
+            def dupTstat = checkThermostatDupe(extTmpTstat, extTmpTstatMir)
             section("When the Threshold Temp is Reached\nTurn Off this Thermostat...") {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
                 if(dupTstat) {
