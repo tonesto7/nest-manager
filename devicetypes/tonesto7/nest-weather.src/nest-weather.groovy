@@ -1130,7 +1130,10 @@ def getSomeOldData(devpoll = false) {
 def getSomeData(devpoll = false) {
     log.trace "getSomeData ${state.curWeatherLoc}"
 // hackery to test getting old data
-    def tryNum = 9
+    def dewpointTable
+    def temperatureTable
+
+    def tryNum = 1
     if (state.eric != tryNum ) {
         dewpointTable = null
         temperatureTable = null
@@ -1150,13 +1153,19 @@ def getSomeData(devpoll = false) {
     }
 
     def todayDay = new Date().format("dd",location.timeZone)
-    def dewpointTable = state?.dewpointTable
-    def temperatureTable = state?.temperatureTable
+    dewpointTable = state?.dewpointTable
+    temperatureTable = state?.temperatureTable
 
     def currentTemperature = wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
     def currentDewpoint = wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f
 
     if (!state.today || state.today != todayDay) {
+
+        //debugging
+        if (dewpointTable == null) {
+            dewpointTable = []
+            temperatureTable = []
+        }
         state.today = todayDay
         state.dewpointTableYesterday = dewpointTable
         state.temperatureTableYesterday = temperatureTable
@@ -1180,12 +1189,6 @@ def getSomeData(devpoll = false) {
         state.dewpointTable = dewpointTable
         state.temperatureTable = temperatureTable
         return
-    }
-
-    //debugging
-    if (dewpointTable == null) {
-        dewpointTable = []
-        temperatureTable = []
     }
 
     // add latest dewpoint & temperature readings for the graph
