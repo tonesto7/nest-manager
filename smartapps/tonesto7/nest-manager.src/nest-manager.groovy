@@ -22,6 +22,7 @@
 import groovy.json.*
 import groovy.time.*
 import java.text.SimpleDateFormat
+import java.security.MessageDigest
 
 definition(
     name: "${textAppName()}",
@@ -987,6 +988,12 @@ def schedUpdateChild() {
     runIn(25, "updateChildData", [overwrite: true])
 }
 
+def generateMD5_A(String s){
+    MessageDigest digest = MessageDigest.getInstance("MD5")
+    digest.update(s.bytes);
+    new BigInteger(1, digest.digest()).toString(16).padLeft(32, '0')
+}
+
 def updateChildData(force = false) {
     LogAction("updateChildData()", "info", true)
     if (atomicState?.pollBlocked) { return }
@@ -1012,10 +1019,12 @@ def updateChildData(force = false) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
                                 "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     def oldTstatData = atomicState?."oldTstatData${devId}"
-                    if (force || nforce || oldTstatData != tData) {
+                    def tstr = tData.inspect()
+                    def tDataChecksum = generateMD5_A(tstr)
+                    if (force || nforce || oldTstatData != tDataChecksum) {
                         LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                         it.generateEvent(tData) //parse received message from parent
-                        atomicState."oldTstatData${devId}" = tData
+                        atomicState."oldTstatData${devId}" = tDataChecksum
                     }
                     return true
                 } else { 
@@ -1029,10 +1038,12 @@ def updateChildData(force = false) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
                     def oldProtData = atomicState?."oldProtData${devId}"
-                    if (force || nforce || oldProtData != pData) {
+                    def pstr = pData.inspect()
+                    def pDataChecksum = generateMD5_A(pstr)
+                    if (force || nforce || oldProtData != pDataChecksum) {
                         LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                         it.generateEvent(pData) //parse received message from parent
-                        atomicState."oldProtData${devId}" = pData
+                        atomicState."oldProtData${devId}" = pDataChecksum
                     }
                     return true
                 } else { 
@@ -1046,10 +1057,12 @@ def updateChildData(force = false) {
                     def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestCamVer()?.ver?.toString()]
                     def oldCamData = atomicState?."oldCamData${devId}"
-                    if (force || nforce || oldCamData != camData) {
+                    def cstr = camData.inspect()
+                    def cDataChecksum = generateMD5_A(cstr)
+                    if (force || nforce || oldCamData != cDataChecksum) {
                         LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
                         it.generateEvent(camData) //parse received message from parent
-                        atomicState."oldCamData${devId}" = camData
+                        atomicState."oldCamData${devId}" = cDataChecksum
                     }
                     return true
                 } else { 
@@ -1062,10 +1075,12 @@ def updateChildData(force = false) {
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
                     def oldPresData = atomicState?."oldPresData${devId}"
-                    if (force || nforce || oldPresData != pData) {
+                    def pstr = pData.inspect()
+                    def pDataChecksum = generateMD5_A(pstr)
+                    if (force || nforce || oldPresData != pDataChecksum) {
                         LogTrace("UpdateChildData >> Presence id: ${devId}")
                         it.generateEvent(pData)
-                        atomicState."oldPresData${devId}" = pData
+                        atomicState."oldPresData${devId}" = pDataChecksum
                     }
                     return true
                 } else { 
@@ -1078,10 +1093,12 @@ def updateChildData(force = false) {
                 if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
                     def oldWeatherData = atomicState?."oldWeatherData${devId}"
-                    if (force || nforce || oldWeatherData != wData) {
+                    def wstr = wData.inspect()
+                    def wDataChecksum = generateMD5_A(wstr)
+                    if (force || nforce || oldWeatherData != wDataChecksum) {
                         LogTrace("UpdateChildData >> Weather id: ${devId}")
                         it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
-                        atomicState."oldWeatherData${devId}" = wData
+                        atomicState."oldWeatherData${devId}" = wDataChecksum
                     }
                     return true
                 } else { 
@@ -4417,7 +4434,7 @@ def mainAutoPage(params) {
             }
 
             if(autoType == "watchDog" && !disableAutomation) { 
-                section("Watch you Nest Location for Events:") {
+                section("Watch your Nest Location for Events:") {
                     def watDogDesc = ""
                     watDogDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
                             "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
