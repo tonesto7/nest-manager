@@ -1,6 +1,6 @@
 /**
  *  Nest Weather
- *	Author: Anthony S. (@tonesto7)
+ *      Author: Anthony S. (@tonesto7)
  *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
  *
  * Copyright (C) 2016 Anthony S., Ben W.
@@ -70,7 +70,7 @@ metadata {
     tiles(scale: 2) {
         htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 10)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-            state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
+            state("default", label:'${currentValue}°',  icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
         }
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
@@ -86,13 +86,17 @@ metadata {
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
         }
+        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 4, whitelist: ["www.gstatic.com"])
+
         main ("temp2")
         details ("weatherHtml", "refresh")
+        //details ("weatherHtml", "graphHTML", "refresh")
     }
 }
 
 mappings {
     path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
+    path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
 }
 
 def initialize() {
@@ -359,7 +363,7 @@ def getTemp() {
      if ( wantMetric() ) {
          return "${state?.curWeatherTemp_c}°C"
      } else {
-         return	"${state?.curWeatherTemp_f}°F"
+         return "${state?.curWeatherTemp_f}°F"
     }       
     } catch (ex) { 
         parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getTemp")
@@ -372,7 +376,7 @@ def getDewpoint() {
      if ( wantMetric() ) {
          return "${state?.curWeatherDewPoint_c}°C"
      } else {
-         return	"${state?.curWeatherDewPoint_f}°F"
+         return "${state?.curWeatherDewPoint_f}°F"
     }       
     } catch (ex) { 
         parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getDewpoint")
@@ -429,6 +433,9 @@ def getWeatherConditions(Map weatData) {
                 state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
                 state.curWeatherDewPoint_f =  Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
                 dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
+
+                getSomeData(true)
+
                 sendEvent(name: "weather", value: cur?.current_observation?.weather)
                 sendEvent(name: "weatherIcon", value: state?.curWeatherIcon, displayed:false)
                 def wspeed = 0.0
@@ -971,7 +978,7 @@ def getWeatherHtml() {
                     <div class="row">
                     <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
                     <div class="centerText four columns">${forecastDay(7)}</div>
-                    </div>		
+                    </div>
                     <div class="row topBorder">
                     <div class="centerText offset-by-three six columns">
                         <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b> 
@@ -997,6 +1004,293 @@ def getWeatherHtml() {
         parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherHtml")
     }
 }
+
+String getDataString(Integer seriesIndex) {
+        def dataString = ""
+        def dataTable = []
+        switch (seriesIndex) {
+                case 1:
+                        dataTable = state.temperatureTableYesterday
+                        break
+                case 2:
+                        dataTable = state.dewpointTableYesterday
+                        break
+                case 3:
+                        dataTable = state.temperatureTable
+                        break
+                case 4:
+                        dataTable = state.dewpointTable
+                        break
+        }
+        dataTable.each() {
+                def dataArray = [[it[0],it[1],0],null,null,null,null]
+                dataArray[seriesIndex] = it[2]
+                dataString += dataArray.toString() + ","
+        }
+        return dataString
+}
+
+def getSomeOldData(devpoll = false) {
+    def dewpointTable = state?.dewpointTable
+    def temperatureTable = state?.temperatureTable
+
+    if (devpoll) {
+        runIn( 66, "getSomeData", [overwrite: true])
+        return
+    }
+
+    def startOfToday = timeToday("00:00", location.timeZone)
+    def newValues
+    def dataTable = []
+
+    if (state.dewpointTableYesterday == null) {
+        log.trace "Querying DB for yesterday's data…"
+        def dewpointData = device.statesBetween("dewpoint", startOfToday - 1, startOfToday, [max: 100]) // 24h in 15min intervals should be more than sufficient…
+        log.debug "got ${dewpointData.size()}"
+
+        // work around a bug where the platform would return less than the requested number of events (as June 2016, only 50 events are returned)
+        while ((newValues = device.statesBetween("dewpoint", startOfToday - 1, dewpointData.last().date, [max: 100])).size()) {
+            log.debug "got ${newValues.size()}"
+            dewpointData += newValues
+        }
+
+        dataTable = []
+        dewpointData.reverse().each() {
+            dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        }
+        runIn( 80, "getSomeData", [overwrite: true])
+        state.dewpointTableYesterday = dataTable
+        log.debug "finished"
+        return
+    }
+
+    if (state.temperatureTableYesterday == null) {
+        log.trace "2"
+        def temperatureData = device.statesBetween("temperature", startOfToday - 1, startOfToday, [max: 100])
+        log.debug "got ${temperatureData.size()}"
+        while ((newValues = device.statesBetween("temperature", startOfToday - 1, temperatureData.last().date, [max: 100])).size()) {
+            log.debug "got ${newValues.size()}"
+            temperatureData += newValues
+        }
+
+        dataTable = []
+        temperatureData.reverse().each() {
+            dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        }
+        runIn( 80, "getSomeData", [overwrite: true])
+        state.temperatureTableYesterday = dataTable
+        log.debug "finished"
+        return
+    }
+
+/*
+    if (dewpointTable == null) {
+        dewpointTable = []
+        temperatureTable = []
+    }
+*/
+    if (dewpointTable == null) {
+        log.trace "Querying DB for today's data…"
+        def dewpointData = device.statesSince("dewpoint", startOfToday, [max: 100])
+        log.debug "got ${dewpointData.size()}"
+        while ((newValues = device.statesBetween("dewpoint", startOfToday, dewpointData.last().date, [max: 100])).size()) {
+            log.debug "got ${newValues.size()}"
+            dewpointData += newValues
+        }
+        dewpointTable = []
+        dewpointData.reverse().each() {
+            dewpointTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        }
+        runIn( 33, "getSomeData", [overwrite: true])
+        state.dewpointTable = dewpointTable
+        log.debug "finished"
+        return
+    }
+
+    if (temperatureTable == null) {
+        log.trace "4"
+        def temperatureData = device.statesSince("temperature", startOfToday, [max: 100])
+        log.debug "got ${temperatureData.size()}"
+        while ((newValues = device.statesBetween("temperature", startOfToday, temperatureData.last().date, [max: 100])).size()) {
+            temperatureData += newValues
+            log.debug "got ${newValues.size()}"
+        }
+        temperatureTable = []
+        //temperatureData.reverse().drop(1).each() {
+        temperatureData.reverse().each() {
+            temperatureTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        }
+        runIn( 30, "getSomeData", [overwrite: true])
+        state.temperatureTable = temperatureTable
+        log.debug "finished"
+        return
+    }
+}
+
+def getSomeData(devpoll = false) {
+    log.trace "getSomeData ${state.curWeatherLoc}"
+// hackery to test getting old data
+    def tryNum = 9
+    if (state.eric != tryNum ) {
+        dewpointTable = null
+        temperatureTable = null
+        state.dewpointTableYesterday = null
+        state.temperatureTableYesterday = null
+        state.dewpointTable = null
+        state.temperatureTable = null
+        state.remove("dewpointTableYesterday")
+        state.remove("temperatureTableYesterday")
+        state.remove("dewpointTable")
+        state.remove("temperatureTable")
+        state.remove("today")
+        
+        state.eric = tryNum
+        runIn( 33, "getSomeData", [overwrite: true])
+        return
+    }
+
+    def todayDay = new Date().format("dd",location.timeZone)
+    def dewpointTable = state?.dewpointTable
+    def temperatureTable = state?.temperatureTable
+
+    def currentTemperature = wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
+    def currentDewpoint = wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f
+
+    if (!state.today || state.today != todayDay) {
+        state.today = todayDay
+        state.dewpointTableYesterday = dewpointTable
+        state.temperatureTableYesterday = temperatureTable
+
+// these are commented out as the platform continuously times out
+        //dewpointTable = dewpointTable ? [] : null
+        //temperatureTable = temperatureTable ? [] : null
+
+// these are in due to platform timeouts
+        dewpointTable = []
+        temperatureTable = []
+
+// these are commented out as the platform continuously times out
+        //getSomeOldData(devpoll)
+        //dewpointTable = state?.dewpointTable
+        //temperatureTable = state?.temperatureTable
+
+
+        dewpointTable.add([0,0,currentDewpoint])
+        temperatureTable.add([0,0,currentTemperature])
+        state.dewpointTable = dewpointTable
+        state.temperatureTable = temperatureTable
+        return
+    }
+
+    //debugging
+    if (dewpointTable == null) {
+        dewpointTable = []
+        temperatureTable = []
+    }
+
+    // add latest dewpoint & temperature readings for the graph
+    def newDate = new Date()
+    dewpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentDewpoint])
+    temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
+    state.dewpointTable = dewpointTable
+    state.temperatureTable = temperatureTable
+}
+
+def getStartTime() {
+    def startTime = 24
+    if (state?.dewpointTable?.size()) {
+        startTime = state.dewpointTable.min{it[0].toInteger()}[0].toInteger()
+    }
+    if (state?.dewpointTableYesterday?.size()) {
+        startTime = Math.min(startTime, state.dewpointTableYesterday.min{it[0].toInteger()}[0].toInteger())
+    }
+    return startTime
+}
+
+def getGraphHTML() {
+    def tempStr = "°F"
+    if ( wantMetric() ) {
+        tempStr = "°C"
+    }
+    def html = """
+        <!DOCTYPE html>
+            <html>
+                <head>
+                    <meta http-equiv="cache-control" content="max-age=0"/>
+                    <meta http-equiv="cache-control" content="no-cache"/>
+                    <meta http-equiv="expires" content="0"/>
+                    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+                    <meta http-equiv="pragma" content="no-cache"/>
+                    <meta name="viewport" content="width = device-width">
+                    <meta name="viewport" content="initial-scale = 1.0, user-scalable=no">
+                    <style type="text/css">body,div {margin:0;padding:0}</style>
+                    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+                    <script type="text/javascript">
+                            google.charts.load('current', {packages: ['corechart']});
+                            google.charts.setOnLoadCallback(drawGraph);
+                            function drawGraph() {
+                                var data = new google.visualization.DataTable();
+                                data.addColumn('timeofday', 'time');
+                                data.addColumn('number', 'Temperature (Yesterday)');
+                                data.addColumn('number', 'Dewpoint (Yesterday)');
+                                data.addColumn('number', 'Temperature (Today)');
+                                data.addColumn('number', 'Dewpoint (Today)');
+                                data.addRows([
+                                    ${getDataString(1)}
+                                    ${getDataString(2)}
+                                    ${getDataString(3)}
+                                    ${getDataString(4)}
+                                ]);
+                                var options = {
+                                        fontName: 'San Francisco, Roboto, Arial',
+                                        height: 240,
+                                        hAxis: {
+                                                format: 'H:mm',
+                                                minValue: [${getStartTime()},0,0],
+                                                slantedText: false
+                                        },
+                                        series: {
+                                                0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+                                                1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
+                                                2: {targetAxisIndex: 1, color: '#FF0000'},
+                                                3: {targetAxisIndex: 0, color: '#004CFF'}
+                                        },
+                                        vAxes: {
+                                                0: {
+                                                        title: 'Dewpoint (${tempStr})',
+                                                        format: 'decimal',
+                                                        textStyle: {color: '#004CFF'},
+                                                        titleTextStyle: {color: '#004CFF'}
+                                                },
+                                                1: {
+                                                        title: 'Temperature (${tempStr})',
+                                                        format: 'decimal',
+                                                        textStyle: {color: '#FF0000'},
+                                                        titleTextStyle: {color: '#FF0000'}
+                                                }
+                                        },
+                                        legend: {
+                                                position: 'none'
+                                            },
+                                        chartArea: {
+                                                width: '72%',
+                                                height: '85%'
+                                        }
+                                };
+                                var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+                                chart.draw(data, options);
+                            }
+                    </script>
+                </head>
+                <body>
+                    <div id="chart_div"></div>
+                </body>
+            </html>
+                """
+        render contentType: "text/html", data: html, status: 200
+}
+
+
 private def textDevName()  { return "Nest Weather${appDevName()}" }
 private def appDevType()   { return false }
 private def appDevName()   { return appDevType() ? " (Dev)" : "" }
