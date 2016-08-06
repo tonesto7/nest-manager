@@ -1128,7 +1128,7 @@ def getSomeOldData(devpoll = false) {
 }
 
 def getSomeData(devpoll = false) {
-    log.trace "getSomeData ${state.curWeatherLoc}"
+    //log.trace "getSomeData ${state.curWeatherLoc}"
 // hackery to test getting old data
     def dewpointTable
     def temperatureTable
