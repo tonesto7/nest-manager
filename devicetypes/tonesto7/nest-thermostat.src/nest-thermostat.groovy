@@ -222,6 +222,8 @@ metadata {
         }
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 4)
         
+        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 5, whitelist: ["www.gstatic.com"])
+
         main( tileMain() )
         details( tileSelect() )
     }
@@ -245,7 +247,8 @@ def tileSelect() {
             break
         default:
             return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
+//                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
+                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "graphHTML", "refresh"]
             break
     }
 }
@@ -285,6 +288,7 @@ def getTempColors() {
 
 mappings {
     path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
+    path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
 }
 
 def initialize() {
@@ -400,6 +404,8 @@ def generateEvent(Map eventData) {
                     break
             }
         }
+        getSomeData(true)
+
         lastUpdatedEvent()
         //This will return all of the devices state data to the logs.
         //log.debug "Device State Data: ${getState()}"
@@ -758,7 +764,7 @@ def tempLockOnEvent(isLocked) {
     try {
         def curState = device.currentState("tempLockOn")?.value.toString()
         def newState = isLocked?.toString()
-        state?.hasLeaf = newState
+        state?.tempLockOn = newState
         if(!curState?.equals(newState)) {
             log.debug("UPDATED | Temperature Lock is set to (${newState}) | Original State: (${curState})")
             sendEvent(name:'tempLockOn', value: newState,  descriptionText: "Temperature Lock: ${newState}" , displayed: false, isStateChange: true, state: newState)
@@ -986,6 +992,10 @@ def getFanMode() {
 
 def getHvacMode() { 
     return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.value.toString() 
+}
+
+def getHvacState() {
+    return !device.currentState("thermostatOperatingState") ? "unknown" : device.currentState("thermostatOperatingState")?.value.toString() 
 }
 
 def getNestPresence() { 
@@ -1903,6 +1913,383 @@ def getInfoHtml() {
         parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "getInfoHtml")
     }
 }
+
+/*
+     variable      attribute for history       getRoutine             variable is present
+
+   temperature       "temperature"              getTemp                   true                         #
+   coolSetpoint     "coolingSetpoint"           getCoolTemp           state.can_cool                   #
+   heatSetpoint     "heatingSetpoint"           getHeatTemp           state.can_heat                   #
+   operatingState "thermostatOperatingState"   getHvacState                true                 idle cooling heating
+   operatingMode    "thermostatMode"           getHvacMode                true                 heat cool off auto
+    presence           "presence"              getPresence                true                 present  not present
+*/
+
+String getDataString(Integer seriesIndex) {
+    //log.trace "getDataString ${seriesIndex}"
+    def dataString = ""
+    def dataTable = []
+    switch (seriesIndex) {
+        case 1:
+            dataTable = state.temperatureTableYesterday
+            break
+        case 2:
+           dataTable = state.temperatureTable
+            break
+        case 3:
+            dataTable = state.operatingStateTable
+            break
+        case 4:
+            dataTable = state.coolSetpointTable
+            break
+        case 5:
+            dataTable = state.heatSetpointTable
+            break
+    }
+
+    def lastVal = 200
+    //log.debug "getDataString ${seriesIndex} ${dataTable}"
+    //log.debug "getDataString ${seriesIndex}"
+    def lastAdded = false
+    def dataArray
+    def myval
+    def myindex
+    def lastdataArray = null
+    
+    
+    if (seriesIndex == 4) {
+      // state.can_cool
+    }
+    if (seriesIndex == 5) {
+       // state.can_heat
+    }
+    
+    dataTable.each() {
+        myindex = seriesIndex
+        if (state?.can_heat && state?.can_cool) { dataArray = [[it[0],it[1],0],null,null,null,null,null] }
+        else { 
+            dataArray = [[it[0],it[1],0],null,null,null,null]
+            if (myindex == 5) {myindex = 4}
+        }
+        //convert idle / non-idle to numeric value
+        if (myindex == 3) {
+            myval = it[2]
+            if (myval == "idle") { myval = 0 }
+            else { myval = 1 }
+        } else { myval = it[2] }
+
+        dataArray[myindex] = myval
+        
+        //reduce # of points to graph
+        if (lastVal != myval) {
+            lastAdded = true
+            if (lastdataArray) {   //controls curves
+                dataString += lastdataArray.toString() + ","
+            }
+            lastdataArray = null
+            lastVal = myval
+            dataString += dataArray.toString() + ","
+        } else { lastAdded = false; lastdataArray = dataArray }
+    }
+    
+    if (!lastAdded && dataString) {
+        dataArray[myindex] = myval
+        dataString += dataArray.toString() + ","
+    }
+    
+    if (dataString == "") {
+        dataArray = [[0,0,0],null,null,null,null,null]
+        dataArray[myindex] = 0
+        dataString += dataArray.toString() + ","
+    }
+    //log.debug "${dataString}"
+    return dataString
+}
+
+def getSomeOldData(devpoll = false) {
+    def temperatureTable = state?.temperatureTable
+
+    if (devpoll) {
+        runIn( 66, "getSomeOldData", [overwrite: true])
+        return
+    }
+
+    def startOfToday = timeToday("00:00", location.timeZone)
+    def newValues
+    def dataTable = []
+
+    if (state.temperatureTableYesterday == null) {
+        log.trace "Querying DB for yesterday's data…"
+        def temperatureData = device.statesBetween("temperature", startOfToday - 1, startOfToday, [max: 100])
+        log.debug "got ${temperatureData.size()}"
+        while ((newValues = device.statesBetween("temperature", startOfToday - 1, temperatureData.last().date, [max: 100])).size()) {
+            log.debug "got ${newValues.size()}"
+            temperatureData += newValues
+        }
+
+        dataTable = []
+        temperatureData.reverse().each() {
+            dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        }
+        runIn( 80, "getSomeOldData", [overwrite: true])
+        state.temperatureTableYesterday = dataTable
+        log.debug "finished"
+        return
+    }
+
+    if (temperatureTable == null) {
+        log.trace "Querying DB for today's data…"
+        def temperatureData = device.statesSince("temperature", startOfToday, [max: 100])
+        log.debug "got ${temperatureData.size()}"
+        while ((newValues = device.statesBetween("temperature", startOfToday, temperatureData.last().date, [max: 100])).size()) {
+            temperatureData += newValues
+            log.debug "got ${newValues.size()}"
+        }
+        temperatureTable = []
+        //temperatureData.reverse().drop(1).each() {
+        temperatureData.reverse().each() {
+            temperatureTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        }
+        runIn( 30, "getSomeOldData", [overwrite: true])
+        state.temperatureTable = temperatureTable
+        log.debug "finished"
+        return
+    }
+}
+
+def getSomeData(devpoll = false) {
+    //log.trace "getSomeData ${app}"
+// hackery to test getting old data
+    def coolSetpointTable
+    def temperatureTable
+    def heatSetpointTable
+    def operatingStateTable
+
+    def tryNum = 1
+    if (state.eric != tryNum ) {
+        coolSetpointTable = null
+        temperatureTable = null
+        state.coolSetpointTableYesterday = null
+        state.temperatureTableYesterday = null
+        state.heatSetpointTableYesterday = null
+        state.operatingStateTableYesterday = null
+
+        state.coolSetpointTable = null
+        state.temperatureTable = null
+        state.heatSetpointTable = null
+        state.operatingStateTable = null
+
+        state.remove("coolSetpointTableYesterday")
+        state.remove("temperatureTableYesterday")
+        state.remove("coolSetpointTable")
+        state.remove("temperatureTable")
+        state.remove("today")
+
+        state.eric = tryNum
+        runIn( 33, "getSomeData", [overwrite: true])
+        return
+    }
+
+    def todayDay = new Date().format("dd",location.timeZone)
+
+    coolSetpointTable = state?.coolSetpointTable
+    temperatureTable = state?.temperatureTable
+    heatSetpointTable = state?.heatSetpointTable
+    operatingStateTable = state?.operatingStateTable
+
+    def currentTemperature = getTemp()
+    def currentcoolSetPoint = getCoolTemp()
+    def currentheatSetPoint = getHeatTemp()
+    def currentoperatingState = getHvacState()
+
+    if (!state.today || state.today != todayDay) {
+
+        //debugging
+        if (coolSetpointTable == null) {
+            coolSetpointTable = []
+            temperatureTable = []
+            heatSetpointTable = []
+            operatingStateTable =  []
+        }
+        state.today = todayDay
+        state.coolSetpointTableYesterday = coolSetpointTable
+        state.temperatureTableYesterday = temperatureTable
+        state.heatSetpointTableYesterday = heatSetpointTable
+        state.operatingStateTableYesterday = operatingStateTable
+
+// these are commented out as the platform continuously times out
+        //coolSetpointTable = coolSetpointTable ? [] : null
+        //temperatureTable = temperatureTable ? [] : null
+        //heatSetpointTable = heatSetpointTable ? [] : null
+        //operatingStateTable = operatingStateTable ? [] : null
+
+// these are in due to platform timeouts
+        coolSetpointTable = []
+        temperatureTable = []
+        heatSetpointTable = []
+        operatingStateTable =  []
+
+// these are commented out as the platform continuously times out
+        //getSomeOldData(devpoll)
+        //coolSetpointTable = state?.coolSetpointTable
+        //temperatureTable = state?.temperatureTable
+        //heatSetpointTable = state?.heatSetpointTable
+        //operatingStateTable = state?.operatingStateTable
+
+/*
+        coolSetpointTable.add([0,0,currentcoolSetPoint])
+        temperatureTable.add([0,0,currentTemperature])
+        heatSetpointTable.add([0,0,currentheatSetPoint])
+        operatingStateTable.add([0,0,currentoperatingState])
+
+        state.coolSetpointTable = coolSetpointTable
+        state.temperatureTable = temperatureTable
+        state.heatSetpointTable = heatSetpointTable
+        state.operatingStateTable = operatingStateTable
+        return
+*/
+    }
+
+    // add latest coolSetpoint & temperature readings for the graph
+    def newDate = new Date()
+    coolSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentcoolSetPoint])
+    temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
+    heatSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
+    operatingStateTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentoperatingState])
+    state.coolSetpointTable = coolSetpointTable
+    state.temperatureTable = temperatureTable
+    state.heatSetpointTable = heatSetpointTable
+    state.operatingStateTable = operatingStateTable
+}
+
+def getStartTime() {
+    def startTime = 24
+    if (state?.temperatureTable?.size()) {
+        startTime = state.temperatureTable.min{it[0].toInteger()}[0].toInteger()
+    }
+    if (state?.temperatureTableYesterday?.size()) {
+        startTime = Math.min(startTime, state.temperatureTableYesterday.min{it[0].toInteger()}[0].toInteger())
+    }
+    //log.trace "startTime ${startTime}"
+    return startTime
+}
+
+def getGraphHTML() {
+    def tempStr = "°F"
+    if ( wantMetric() ) {
+        tempStr = "°C"
+    }
+    
+    def coolstr1 = "data.addColumn('number', 'CoolSP');"
+    def coolstr2 =  getDataString(4)
+    def coolstr3 = "3: {targetAxisIndex: 1, type: 'line', color: '#D1DFFF', lineWidth: 1},"
+    
+    def heatstr1 = "data.addColumn('number', 'HeatSP');"
+    def heatstr2 = getDataString(5)
+    def heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
+    
+    if (state?.can_cool && !state?.can_heat) { coolstr3 = "3: {targetAxisIndex: 1, type: 'line', color: '#D1DFFF', lineWidth: 1}" }
+    
+    if (!state?.can_cool && state?.can_heat) { heatstr3 = "3: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
+    
+    if (!state?.can_cool) {
+        coolstr1 = ""
+        coolstr2 = ""
+        coolstr3 = ""
+    }
+    
+    if (!state?.can_heat) {
+        heatstr1 = ""
+        heatstr2 = ""
+        heatstr3 = ""
+    }
+    
+    def html = """
+        <!DOCTYPE html>
+            <html>
+                <head>
+                    <meta http-equiv="cache-control" content="max-age=0"/>
+                    <meta http-equiv="cache-control" content="no-cache"/>
+                    <meta http-equiv="expires" content="0"/>
+                    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+                    <meta http-equiv="pragma" content="no-cache"/>
+                    <meta name="viewport" content="width = device-width">
+                    <meta name="viewport" content="initial-scale = 1.0, user-scalable=no">
+                    <style type="text/css">body,div {margin:0;padding:0}</style>
+                    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+                    <script type="text/javascript">
+                            google.charts.load('current', {packages: ['corechart']});
+                            google.charts.setOnLoadCallback(drawGraph);
+                            function drawGraph() {
+                                var data = new google.visualization.DataTable();
+                                data.addColumn('timeofday', 'time');
+                                data.addColumn('number', 'Temp (Y)');
+                                data.addColumn('number', 'Temp (T)');
+                                data.addColumn('number', 'Operating');
+                                ${coolstr1}
+                                ${heatstr1}
+                                data.addRows([
+                                    ${getDataString(1)}
+                                    ${getDataString(2)}
+                                    ${getDataString(3)}
+                                    ${coolstr2}
+                                    ${heatstr2}
+                                ]);
+                                var options = {
+                                        fontName: 'San Francisco, Roboto, Arial',
+                                        height: 240,
+                                        width: 300,
+                                        hAxis: {
+                                                format: 'H:mm',
+                                                minValue: [${getStartTime()},0,0],
+                                                slantedText: false
+                                        },
+                                        series: {
+                                                0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                                                1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                                                2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                                                ${coolstr3}
+                                                ${heatstr3}
+                                        },
+                                        vAxes: {
+                                                0: {
+                                                    title: '',
+                                                    format: 'decimal',
+                                                    minValue: 0,
+                                                    maxValue: 8,
+                                                    textStyle: {color: '#FFFFFF'},
+                                                    titleTextStyle: {color: '#004CFF'}
+                                                },
+                                                1: {
+                                                    title: 'Temperature (${tempStr})',
+                                                    format: 'decimal',
+                                                    textStyle: {color: '#FF0000'},
+                                                    titleTextStyle: {color: '#FF0000'}
+                                                }
+                                        },
+                                        legend: {
+                                                position: 'top',
+                                                maxLines: 4,
+                                                textStyle: {color: '#000000'}
+                                            },
+                                        chartArea: {
+                                                width: '72%',
+                                                height: '85%'
+                                        }
+                                };
+                                var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+                                chart.draw(data, options);
+                            }
+                    </script>
+                </head>
+                <body>
+                    <div id="chart_div"></div>
+                </body>
+            </html>
+                """
+        render contentType: "text/html", data: html, status: 200
+}
+
 
 private def textDevName()  { return "Nest Thermostat${appDevName()}" }
 private def appDevType()   { return false }
