@@ -878,10 +878,10 @@ def poll(force = false, type = null) {
                 dev = getApiData("dev")
             }
         }
-        if (atomicState?.pollBlocked) { return }
+        if (atomicState?.pollBlocked) { schedNextWorkQ(null); return }
         if (dev || str || atomicState?.needChildUpd ) { schedUpdateChild() }
 
-        updateWebStuff()
+        updateWebStuff(force)
         notificationCheck() //Checks if a notification needs to be sent for a specific event
     }
 }
@@ -905,7 +905,7 @@ def forcedPoll(type = null) {
         atomicState?.lastWebUpdDt = null
         atomicState?.lastWeatherUpdDt = null
         atomicState?.lastForecastUpdDt = null
-        updateWebStuff(true)
+        schedNextWorkQ(null)
     } else {
         LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${settings?.pollWaitVal})...", "debug", true)
         atomicState.needStrPoll = true
@@ -1021,7 +1021,6 @@ def updateChildData(force = false) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
                                 "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     def oldTstatData = atomicState?."oldTstatData${devId}"
-                    //def tstr = tData.inspect()
                     def tDataChecksum = generateMD5_A(tData.toString())
                     atomicState."oldTstatData${devId}" = tDataChecksum
                     tDataChecksum = atomicState."oldTstatData${devId}"
@@ -1042,12 +1041,13 @@ def updateChildData(force = false) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
                     def oldProtData = atomicState?."oldProtData${devId}"
-                    //def pstr = pData.inspect()
                     def pDataChecksum = generateMD5_A(pData.toString())
+                    atomicState."oldProtData${devId}" = pDataChecksum
+                    pDataChecksum = atomicState."oldProtData${devId}"
                     if (force || nforce || (oldProtData != pDataChecksum)) {
                         LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
+                        //log.warn "oldProtData: ${oldProtData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
                         it.generateEvent(pData) //parse received message from parent
-                        atomicState."oldProtData${devId}" = pDataChecksum
                     }
                     return true
                 } else { 
@@ -1061,7 +1061,6 @@ def updateChildData(force = false) {
                     def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestCamVer()?.ver?.toString()]
                     def oldCamData = atomicState?."oldCamData${devId}"
-                    //def cstr = camData.inspect()
                     def cDataChecksum = generateMD5_A(camData.toString())
                     if (force || nforce || (oldCamData != cDataChecksum)) {
                         LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
@@ -1079,12 +1078,13 @@ def updateChildData(force = false) {
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
                     def oldPresData = atomicState?."oldPresData${devId}"
-                    //def pstr = pData.inspect()
                     def pDataChecksum = generateMD5_A(pData.toString())
+                    atomicState."oldPresData${devId}" = pDataChecksum
+                    pDataChecksum = atomicState."oldPresData${devId}"
                     if (force || nforce || (oldPresData != pDataChecksum)) {
                         LogTrace("UpdateChildData >> Presence id: ${devId}")
+                        //log.warn "oldPresData: ${oldPresData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
                         it.generateEvent(pData)
-                        atomicState."oldPresData${devId}" = pDataChecksum
                     }
                     return true
                 } else { 
@@ -1097,7 +1097,6 @@ def updateChildData(force = false) {
                 if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
                     def oldWeatherData = atomicState?."oldWeatherData${devId}"
-                    //def wstr = wData.inspect()
                     def wDataChecksum = generateMD5_A(wData.toString())
                     atomicState."oldWeatherData${devId}" = wDataChecksum
                     wDataChecksum = atomicState."oldWeatherData${devId}"
