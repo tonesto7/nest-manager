@@ -86,11 +86,11 @@ metadata {
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
         }
-        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 4, whitelist: ["www.gstatic.com"])
+        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 5, whitelist: ["www.gstatic.com"])
 
         main ("temp2")
-        details ("weatherHtml", "refresh")
-        //details ("weatherHtml", "graphHTML", "refresh")
+        //details ("weatherHtml", "refresh")
+        details ("weatherHtml", "graphHTML", "refresh")
     }
 }
 
@@ -1035,7 +1035,7 @@ def getSomeOldData(devpoll = false) {
     def temperatureTable = state?.temperatureTable
 
     if (devpoll) {
-        runIn( 66, "getSomeData", [overwrite: true])
+        runIn( 66, "getSomeOldData", [overwrite: true])
         return
     }
 
@@ -1058,7 +1058,7 @@ def getSomeOldData(devpoll = false) {
         dewpointData.reverse().each() {
             dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
         }
-        runIn( 80, "getSomeData", [overwrite: true])
+        runIn( 80, "getSomeOldData", [overwrite: true])
         state.dewpointTableYesterday = dataTable
         log.debug "finished"
         return
@@ -1077,7 +1077,7 @@ def getSomeOldData(devpoll = false) {
         temperatureData.reverse().each() {
             dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
         }
-        runIn( 80, "getSomeData", [overwrite: true])
+        runIn( 80, "getSomeOldData", [overwrite: true])
         state.temperatureTableYesterday = dataTable
         log.debug "finished"
         return
@@ -1101,7 +1101,7 @@ def getSomeOldData(devpoll = false) {
         dewpointData.reverse().each() {
             dewpointTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
         }
-        runIn( 33, "getSomeData", [overwrite: true])
+        runIn( 33, "getSomeOldData", [overwrite: true])
         state.dewpointTable = dewpointTable
         log.debug "finished"
         return
@@ -1120,7 +1120,7 @@ def getSomeOldData(devpoll = false) {
         temperatureData.reverse().each() {
             temperatureTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
         }
-        runIn( 30, "getSomeData", [overwrite: true])
+        runIn( 30, "getSomeOldData", [overwrite: true])
         state.temperatureTable = temperatureTable
         log.debug "finished"
         return
