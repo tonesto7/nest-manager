@@ -1018,6 +1018,10 @@ def getTemp() {
     return !device.currentValue("temperature") ? 0 : device.currentValue("temperature") 
 }
 
+def getHumidity() { 
+    return !device.currentValue("humidity") ? 0 : device.currentValue("humidity") 
+}
+
 def getTempWaitVal() { 
     return state?.childWaitVal ? state?.childWaitVal.toInteger() : 4
 }
@@ -1940,9 +1944,12 @@ String getDataString(Integer seriesIndex) {
             dataTable = state.operatingStateTable
             break
         case 4:
-            dataTable = state.coolSetpointTable
+            dataTable = state.humidityTable
             break
         case 5:
+            dataTable = state.coolSetpointTable
+            break
+        case 6:
             dataTable = state.heatSetpointTable
             break
     }
@@ -1957,25 +1964,25 @@ String getDataString(Integer seriesIndex) {
     def lastdataArray = null
     
     
-    if (seriesIndex == 4) {
+    if (seriesIndex == 5) {
       // state.can_cool
     }
-    if (seriesIndex == 5) {
+    if (seriesIndex == 6) {
        // state.can_heat
     }
     
     dataTable.each() {
         myindex = seriesIndex
-        if (state?.can_heat && state?.can_cool) { dataArray = [[it[0],it[1],0],null,null,null,null,null] }
+        if (state?.can_heat && state?.can_cool) { dataArray = [[it[0],it[1],0],null,null,null,null,null,null] }
         else { 
-            dataArray = [[it[0],it[1],0],null,null,null,null]
-            if (myindex == 5) {myindex = 4}
+            dataArray = [[it[0],it[1],0],null,null,null,null,null]
+            if (myindex == 6) {myindex = 5}
         }
         //convert idle / non-idle to numeric value
         if (myindex == 3) {
             myval = it[2]
             if (myval == "idle") { myval = 0 }
-            else { myval = 1 }
+            else { myval = 8 }
         } else { myval = it[2] }
 
         dataArray[myindex] = myval
@@ -1998,7 +2005,7 @@ String getDataString(Integer seriesIndex) {
     }
     
     if (dataString == "") {
-        dataArray = [[0,0,0],null,null,null,null,null]
+        dataArray = [[0,0,0],null,null,null,null,null,null]
         dataArray[myindex] = 0
         dataString += dataArray.toString() + ","
     }
@@ -2064,6 +2071,7 @@ def getSomeData(devpoll = false) {
     def temperatureTable
     def heatSetpointTable
     def operatingStateTable
+    def humidityTable
 
     def tryNum = 1
     if (state.eric != tryNum ) {
@@ -2073,16 +2081,19 @@ def getSomeData(devpoll = false) {
         state.temperatureTableYesterday = null
         state.heatSetpointTableYesterday = null
         state.operatingStateTableYesterday = null
+        state.humidityTableYesterday = null
 
         state.coolSetpointTable = null
         state.temperatureTable = null
         state.heatSetpointTable = null
         state.operatingStateTable = null
+        state.humidityTable = null
 
         state.remove("coolSetpointTableYesterday")
         state.remove("temperatureTableYesterday")
         state.remove("coolSetpointTable")
         state.remove("temperatureTable")
+        state.remove("humidityTable")
         state.remove("today")
 
         state.eric = tryNum
@@ -2096,11 +2107,13 @@ def getSomeData(devpoll = false) {
     temperatureTable = state?.temperatureTable
     heatSetpointTable = state?.heatSetpointTable
     operatingStateTable = state?.operatingStateTable
+    humidityTable = state?.humidityTable
 
     def currentTemperature = getTemp()
     def currentcoolSetPoint = getCoolTemp()
     def currentheatSetPoint = getHeatTemp()
     def currentoperatingState = getHvacState()
+    def currenthumidity = getHumidity()
 
     if (!state.today || state.today != todayDay) {
 
@@ -2110,24 +2123,28 @@ def getSomeData(devpoll = false) {
             temperatureTable = []
             heatSetpointTable = []
             operatingStateTable =  []
+            humidityTable =  []
         }
         state.today = todayDay
         state.coolSetpointTableYesterday = coolSetpointTable
         state.temperatureTableYesterday = temperatureTable
         state.heatSetpointTableYesterday = heatSetpointTable
         state.operatingStateTableYesterday = operatingStateTable
+        state.humidityTableYesterday = humidityTable
 
 // these are commented out as the platform continuously times out
         //coolSetpointTable = coolSetpointTable ? [] : null
         //temperatureTable = temperatureTable ? [] : null
         //heatSetpointTable = heatSetpointTable ? [] : null
         //operatingStateTable = operatingStateTable ? [] : null
+        //humidityTable = humidityTable ? [] : null
 
 // these are in due to platform timeouts
         coolSetpointTable = []
         temperatureTable = []
         heatSetpointTable = []
         operatingStateTable =  []
+        humidityTable =  []
 
 // these are commented out as the platform continuously times out
         //getSomeOldData(devpoll)
@@ -2135,20 +2152,11 @@ def getSomeData(devpoll = false) {
         //temperatureTable = state?.temperatureTable
         //heatSetpointTable = state?.heatSetpointTable
         //operatingStateTable = state?.operatingStateTable
-
-/*
-        coolSetpointTable.add([0,0,currentcoolSetPoint])
-        temperatureTable.add([0,0,currentTemperature])
-        heatSetpointTable.add([0,0,currentheatSetPoint])
-        operatingStateTable.add([0,0,currentoperatingState])
-
-        state.coolSetpointTable = coolSetpointTable
-        state.temperatureTable = temperatureTable
-        state.heatSetpointTable = heatSetpointTable
-        state.operatingStateTable = operatingStateTable
-        return
-*/
+        //humidityTable = state?.humidityTable
     }
+
+    // need for upgrade of beta folks
+    if (humidityTable == null) { humidityTable = [] }
 
     // add latest coolSetpoint & temperature readings for the graph
     def newDate = new Date()
@@ -2156,10 +2164,13 @@ def getSomeData(devpoll = false) {
     temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
     heatSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
     operatingStateTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentoperatingState])
+    humidityTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currenthumidity])
+
     state.coolSetpointTable = coolSetpointTable
     state.temperatureTable = temperatureTable
     state.heatSetpointTable = heatSetpointTable
     state.operatingStateTable = operatingStateTable
+    state.humidityTable = humidityTable
 }
 
 def getStartTime() {
@@ -2181,16 +2192,16 @@ def getGraphHTML() {
     }
     
     def coolstr1 = "data.addColumn('number', 'CoolSP');"
-    def coolstr2 =  getDataString(4)
-    def coolstr3 = "3: {targetAxisIndex: 1, type: 'line', color: '#D1DFFF', lineWidth: 1},"
+    def coolstr2 =  getDataString(5)
+    def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
     
     def heatstr1 = "data.addColumn('number', 'HeatSP');"
-    def heatstr2 = getDataString(5)
-    def heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
+    def heatstr2 = getDataString(6)
+    def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
     
-    if (state?.can_cool && !state?.can_heat) { coolstr3 = "3: {targetAxisIndex: 1, type: 'line', color: '#D1DFFF', lineWidth: 1}" }
+    if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
     
-    if (!state?.can_cool && state?.can_heat) { heatstr3 = "3: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
+    if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
     
     if (!state?.can_cool) {
         coolstr1 = ""
@@ -2226,12 +2237,14 @@ def getGraphHTML() {
                                 data.addColumn('number', 'Temp (Y)');
                                 data.addColumn('number', 'Temp (T)');
                                 data.addColumn('number', 'Operating');
+                                data.addColumn('number', 'Humidity');
                                 ${coolstr1}
                                 ${heatstr1}
                                 data.addRows([
                                     ${getDataString(1)}
                                     ${getDataString(2)}
                                     ${getDataString(3)}
+                                    ${getDataString(4)}
                                     ${coolstr2}
                                     ${heatstr2}
                                 ]);
@@ -2248,17 +2261,18 @@ def getGraphHTML() {
                                                 0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
                                                 1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
                                                 2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                                                3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
                                                 ${coolstr3}
                                                 ${heatstr3}
                                         },
                                         vAxes: {
                                                 0: {
-                                                    title: '',
+                                                    title: 'Humidity (%)',
                                                     format: 'decimal',
                                                     minValue: 0,
-                                                    maxValue: 8,
-                                                    textStyle: {color: '#FFFFFF'},
-                                                    titleTextStyle: {color: '#004CFF'}
+                                                    maxValue: 100,
+                                                    textStyle: {color: '#B8B8B8'},
+                                                    titleTextStyle: {color: '#B8B8B8'}
                                                 },
                                                 1: {
                                                     title: 'Temperature (${tempStr})',
