@@ -368,7 +368,7 @@ def generateEvent(Map eventData) {
                         heatingSetpoint = targetTemp 
                         //clearCoolingSetpoint()
                     } 
-                    else if (hvacMode == "heat-cool") {
+                    else if (hvacMode == "auto") {
                         coolingSetpoint = Math.round(eventData?.data?.target_temperature_high_c.toDouble())
                         heatingSetpoint = Math.round(eventData?.data?.target_temperature_low_c.toDouble())
                     }
@@ -397,7 +397,7 @@ def generateEvent(Map eventData) {
                         heatingSetpoint = targetTemp
                         //clearCoolingSetpoint()
                     } 
-                    else if (hvacMode == "heat-cool") {
+                    else if (hvacMode == "auto") {
                         coolingSetpoint = eventData?.data?.target_temperature_high_f
                         heatingSetpoint = eventData?.data?.target_temperature_low_f
                     }
