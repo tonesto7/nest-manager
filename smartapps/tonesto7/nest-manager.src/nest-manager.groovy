@@ -5948,16 +5948,19 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, curOperState, curFanMode, op
     // if ac or is on, we should put fan back to auto
     if (!tstatOperStateOk) {
         LogAction("Remote Sensor Fan Run: The Thermostat OperatingState is Currently (${curOperState?.toString().toUpperCase()})... Skipping!!!", "info", true)
+
+        if( atomicState?.lastRemSenFanOffDt > atomicState?.lastRemSenFanRunDt) { return }
         returnToAuto = true
     }
 
     if(tstat) {
-        def fanTempOk = getRemSenFanTempOk(curHvacMode, curSenTemp, reqSetpointTemp, threshold, fanOn, operType)
+        def fanTempOk = getRemSenFanTempOk(curSenTemp, reqSetpointTemp, threshold, fanOn, operType)
+
         if(fanTempOk && !fanOn && !returnToAuto) { 
             def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
             def timeSinceLastOffOk = (getLastRemSenFanOffDtSec() > waitTimeVal) ? true : false
             if(!timeSinceLastOffOk) { 
-                LogAction("Remote Sensor Fan Run: Wants to RUN Fan BUT | The Time Since Last Run (${getLastRemSenFanOffDtSec()} Seconds) is not greater than Required value (${waitTimeVal} seconds)", "info", true) 
+                LogAction("Remote Sensor Fan Run: Wants to RUN Fan BUT | The Time Since Last Auto command (${getLastRemSenFanOffDtSec()} Seconds) is not greater than Required value (${waitTimeVal} seconds)", "info", true) 
                 runIn(300, "remSenCheck", [overwrite: true])
                 return
             }
@@ -5997,7 +6000,7 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, curOperState, curFanMode, op
     }
 }
 
-def getRemSenFanTempOk(hvacMode, Double senTemp, Double reqsetTemp, Double threshold, Boolean fanOn, operType) {
+def getRemSenFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, Boolean fanOn, operType) {
     LogAction("RemSenFanTempOk Debug:", "debug", false)
 
     def turnOn = false
@@ -6032,6 +6035,8 @@ def getRemSenFanTempOk(hvacMode, Double senTemp, Double reqsetTemp, Double thres
 
     LogAction(" ├ onTemp: ${ontemp}   | offTemp: ${offtemp}}°${atomicState?.tempUnit}", "debug", false)
     LogAction(" ├ FanAlreadyOn: (${fanOn.toString().toUpperCase()})", "debug", false)
+    LogAction(" ┌ Final Result: (${turnOn.toString().toUpperCase()})", "debug", false)
+    LogAction("getRemSenFanTempOk: ", "debug", false)
 
     if(!turnOn && fanOn) {
         LogAction("Remote Sensor Fan Temp: The Temperature Difference is Outside of Threshold Limits | Turning Thermostat Fan OFF", "info", true)
@@ -6040,7 +6045,7 @@ def getRemSenFanTempOk(hvacMode, Double senTemp, Double reqsetTemp, Double thres
     if(turnOn && !fanOn) {
         LogAction("Remote Sensor Fan Temp: The Temperature Difference is within the Threshold Limit | Turning Thermostat Fan ON", "info", true)
     }
-    LogAction(" ┌ Final Result: (${turnOn.toString().toUpperCase()})", "debug", false)
+
     return turnOn
 }
 
