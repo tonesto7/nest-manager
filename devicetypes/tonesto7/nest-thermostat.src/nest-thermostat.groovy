@@ -2394,8 +2394,11 @@ def getGraphHTML() {
     def maxstr = "maxValue: ${maxval},"
 
     def differ = maxval - minval
-    if (differ > (maxval/4)) {
-        minstr = "minValue: ${(minval - (maxval/4))},"
+    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+        minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
+        if (differ < (wantMetric() ? 10:20) ) {
+            maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
+        }
     }
 
     def html = """
@@ -2461,6 +2464,7 @@ def getGraphHTML() {
                                                     title: 'Temperature (${tempStr})',
                                                     format: 'decimal',
                                                     ${minstr}
+                                                    ${maxstr}
                                                     textStyle: {color: '#FF0000'},
                                                     titleTextStyle: {color: '#FF0000'}
                                                 }
