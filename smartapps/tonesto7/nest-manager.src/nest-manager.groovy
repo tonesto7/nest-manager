@@ -352,11 +352,6 @@ def mainPage() {
                 href "automationsPage", title: "Automations...", description: (autoDesc ? autoDesc : "Tap to Configure..."), state: (autoDesc ? "complete" : null), image: getAppImg("automation_icon.png")
             }
         }
-        if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
-            section("Diagnostics/Info:") {
-                href "nestInfoPage", title: "API | Diagnostics | Testing...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
-            }
-        }
         if(atomicState?.isInstalled) {
             section("Preferences:") {
                 def descStr = ""
@@ -365,8 +360,15 @@ def mainPage() {
                 def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
             }
-            section(" ") {
+            section("Help and Instructions") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
+            }
+            if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
+                section("Diagnostics/Info:") {
+                    href "nestInfoPage", title: "API | Diagnostics | Testing...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
+                }
+            }
+            section("  ") {
                 href "uninstallPage", title: "Uninstall this App", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
             }
         }
