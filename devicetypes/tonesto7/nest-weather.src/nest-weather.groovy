@@ -2,7 +2,7 @@
  *  Nest Weather
  *      Author: Anthony S. (@tonesto7)
  *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch)
- *  Graphing Modelled on code from Andreas Amann (@ahndee)
+ *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -1151,11 +1151,114 @@ def getStartTime() {
     return startTime
 }
 
+def getMinTemp() {
+    def ytmin
+    def tmin
+    def dtmin
+    def dmin
+    def dataTable = []
+    if (state?.temperatureTableYesterday?.size()) {
+        dataTable = []
+        def temperatureData = state?.temperatureTableYesterday
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        ytmin = dataTable.min().toInteger()
+    }
+    if (state?.temperatureTable?.size()) {
+        dataTable = []
+        def temperatureData = state?.temperatureTable
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        tmin = dataTable.min().toInteger()
+    }
+    if (state?.dewpointTableYesterday?.size()) {
+        dataTable = []
+        def temperatureData = state?.dewpointTableYesterday
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        dtmin = dataTable.min().toInteger()
+    }
+    if (state?.dewpointTable?.size()) {
+        dataTable = []
+        def temperatureData = state?.dewpointTable
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        dmin = dataTable.min().toInteger()
+    }
+    def result = [ytmin, tmin, dtmin, dmin]
+    //log.trace "getMinTemp: ${result.min()} result: ${result}"
+    return result.min()
+}
+
+def getMaxTemp() {
+    def ytmax
+    def tmax
+    def dtmax
+    def dmax
+    def dataTable = []
+    if (state?.temperatureTableYesterday?.size()) {
+        dataTable = []
+        def temperatureData = state?.temperatureTableYesterday
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        ytmax = dataTable.max().toInteger()
+    }
+    if (state?.temperatureTable?.size()) {
+        dataTable = []
+        def temperatureData = state?.temperatureTable
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        tmax = dataTable.max().toInteger()
+    }
+    if (state?.dewpointTableYesterday?.size()) {
+        dataTable = []
+        def temperatureData = state?.dewpointTableYesterday
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        dtmax = dataTable.max().toInteger()
+    }
+    if (state?.dewpointTable?.size()) {
+        dataTable = []
+        def temperatureData = state?.dewpointTable
+        temperatureData.each() {
+            dataTable.add(it[2])
+        }
+        dmax = dataTable.max().toInteger()
+    }
+    def result = [ytmax, tmax, dtmax, dmax]
+    //log.trace "getMaxTemp: ${result.max()} result: ${result}"
+    return result.max()
+}
+
 def getGraphHTML() {
     def tempStr = "°F"
     if ( wantMetric() ) {
         tempStr = "°C"
     }
+
+    def minval = getMinTemp()
+    def minstr = "minValue: ${minval},"
+
+    def maxval = getMaxTemp()
+    def maxstr = "maxValue: ${maxval},"
+
+    def differ = maxval - minval
+    //log.trace "differ ${differ}"
+    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+        minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
+        if (differ < (wantMetric() ? 10:20) ) {
+            maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
+        }
+    }
+    //log.trace "${minstr}   ${maxstr}"
+
     def html = """
         <!DOCTYPE html>
             <html>
@@ -1202,12 +1305,16 @@ def getGraphHTML() {
                                     0: {
                                         title: 'Dewpoint (${tempStr})',
                                         format: 'decimal',
+                                        ${minstr}
+                                        ${maxstr}
                                         textStyle: {color: '#004CFF'},
                                         titleTextStyle: {color: '#004CFF'}
                                     },
                                     1: {
                                         title: 'Temperature (${tempStr})',
                                         format: 'decimal',
+                                        ${minstr}
+                                        ${maxstr}
                                         textStyle: {color: '#FF0000'},
                                         titleTextStyle: {color: '#FF0000'}
                                     }
