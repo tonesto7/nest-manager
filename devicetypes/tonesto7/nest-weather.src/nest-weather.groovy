@@ -443,6 +443,7 @@ def getWeatherConditions(Map weatData) {
                 def hum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "") as Double
                 def Tc = Math.round(cur?.current_observation?.feelslike_c as Double) as Double
                 state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
+                if (state.curWeatherTemp_c < state.curWeatherDewPoint_c) { state.curWeatherDewPoint_c = state.curWeatherTemp_c }
                 state.curWeatherDewPoint_f =  Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
                 dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
 
