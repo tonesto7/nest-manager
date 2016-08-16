@@ -1931,6 +1931,14 @@ def getSomeData(devpoll = false) {
     coolSetpointTable = state?.coolSetpointTable
     heatSetpointTable = state?.heatSetpointTable
 
+    if (temperatureTable = null) {
+        temperatureTable = []
+        operatingStateTable =  []
+        humidityTable =  []
+        coolSetpointTable = []
+        heatSetpointTable = []
+    }
+
     if (!state?.today || state.today != todayDay) {
 
 // debugging
@@ -1949,11 +1957,18 @@ def getSomeData(devpoll = false) {
         state.coolSetpointTableYesterday = coolSetpointTable
         state.heatSetpointTableYesterday = heatSetpointTable
 
+        temperatureTable = []
+        operatingStateTable =  []
+        humidityTable =  []
+        coolSetpointTable = []
+        heatSetpointTable = []
+/*
         temperatureTable = temperatureTable ? [] : null
         operatingStateTable = operatingStateTable ? [] : null
         humidityTable = humidityTable ? [] : null
         coolSetpointTable = coolSetpointTable ? [] : null
         heatSetpointTable = heatSetpointTable ? [] : null
+*/
 
 // these are commented out as the platform continuously times out
         //getSomeOldData("temperature", "temperature", true, devpoll)
