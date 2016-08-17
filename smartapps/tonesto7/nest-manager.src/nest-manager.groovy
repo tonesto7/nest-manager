@@ -2887,7 +2887,7 @@ def getChildTstatsIdString() {
 }
 
 def getChildProtectsIdString() {
-    return protects.collect { it.split(/\./).last() }.join(',')
+    return settings?.protects.collect { it.split(/\./).last() }.join(',')
 }
 
 def toJson(Map m) {
