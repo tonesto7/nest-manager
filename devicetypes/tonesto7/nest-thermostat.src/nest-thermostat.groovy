@@ -308,6 +308,7 @@ def processEvent() {
     try {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
+            if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
             state.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData.tz : null
             debugOnEvent(eventData?.debug ? true : false)
@@ -461,6 +462,15 @@ def deviceVerEvent(ver) {
         Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
         sendEvent(name: 'devTypeVer', value: newData, displayed: false)
     } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
+}
+
+def nestTypeEvent(type) {
+    def val = device.currentState("nestType")?.value
+    state?.nestType=type
+    if(!val.equals(type)) {
+        log.debug("UPDATED | nestType: (${type}) | Original State: (${val})")
+        sendEvent(name: 'nestType', value: type, displayed: false)
+    } else { Logger("nestType: (${type}) | Original State: (${val})") }
 }
 
 def debugOnEvent(debug) {
@@ -1920,12 +1930,6 @@ def getSomeData(devpoll = false) {
     //log.trace "getSomeData ${app}"
 
 // hackery to test getting old data
-    def temperatureTable
-    def operatingStateTable
-    def humidityTable
-    def coolSetpointTable
-    def heatSetpointTable
-
     def tryNum = 1
     if (state.eric != tryNum ) {
         if (devpoll) {
@@ -1972,43 +1976,7 @@ def getSomeData(devpoll = false) {
 
     def todayDay = new Date().format("dd",location.timeZone)
 
-    temperatureTable = state?.temperatureTable
-    operatingStateTable = state?.operatingStateTable
-    humidityTable = state?.humidityTable
-    coolSetpointTable = state?.coolSetpointTable
-    heatSetpointTable = state?.heatSetpointTable
-
-    if (temperatureTable == null) {
-        temperatureTable = []
-        operatingStateTable =  []
-        humidityTable =  []
-        coolSetpointTable = []
-        heatSetpointTable = []
-    }
-
-    if (!state?.today || state.today != todayDay) {
-
-// debugging
-        if (!state?.today) {
-            temperatureTable = []
-            operatingStateTable =  []
-            humidityTable =  []
-            coolSetpointTable = []
-            heatSetpointTable = []
-        }
-
-        state.today = todayDay
-        state.temperatureTableYesterday = temperatureTable
-        state.operatingStateTableYesterday = operatingStateTable
-        state.humidityTableYesterday = humidityTable
-        state.coolSetpointTableYesterday = coolSetpointTable
-        state.heatSetpointTableYesterday = heatSetpointTable
-
-        temperatureTable = []
-        operatingStateTable =  []
-        humidityTable =  []
-        coolSetpointTable = []
-        heatSetpointTable = []
+    if (state?.temperatureTable == null) {
 
     // these are commented out as the platform continuously times out
         //getSomeOldData("temperature", "temperature", true, devpoll)
@@ -2017,21 +1985,57 @@ def getSomeData(devpoll = false) {
         //if (state?.can_cool) { getSomeOldData("coolSetpoint", "coolingSetpoint", true, devpoll) }
         //if (state?.can_heat) { getSomeOldData("heatSetpoint", "heatingSetpoint", true, devpoll) }
 
-        //temperatureTable = state?.temperatureTable
-        //operatingStateTable = state?.operatingStateTable
-        //coolSetpointTable = state?.coolSetpointTable
-        //heatSetpointTable = state?.heatSetpointTable
-        //humidityTable = state?.humidityTable
+        state.temperatureTable = []
+        state.operatingStateTable = []
+        state.humidityTable = []
+        state.coolSetpointTable = []
+        state.heatSetpointTable = []
+        addNewData()
     }
 
-    // need for upgrade of beta folks
-    if (humidityTable == null) { humidityTable = [] }
+    def temperatureTable = state?.temperatureTable
+    def operatingStateTable = state?.operatingStateTable
+    def humidityTable = state?.humidityTable
+    def coolSetpointTable = state?.coolSetpointTable
+    def heatSetpointTable = state?.heatSetpointTable
 
+    if (state?.temperatureTableYesterday?.size() == 0) {
+        state.temperatureTableYesterday = temperatureTable
+        state.operatingStateTableYesterday = operatingStateTable
+        state.humidityTableYesterday = humidityTable
+        state.coolSetpointTableYesterday = coolSetpointTable
+        state.heatSetpointTableYesterday = heatSetpointTable
+    }
+
+    if (!state?.today || state.today != todayDay) {
+        state.today = todayDay
+        state.temperatureTableYesterday = temperatureTable
+        state.operatingStateTableYesterday = operatingStateTable
+        state.humidityTableYesterday = humidityTable
+        state.coolSetpointTableYesterday = coolSetpointTable
+        state.heatSetpointTableYesterday = heatSetpointTable
+
+        state.temperatureTable = []
+        state.operatingStateTable = []
+        state.humidityTable = []
+        state.coolSetpointTable = []
+        state.heatSetpointTable = []
+    }
+    addNewData()
+}
+
+def addNewData() {
     def currentTemperature = getTemp()
     def currentcoolSetPoint = getCoolTemp()
     def currentheatSetPoint = getHeatTemp()
     def currentoperatingState = getHvacState()
     def currenthumidity = getHumidity()
+
+    def temperatureTable = state?.temperatureTable
+    def operatingStateTable = state?.operatingStateTable
+    def humidityTable = state?.humidityTable
+    def coolSetpointTable = state?.coolSetpointTable
+    def heatSetpointTable = state?.heatSetpointTable
 
     // add latest coolSetpoint & temperature readings for the graph
     def newDate = new Date()
@@ -2041,11 +2045,11 @@ def getSomeData(devpoll = false) {
     coolSetpointTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentcoolSetPoint])
     heatSetpointTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
 
-    state.coolSetpointTable = coolSetpointTable
     state.temperatureTable = temperatureTable
-    state.heatSetpointTable = heatSetpointTable
     state.operatingStateTable = operatingStateTable
     state.humidityTable = humidityTable
+    state.coolSetpointTable = coolSetpointTable
+    state.heatSetpointTable = heatSetpointTable
 }
 
 def getStartTime() {
@@ -2306,6 +2310,8 @@ def hideChartHtml() {
     return data
 }
 
-private def textDevName()  { return "Nest Thermostat${appDevName()}" }
+private def textDevName()  { return "Nest ${virtDevName()}Thermostat${appDevName()}" }
 private def appDevType()   { return false }
 private def appDevName()   { return appDevType() ? " (Dev)" : "" }
+private def virtType()     { return false }
+private def virtDevName()   { return virtType() ? "Virtual " : "" }
