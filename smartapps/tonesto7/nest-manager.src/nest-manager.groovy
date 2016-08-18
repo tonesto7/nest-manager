@@ -3732,15 +3732,17 @@ def alarmTestPage () {
                         if(alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
                             href "simulateTestEventPage", title: "Simulate Battery Event", params: ["testType":"battery"], description: "Tap to Execute Test", required: true, state: null
                         }
+                    }
+                }
+                section("Instructions") {
 
-                        if(atomicState?.isAlarmCoTestActive && (alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
-                            paragraph "FYI: Clear ALL Selected Tests to Reset for New Alarm Test", required: true, state: null
-                        }
+                    if(atomicState?.isAlarmCoTestActive && (alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
+                        paragraph "FYI: Clear ALL Selected Tests to Reset for New Alarm Test", required: true, state: null
+                    }
 
-                        if (!alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
-                            atomicState?.isAlarmCoTestActive = false
-                            atomicState?.curProtTestPageData = null
-                        }
+                    if (!alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
+                        atomicState?.isAlarmCoTestActive = false
+                        atomicState?.curProtTestPageData = null
                     }
                 }
             }
