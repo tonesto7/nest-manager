@@ -4526,8 +4526,13 @@ def getAutoTypeLabel() {
     else if (type == "leakWat")     { typeLabel = "${newName} (LeakSensor)" }
     else if (type == "watchDog")    { typeLabel = "Nest Location ${location.name} Watchdog"}
 
-    if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
-        newLbl = appLbl
+    //if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
+    if(appLbl != "Nest Manager") {
+        if(appLbl.contains("\n(Disabled)")) {
+            newLbl = appLbl.replaceAll("\n(Disabled)", "")
+        } else {
+            newLbl = appLbl
+        }
     } else {
         newLbl = typeLabel
     }
