@@ -4529,7 +4529,7 @@ def getAutoTypeLabel() {
     //if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
     if(appLbl != "Nest Manager") {
         if(appLbl.contains("\n(Disabled)")) {
-            newLbl = appLbl.replaceAll("\n(Disabled)", "")
+            newLbl = appLbl.replaceAll("\\\n\\(Disabled\\)", "")
         } else {
             newLbl = appLbl
         }
