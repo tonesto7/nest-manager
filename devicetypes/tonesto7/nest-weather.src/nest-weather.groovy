@@ -1011,6 +1011,12 @@ String getDataString(Integer seriesIndex) {
         case 4:
             dataTable = state?.dewpointTable
             break
+        case 5:
+            dataTable = state?.humidityTableYesterday
+            break
+        case 6:
+            dataTable = state?.humidityTable
+            break
     }
     dataTable.each() {
         def dataArray = [[it[0],it[1],0],null,null,null,null,null,null]
@@ -1147,7 +1153,16 @@ def getSomeData(devpoll = false) {
 
         state.temperatureTable = []
         state.dewpointTable = []
+        state.humidityTable = []
         addNewData()
+    }
+
+// hack for folks that upgrade
+    if (state?.humidityTable == null) {
+        state.humidityTable = []
+        state.humidityTableYesterday = []
+        addNewData()
+        state.humidityTableYesterday = state.humidityTable
     }
 
     def temperatureTable = state?.temperatureTable
@@ -1157,15 +1172,18 @@ def getSomeData(devpoll = false) {
     if (state?.temperatureTableYesterday?.size() == 0) {
         state.temperatureTableYesterday = temperatureTable
         state.dewpointTableYesterday = dewpointTable
+        state.humidityTableYesterday = humidityTable
     }
 
     if (!state.today || state.today != todayDay) {
         state.today = todayDay
         state.dewpointTableYesterday = dewpointTable
         state.temperatureTableYesterday = temperatureTable
+        state.humidityTableYesterday = humidityTable
 
         state.temperatureTable = []
         state.dewpointTable = []
+        state.humidityTable = []
     }
     addNewData()
 }
@@ -1173,17 +1191,21 @@ def getSomeData(devpoll = false) {
 def addNewData() {
     def currentTemperature = wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
     def currentDewpoint = wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f
+    def currentHumidity = state?.curWeatherHum
 
     def temperatureTable = state?.temperatureTable
     def dewpointTable = state?.dewpointTable
+    def humidityTable = state?.humidityTable
 
     // add latest dewpoint & temperature readings for the graph
     def newDate = new Date()
     temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
     dewpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentDewpoint])
+    humidityTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentHumidity])
 
     state.temperatureTable = temperatureTable
     state.dewpointTable = dewpointTable
+    state?.humidityTable = humidityTable
 }
 
 def getStartTime() {
@@ -1272,6 +1294,8 @@ def getWeatherHTML() {
                           ${getDataString(2)}
                           ${getDataString(3)}
                           ${getDataString(4)}
+                          ${getDataString(5)}
+                          ${getDataString(6)}
                       ]);
                       var options = {
                           width: '100%',
@@ -1284,18 +1308,20 @@ def getWeatherHTML() {
                           },
                           series: {
                               0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
-                              1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
+                              1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
                               2: {targetAxisIndex: 1, color: '#FF0000'},
-                              3: {targetAxisIndex: 0, color: '#004CFF'}
+                              3: {targetAxisIndex: 1, color: '#004CFF'},
+                              4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
+                              5: {targetAxisIndex: 0, color: '#B8B8B8'}
                           },
                           vAxes: {
                               0: {
-                                  title: 'Dewpoint (${tempStr})',
+                                  title: 'Humidity (%))',
                                   format: 'decimal',
-                                  ${minstr}
-                                  ${maxstr}
-                                  textStyle: {color: '#004CFF'},
-                                  titleTextStyle: {color: '#004CFF'}
+                                  minValue: 0,
+                                  maxValue: 100,
+                                  textStyle: {color: '#B8B8B8'},
+                                  titleTextStyle: {color: '#B8B8B8'}
                               },
                               1: {
                                   title: 'Temperature (${tempStr})',
