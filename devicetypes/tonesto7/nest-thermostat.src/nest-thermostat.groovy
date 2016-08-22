@@ -2,7 +2,7 @@
  *  Nest Thermostat
  *	Author: Anthony S. (@tonesto7)
  *	Contributor: Ben W. (@desertBlade) & Eric S. (@E_Sch)
- *  Graphing Modelled on code from Andreas Amann (@ahndee)
+ *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
  * Based off of the EcoBee thermostat under Templates in the IDE
  * Copyright (C) 2016 Anthony S., Ben W.
@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "3.0.2"}
+def devVer() { return "3.1.0"}
 
 // for the UI
 metadata {
@@ -93,6 +93,8 @@ metadata {
         attribute "canHeat", "string"
         attribute "canCool", "string"
         attribute "hasFan", "string"
+        attribute "nestType", "string"
+        attribute "pauseUpdates", "string"
     }
 
     simulator {
@@ -289,6 +291,7 @@ def poll() {
 }
 
 def refresh() {
+    pauseEvent("false")
     parent.refresh(this)
 }
 
@@ -302,8 +305,12 @@ def generateEvent(Map eventData) {
 }
 
 def processEvent() {
+    def pauseUpd = !device.currentValue("pauseUpdates") ? false : device.currentValue("pauseUpdates").value
+    if(pauseUpd == "true") { log.warn "pausing"; return }
+
     def eventData = state?.eventData
     state.eventData = null
+
     //log.trace("processEvent Parsing data ${eventData}")
     try {
         Logger("------------START OF API RESULTS DATA------------", "warn")
@@ -454,6 +461,14 @@ def isCodeUpdateAvailable(newVer, curVer) {
     return result
 }
 
+def pauseEvent(val) {
+    def curData = device.currentState("pauseUpdates")?.value
+    if(!curData?.equals(val)) {
+        Logger("UPDATED | Pause Updates is: (${val}) | Original State: (${curData})")
+        sendEvent(name: 'pauseUpdates', value: val, displayed: false)
+    } else { Logger("Pause Updates is: (${val}) | Original State: (${curData})") }
+}
+
 def deviceVerEvent(ver) {
     def curData = device.currentState("devTypeVer")?.value.toString()
     def pubVer = ver ?: null
@@ -472,7 +487,7 @@ def nestTypeEvent(type) {
     state?.nestType=type
     if(!val.equals(type)) {
         log.debug("UPDATED | nestType: (${type}) | Original State: (${val})")
-        sendEvent(name: 'nestType', value: type, displayed: false)
+        sendEvent(name: 'nestType', value: type, displayed: true)
     } else { Logger("nestType: (${type}) | Original State: (${val})") }
 }
 
@@ -963,6 +978,7 @@ void levelUpDown(tempVal, chgType = null) {
         }
 
         if (targetVal != curThermSetpoint ) {
+            pauseEvent("true")
             switch (hvacMode) {
                 case "heat":
                     Logger("Sending changeSetpoint(Temp: ${targetVal})")
@@ -1006,6 +1022,7 @@ void levelUpDown(tempVal, chgType = null) {
                     } else { log.warn "Temp Change without a chgType is not supported!!!" }
                     break
                 default:
+                    pauseEvent("false")
                     log.warn "Unsupported Mode Received: ($hvacMode}!!!"
                     break
             }
@@ -1140,8 +1157,10 @@ void changeSetpoint() {
                     break
             }
         }
+        pauseEvent("false")
     }
     catch (ex) {
+        pauseEvent("false")
         log.error "changeSetpoint Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "changeSetpoint")
     }
@@ -1169,13 +1188,13 @@ void setHeatingSetpoint(Double reqtemp) {
                     if (temp) {
                         if (temp < 9.0) { temp = 9.0 }
                         if (temp > 32.0 ) { temp = 32.0 }
-                            log.debug "Sending Heat Temp ($temp)"
+                        log.debug "Sending Heat Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempLow(this, tempUnit, temp)
+                            parent.setTargetTempLow(this, tempUnit, temp, virtType())
                             heatingSetpointEvent(temp)
                         }
                         if (hvacMode == 'heat') {
-                            parent.setTargetTemp(this, tempUnit, temp)
+                            parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
                             thermostatSetpointEvent(temp)
                             heatingSetpointEvent(temp)
                         }
@@ -1189,11 +1208,11 @@ void setHeatingSetpoint(Double reqtemp) {
                         if (temp > 90) { temp = 90 }
                         log.debug "Sending Heat Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempLow(this, tempUnit, temp)
+                            parent.setTargetTempLow(this, tempUnit, temp, virtType())
                             heatingSetpointEvent(temp)
                         }
                         if (hvacMode == 'heat') {
-                            parent.setTargetTemp(this, tempUnit, temp)
+                            parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
                             thermostatSetpointEvent(temp)
                             heatingSetpointEvent(temp)
                         }
@@ -1238,11 +1257,11 @@ void setCoolingSetpoint(Double reqtemp) {
                         if (temp > 32.0) { temp = 32.0 }
                         log.debug "Sending Cool Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempHigh(this, tempUnit, temp)
+                            parent.setTargetTempHigh(this, tempUnit, temp, virtType())
                             coolingSetpointEvent(temp)
                         }
                         if (hvacMode == 'cool') {
-                            parent.setTargetTemp(this, tempUnit, temp)
+                            parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
                             thermostatSetpointEvent(temp)
                             coolingSetpointEvent(temp)
                         }
@@ -1257,11 +1276,11 @@ void setCoolingSetpoint(Double reqtemp) {
                         if (temp > 90) { temp = 90 }
                         log.debug "Sending Cool Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempHigh(this, tempUnit, temp)
+                            parent.setTargetTempHigh(this, tempUnit, temp, virtType())
                             coolingSetpointEvent(temp)
                         }
                         if (hvacMode == 'cool') {
-                            parent.setTargetTemp(this, tempUnit, temp)
+                            parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
                             thermostatSetpointEvent(temp)
                             coolingSetpointEvent(temp)
                         }
@@ -1292,10 +1311,10 @@ void setPresence() {
         def pres = getNestPresence()
         log.trace "Current Nest Presence: ${pres}"
         if(pres == "auto-away" || pres == "away") {
-            if (parent.setStructureAway(this, "false")) { presenceEvent("home") }
+            if (parent.setStructureAway(this, "false", virtType())) { presenceEvent("home") }
         }
         else if (pres == "home") {
-            if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
+            if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
         }
     }
     catch (ex) {
@@ -1331,7 +1350,7 @@ void present() {
 def setAway() {
     try {
         log.trace "setAway()..."
-        if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
+        if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
     }
     catch (ex) {
         log.error "setAway Exception: ${ex}", ex
@@ -1342,7 +1361,7 @@ def setAway() {
 def setHome() {
     try {
         log.trace "setHome()..."
-        if (parent.setStructureAway(this, "false") ) { presenceEvent("home") }
+        if (parent.setStructureAway(this, "false", virtType()) ) { presenceEvent("home") }
     }
     catch (ex) {
         log.error "setHome Exception: ${ex}", ex
@@ -1404,22 +1423,22 @@ def doChangeMode() {
         def errflag = true
         switch(currentMode) {
             case "auto":
-                if (parent.setHvacMode(this, "heat-cool")) {
+                if (parent.setHvacMode(this, "heat-cool", virtType())) {
                     errflag = false
                 }
                 break
             case "heat":
-                if (parent.setHvacMode(this, "heat")) {
+                if (parent.setHvacMode(this, "heat", virtType())) {
                     errflag = false
                 }
                 break
             case "cool":
-                if (parent.setHvacMode(this, "cool")) {
+                if (parent.setHvacMode(this, "cool", virtType())) {
                     errflag = false
                 }
                 break
             case "off":
-                if (parent.setHvacMode(this, "off")) {
+                if (parent.setHvacMode(this, "off", virtType())) {
                     errflag = false
                 }
                 break
@@ -1499,7 +1518,7 @@ void fanOn() {
     try {
         log.trace "fanOn()..."
         if ( state?.has_fan.toBoolean() ) {
-            if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
+            if (parent.setFanMode(this, true, virtType()) ) { fanModeEvent("true") }
         } else { log.error "Error setting fanOn" }
     }
     catch (ex) {
@@ -1523,7 +1542,7 @@ void fanAuto() {
     try {
         log.trace "fanAuto()..."
         if ( state?.has_fan.toBoolean() ) {
-            if (parent.setFanMode(this,false) ) { fanModeEvent("false") }
+            if (parent.setFanMode(this,false, virtType()) ) { fanModeEvent("false") }
         } else { log.error "Error setting fanAuto" }
     }
     catch (ex) {
@@ -1705,7 +1724,11 @@ def getJS(url){
 
 def getCssData() {
     def cssData = null
-    def htmlInfo = state?.htmlInfo
+    //def htmlInfo = state?.htmlInfo
+//ERS
+    def htmlInfo
+    state.cssData = null
+
     if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
         if(state?.cssData) {
             if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
@@ -1732,7 +1755,11 @@ def getCssData() {
 
 def getChartJsData() {
     def chartJsData = null
-    def htmlInfo = state?.htmlInfo
+    //def htmlInfo = state?.htmlInfo
+//ERS
+    def htmlInfo
+    state.chartJsData = null
+
     if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
         if(state?.chartJsData) {
             if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
@@ -1740,13 +1767,13 @@ def getChartJsData() {
                 chartJsData = state?.chartJsData
             } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
                 log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
-                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
                 state.chartJsData = chartJsData
                 state?.chartJsVer = htmlInfo?.chartJsVer
             }
         } else {
             log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
-            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
             state?.chartJsData = chartJsData
             state?.chartJsVer = htmlInfo?.chartJsVer
         }
