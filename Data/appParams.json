@@ -54,9 +54,9 @@
                 "type": "rel",
                 "ver": "3.0.2"
             },
-            "virThermostat": {
+            "vthermostat": {
                 "type": "rel",
-                "ver": "1.0.0"
+                "ver": "3.1.0"
             }
             "protect": {
                 "type": "rel",
