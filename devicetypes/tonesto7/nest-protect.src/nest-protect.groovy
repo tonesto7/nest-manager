@@ -180,7 +180,7 @@ void runSmokeTest() {
         carbonSmokeStateEvent("ok", "emergency")
         schedEndTest()
     } catch (ex) {
-        log.error "runSmokeTest Exception: ${ex}", ex
+        log.error "runSmokeTest Exception:", ex
         exceptionDataHandler(ex.message, "runSmokeTest")
     }
 }
@@ -193,7 +193,7 @@ void runCoTest() {
         carbonSmokeStateEvent("emergency", "ok")
         schedEndTest()
     } catch (ex) {
-        log.error "runCoTest Exception: ${ex}", ex
+        log.error "runCoTest Exception:", ex
         exceptionDataHandler(ex.message, "runCoTest")
     }
 }
@@ -206,7 +206,7 @@ void runBatteryTest() {
         batteryStateEvent("replace")
         schedEndTest()
     } catch (ex) {
-        log.error "runBatteryTest Exception: ${ex}", ex
+        log.error "runBatteryTest Exception:", ex
         exceptionDataHandler(ex.message, "runBatteryTest")
     }
 }
@@ -216,7 +216,7 @@ void schedEndTest() {
         runIn(5, "endTest", [overwrite: true])
         refresh()  // this typically takes more than 5 seconds to complete
     } catch (ex) {
-        log.error "schedEndTest Exception: ${ex}", ex
+        log.error "schedEndTest Exception:", ex
         exceptionDataHandler(ex.message, "schedEndTest")
     }
 }
@@ -228,7 +228,7 @@ void endTest() {
         testingStateEvent("false")
         refresh()
     } catch (ex) {
-        log.error "endTest Exception: ${ex}", ex
+        log.error "endTest Exception:", ex
         exceptionDataHandler(ex.message, "endTest")
     }
 }
@@ -276,7 +276,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -628,7 +628,7 @@ def getFileBase64(url,preType,fileType) {
         }
     }
     catch (ex) {
-        log.error "getFileBase64 Exception: ${ex}", ex
+        log.error "getFileBase64 Exception:", ex
         exceptionDataHandler(ex.message, "getFileBase64")
     }
 }
@@ -756,7 +756,7 @@ def getInfoHtml() {
         render contentType: "text/html", data: html, status: 200
     }
     catch (ex) {
-        log.error "getInfoHtml Exception: ${ex}", ex
+        log.error "getInfoHtml Exception:", ex
         exceptionDataHandler(ex.message, "getInfoHtml")
     }
 }
