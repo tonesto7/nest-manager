@@ -415,7 +415,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -577,7 +577,7 @@ def temperatureEvent(Double tempVal) {
         checkSafetyTemps()
     }
     catch (ex) {
-        log.error "temperatureEvent Exception: ${ex}", ex
+        log.error "temperatureEvent Exception:", ex
         exceptionDataHandler(ex.message, "temperatureEvent")
     }
 }
@@ -1161,7 +1161,7 @@ void changeSetpoint() {
     }
     catch (ex) {
         pauseEvent("false")
-        log.error "changeSetpoint Exception: ${ex}", ex
+        log.error "changeSetpoint Exception:", ex
         exceptionDataHandler(ex.message, "changeSetpoint")
     }
 }
@@ -1229,7 +1229,7 @@ void setHeatingSetpoint(Double reqtemp) {
         }
     }
     catch (ex) {
-        log.error "setHeatingSetpoint Exception: ${ex}", ex
+        log.error "setHeatingSetpoint Exception:", ex
         exceptionDataHandler(ex.message, "setHeatingSetpoint")
     }
 }
@@ -1297,7 +1297,7 @@ void setCoolingSetpoint(Double reqtemp) {
         }
     }
     catch (ex) {
-        log.error "setCoolingSetpoint Exception: ${ex}", ex
+        log.error "setCoolingSetpoint Exception:", ex
         exceptionDataHandler(ex.message, "setCoolingSetpoint")
     }
 }
@@ -1318,7 +1318,7 @@ void setPresence() {
         }
     }
     catch (ex) {
-        log.error "setPresence Exception: ${ex}", ex
+        log.error "setPresence Exception:", ex
         exceptionDataHandler(ex.message, "setPresence")
     }
 }
@@ -1330,7 +1330,7 @@ void away() {
         setAway()
     }
     catch (ex) {
-        log.error "away Exception: ${ex}", ex
+        log.error "away Exception:", ex
         exceptionDataHandler(ex.message, "away")
     }
 }
@@ -1342,7 +1342,7 @@ void present() {
         setHome()
     }
     catch (ex) {
-        log.error "present Exception: ${ex}", ex
+        log.error "present Exception:", ex
         exceptionDataHandler(ex.message, "present")
     }
 }
@@ -1353,7 +1353,7 @@ def setAway() {
         if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
     }
     catch (ex) {
-        log.error "setAway Exception: ${ex}", ex
+        log.error "setAway Exception:", ex
         exceptionDataHandler(ex.message, "setAway")
     }
 }
@@ -1364,7 +1364,7 @@ def setHome() {
         if (parent.setStructureAway(this, "false", virtType()) ) { presenceEvent("home") }
     }
     catch (ex) {
-        log.error "setHome Exception: ${ex}", ex
+        log.error "setHome Exception:", ex
         exceptionDataHandler(ex.message, "setHome")
     }
 }
@@ -1395,7 +1395,7 @@ def changeMode() {
         setHvacMode(nextMode)
     }
     catch (ex) {
-        log.error "changeMode Exception: ${ex}", ex
+        log.error "changeMode Exception:", ex
         exceptionDataHandler(ex.message, "changeMode")
     }
 }
@@ -1411,7 +1411,7 @@ def setHvacMode(nextMode) {
         }
     }
     catch (ex) {
-        log.error "setHvacMode Exception: ${ex}", ex
+        log.error "setHvacMode Exception:", ex
         exceptionDataHandler(ex.message, "setHvacMode")
     }
 }
@@ -1452,7 +1452,7 @@ def doChangeMode() {
         }
     }
     catch (ex) {
-        log.error "doChangeMode Exception: ${ex}", ex
+        log.error "doChangeMode Exception:", ex
         exceptionDataHandler(ex.message, "doChangeMode")
     }
 }
@@ -1522,7 +1522,7 @@ void fanOn() {
         } else { log.error "Error setting fanOn" }
     }
     catch (ex) {
-        log.error "fanOn Exception: ${ex}", ex
+        log.error "fanOn Exception:", ex
         exceptionDataHandler(ex.message, "fanOn")
     }
 }
@@ -1546,7 +1546,7 @@ void fanAuto() {
         } else { log.error "Error setting fanAuto" }
     }
     catch (ex) {
-        log.error "fanAuto Exception: ${ex}", ex
+        log.error "fanAuto Exception:", ex
         exceptionDataHandler(ex.message, "fanAuto")
     }
 }
@@ -1662,7 +1662,7 @@ def getImgBase64(url,type) {
         }
     }
     catch (ex) {
-        log.error "getImageBytes Exception: ${ex}", ex
+        log.error "getImageBytes Exception:", ex
         exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
@@ -1691,7 +1691,7 @@ def getFileBase64(url,preType,fileType) {
         }
     }
     catch (ex) {
-        log.error "getFileBase64 Exception: ${ex}", ex
+        log.error "getFileBase64 Exception:", ex
         exceptionDataHandler(ex.message, "getFileBase64")
     }
 }
@@ -1707,7 +1707,7 @@ def getCSS(url = null){
         }
     }
     catch (ex) {
-        log.error "getCss Exception: ${ex}", ex
+        log.error "getCss Exception:", ex
         exceptionDataHandler(ex.message, "getCSS")
     }
 }
@@ -1725,7 +1725,6 @@ def getJS(url){
 def getCssData() {
     def cssData = null
     //def htmlInfo = state?.htmlInfo
-//ERS
     def htmlInfo
     state.cssData = null
 
@@ -1756,7 +1755,6 @@ def getCssData() {
 def getChartJsData() {
     def chartJsData = null
     //def htmlInfo = state?.htmlInfo
-//ERS
     def htmlInfo
     state.chartJsData = null
 
@@ -2204,7 +2202,7 @@ def getGraphHTML() {
         """
         render contentType: "text/html", data: html, status: 200
     } catch (ex) {
-        log.error "graphHTML Exception: ${ex}", ex
+        log.error "graphHTML Exception:", ex
         exceptionDataHandler(ex.message, "graphHTML")
     }
 
