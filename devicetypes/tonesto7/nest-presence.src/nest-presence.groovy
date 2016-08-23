@@ -131,7 +131,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -232,7 +232,7 @@ void setPresence() {
         else if (pres == "home") { setAway() }
     }
     catch (ex) {
-        log.error "setPresence Exception: ${ex}", ex
+        log.error "setPresence Exception:", ex
         exceptionDataHandler(ex.message, "setPresence")
     }
 }
@@ -244,7 +244,7 @@ def setAway() {
         presenceEvent("away")
     }
     catch (ex) {
-        log.error "setAway Exception: ${ex}", ex
+        log.error "setAway Exception:", ex
         exceptionDataHandler(ex.message, "setAway")
     }
 }
@@ -256,7 +256,7 @@ def setHome() {
         presenceEvent("home")
     }
     catch (ex) {
-        log.error "setHome Exception: ${ex}", ex
+        log.error "setHome Exception:", ex
         exceptionDataHandler(ex.message, "setHome")
     }
 }
