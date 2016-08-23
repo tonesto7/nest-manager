@@ -182,7 +182,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -410,7 +410,7 @@ def getWeatherConditions(Map weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherConditions Exception: ${ex}", ex
+        log.error "getWeatherConditions Exception:", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherConditions")
     }
 }
@@ -436,7 +436,7 @@ def getWeatherForecast(Map weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherForecast Exception: ${ex}", ex
+        log.error "getWeatherForecast Exception:", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherForecast")
     }
 }
@@ -458,7 +458,7 @@ def getWeatherAstronomy(weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherAstronomy Exception: ${ex}", ex
+        log.error "getWeatherAstronomy Exception:", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherAstronomy")
     }
 }
@@ -526,7 +526,7 @@ def getWeatherAlerts(weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherAlerts Exception: ${ex}", ex
+        log.error "getWeatherAlerts Exception:", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherAlerts")
     }
 }
@@ -546,7 +546,7 @@ private pad(String s, size = 25) {
         }
     }
     catch (ex) {
-        log.error "pad Exception: ${ex}", ex
+        log.error "pad Exception:", ex
         exceptionDataHandler(ex.message, "pad")
     }
 }
@@ -647,7 +647,7 @@ private estimateLux(weatherIcon) {
         }
     }
     catch (ex) {
-        log.error "estimateLux Exception: ${ex}", ex
+        log.error "estimateLux Exception:", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "estimateLux")
     }
 }
@@ -766,7 +766,7 @@ def getImgBase64(url, type) {
         }
     }
     catch (ex) {
-        log.error "getImageBase64 Exception: ${ex}", ex
+        log.error "getImageBase64 Exception:", ex
         exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
@@ -795,7 +795,7 @@ def getFileBase64(url, preType, fileType) {
         }
     }
     catch (ex) {
-        log.error "getFileBase64 Exception: ${ex}", ex
+        log.error "getFileBase64 Exception:", ex
         exceptionDataHandler(ex.message, "getFileBase64")
     }
 }
@@ -811,7 +811,7 @@ def getCSS(url = null){
         }
     }
     catch (ex) {
-        log.error "getCss Exception: ${ex}", ex
+        log.error "getCss Exception:", ex
         exceptionDataHandler(ex.message, "getCSS")
     }
 }
@@ -890,7 +890,7 @@ def getWeatherIcon(weatherIcon) {
         return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
     }
     catch (ex) {
-        log.error "getWeatherIcon Exception: ${ex}", ex
+        log.error "getWeatherIcon Exception:", ex
         exceptionDataHandler(ex.message, "getWeatherIcon")
     }
 }
@@ -900,7 +900,7 @@ def getFavIcon() {
         return getImgBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "ico")
     }
     catch (ex) {
-        log.error "getFavIcon Exception: ${ex}", ex
+        log.error "getFavIcon Exception:", ex
         exceptionDataHandler(ex.message, "getFavIcon")
     }
 }
@@ -933,7 +933,7 @@ private localDate(timeZone) {
         df.format(new Date())
     }
     catch (ex) {
-        log.error "localDate Exception: ${ex}"
+        log.error "localDate Exception:"
         exceptionDataHandler(ex.message, "localDate")
     }
 }
@@ -963,7 +963,7 @@ def getSunriseSunset() {
         state.localSunrise = localSunrise
         state.localSunset = localSunset
     } catch (ex) {
-        log.error "getSunriseSunset Exception: ${ex}", ex
+        log.error "getSunriseSunset Exception:", ex
         exceptionDataHandler(ex.message, "getSunriseSunset")
     }
 }
@@ -1440,7 +1440,7 @@ def getWeatherHTML() {
         render contentType: "text/html", data: mainHtml, status: 200
     }
     catch (ex) {
-        log.error "getWeatherHTML Exception: ${ex}", ex
+        log.error "getWeatherHTML Exception:", ex
         exceptionDataHandler(ex.message, "getWeatherHTML")
     }
 }
