@@ -2291,10 +2291,10 @@ def getHtmlInfo() {
 
 def allowDbException() {
     if(atomicState?.appData?.database?.disableExceptions) {
-        return atomicState?.appData?.database?.disableExceptions == true ? true : false
+        return atomicState?.appData?.database?.disableExceptions == true ? false : true
     } else {
         if(getWebFileData()) {
-            return atomicState?.appData?.database?.disableExceptions == true ? true : false
+            return atomicState?.appData?.database?.disableExceptions == true ? false : true
         }
     }
 }
