@@ -711,7 +711,8 @@ def uninstalled() {
 def initialize() {
 	//log.debug "initialize..."
 	if(parent && atomicState?.automationType != "webDash") {
-		initAutoApp()
+		runIn(4, "initAutoApp", [overwrite: true])
+		//initAutoApp()
 	}
 	else {
 		initWatchdogApp()
@@ -742,6 +743,7 @@ def initManagerApp() {
 	atomicState.pollingOn = false
 	atomicState.lastChildUpdDt = null // force child update on next poll
 	atomicState.lastForcePoll = null
+	atomicState.swVersion = appVersion()
 	if (addRemoveDevices()) { // if we changed devices, reset queues and polling
 		atomicState.cmdQlist = []
 	}
@@ -962,9 +964,22 @@ def pollWatcher(evt) {
 	if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
 
+def checkIfSwupdated() {
+	if (atomicState?.swVersion != appVersion()) {
+		def cApps = getChildApps()
+		if(cApps) {
+			cApps?.sort()?.each { chld ->
+				chld?.update()
+			}
+		}
+		updated()
+	}
+}
+
 def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
+		checkIfSwupdated()
 		def dev = false
 		def str = false
 		if (force == true) { forcedPoll(type) }
