@@ -1222,13 +1222,13 @@ def getStartTime() {
 def getMinTemp() {
     def list = []
     if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     if (state?.dewpointTableYesterday?.size() > 0) { list.add(state?.dewpointTableYesterday.min { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     if (state?.dewpointTable?.size() > 0) { list.add(state?.dewpointTable.min { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     //log.trace "getMinTemp: ${list.min()} result: ${list}"
     return list?.min()
 }
@@ -1236,13 +1236,13 @@ def getMinTemp() {
 def getMaxTemp() {
     def list = []
     if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     if (state?.dewpointTableYesterday?.size() > 0) { list.add(state?.dewpointTableYesterday.max { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     if (state?.dewpointTable?.size() > 0) { list.add(state?.dewpointTable.max { it[2] }[2].toInteger()) }
-    else { list.add(0) }
+//    else { list.add(0) }
     //log.trace "getMaxTemp: ${list.max()} result: ${list}"
     return list?.max()
 }
