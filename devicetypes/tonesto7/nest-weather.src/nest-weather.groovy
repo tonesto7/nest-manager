@@ -35,6 +35,7 @@ metadata {
         capability "Refresh"
         capability "Relative Humidity Measurement"
         capability "Temperature Measurement"
+        capability "Ultraviolet Index"
 
         command "refresh"
         command "log"
@@ -405,6 +406,7 @@ def getWeatherConditions(Map weatData) {
                 sendEvent(name: "city", value: cityValue)
 
                 sendEvent(name: "uvindex", value: cur?.current_observation?.UV)
+                sendEvent(name: "ultravioletIndex", value: cur?.current_observation?.UV)
                 Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
             }
         }
@@ -1316,7 +1318,7 @@ def getWeatherHTML() {
                           },
                           vAxes: {
                               0: {
-                                  title: 'Humidity (%))',
+                                  title: 'Humidity (%)',
                                   format: 'decimal',
                                   minValue: 0,
                                   maxValue: 100,
