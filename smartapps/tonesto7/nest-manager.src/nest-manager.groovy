@@ -2311,7 +2311,7 @@ def getHtmlInfo() {
 }
 
 def allowDbException() {
-	if(atomicState?.appData?.database?.disableExceptions) {
+	if(atomicState?.appData?.database?.disableExceptions != null) {
 		return atomicState?.appData?.database?.disableExceptions == true ? false : true
 	} else {
 		if(getWebFileData()) {
