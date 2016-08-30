@@ -5151,14 +5151,14 @@ def getAutoTypeLabel() {
 	def typeLabel = ""
 	def newLbl
 	def dis = atomicState?.disableAutomation ? "\n(Disabled)" : ""
-	if (type == "remSen")	   { typeLabel = "${newName} (RemoteSensor)" }
-	else if (type == "fanCtrl")     { typeLabel = "${newName} (FanControl)" }
-	else if (type == "extTmp")      { typeLabel = "${newName} (ExternalTemp)" }
-	else if (type == "conWat")      { typeLabel = "${newName} (Contact)" }
-	else if (type == "nMode")       { typeLabel = "${newName} (NestMode)" }
-	else if (type == "tMode")       { typeLabel = "${newName} (TstatMode)" }
-	else if (type == "leakWat")     { typeLabel = "${newName} (LeakSensor)" }
-	else if (type == "watchDog")    { typeLabel = "Nest Location ${location.name} Watchdog"}
+	if (type == "remSen")		{ typeLabel = "${newName} (RemoteSensor)" }
+	else if (type == "fanCtrl")	{ typeLabel = "${newName} (FanControl)" }
+	else if (type == "extTmp")	{ typeLabel = "${newName} (ExternalTemp)" }
+	else if (type == "conWat")	{ typeLabel = "${newName} (Contact)" }
+	else if (type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
+	else if (type == "tMode")	{ typeLabel = "${newName} (TstatMode)" }
+	else if (type == "leakWat")	{ typeLabel = "${newName} (LeakSensor)" }
+	else if (type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
 
 	if(appLbl != "Nest Manager") {
 		if(appLbl.contains("\n(Disabled)")) {
@@ -5562,7 +5562,7 @@ def watchdogSafetyTempEvt(evt) {
 	storeLastEventData(evt)
 }
 
-// Alarms will repeat every watDogRepateMsgDelay (1 hr default) ALL thermostats
+// Alarms will repeat every watDogRepeatMsgDelay (1 hr default) ALL thermostats
 def watchDogCheck() {
 	if(atomicState?.disableAutomation) { return }
 	else {
@@ -5635,12 +5635,39 @@ def isWatchdogConfigured() {
 
 def remSenPrefix() { return "remSen" }
 
+def remSenLock(val, myId) {
+	def res = false
+	if(val && myId && !parent) {
+		def lval = atomicState?."remSenLock${val}"
+		if(!lval) {
+			atomicState?."remSenLock${val}" = myId
+			res = true
+		} else if(lval == myId) { res = true }
+	}
+	return res
+}
+
+def remSenUnlock(val, myId) {
+	def res = false
+	if(val && myId && !parent) {
+		def lval = atomicState?."remSenLock${val}"
+		if(lval) {
+			if(lval == myId) {
+				atomicState?."remSenLock${val}" = null
+				res = true
+			}
+		} else { res = true }
+	}
+	return res
+}
+
 def remSensorPage() {
 	def pName = remSenPrefix()
 	dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false, nextPage: "mainAutoPage") {
 		def req = (remSensorDay || remSensorNight || remSenTstat || !remSenTstat) ? true : false
 		def dupTstat
 		def tStatPhys
+		def cannotLock
 		def tStatHeatSp
 		def tStatCoolSp
 		def tStatMode
@@ -5648,6 +5675,9 @@ def remSensorPage() {
 		def defHeat
 		def defCool
 		def locMode = location?.mode
+		if(!getMyLockId()) {
+			setMyLockId(app.id)
+		}
 
 		section("Choose a Thermostat... ") {
 			input "remSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: req, required: true, image: getAppImg("thermostat_icon.png")
@@ -5663,16 +5693,26 @@ def remSensorPage() {
 			}
 
 			if(remSenTstat && tStatPhys) {
-				if(getMyLockId()) {
-					if(atomicState?.remSenTstat && (remSenTstat.deviceNetworkId != atomicState?.remSenTstat)) {
+				if(atomicState?.remSenTstat) {
+					if(remSenTstat.deviceNetworkId != atomicState?.remSenTstat) {
 						parent?.addRemoveVthermostat(atomicState.remSenTstat, false, getMyLockId())
-						atomicState.remSenTstat = null
+						if( parent?.remSenUnlock(atomicState.remSenTstat, getMyLockId()) ) { // attempt unlock old ID
+							atomicState.oldremSenTstat = atomicState?.remSenTstat
+							atomicState?.remSenTstat = null
+						}
 					}
-				} else { setMyLockId(app.id) }
+				}
+				if( parent?.remSenLock(remSenTstat.deviceNetworkId, getMyLockId()) ) {  // lock new ID
+					atomicState?.remSenTstat = remSenTstat.deviceNetworkId
+					cannotLock = false
+				} else { cannotLock = true }
 
 //   can check if any vthermostat is owned by us, and delete it
 //   have issue request for vthermostat is still on as input below
 
+				if(cannotLock) {
+					paragraph "Cannot Lock thermostat for remote sensor - thermostat may already be in use.  Please Correct...", image: getAppImg("error_icon.png")
+				}
 				getTstatCapabilities(remSenTstat, remSenPrefix())
 				tStatHeatSp = getTstatSetpoint(remSenTstat, "heat")
 				tStatCoolSp = getTstatSetpoint(remSenTstat, "cool")
@@ -5696,7 +5736,7 @@ def remSensorPage() {
 				}
 			}
 		}
-		if(remSenTstat && !dupTstat && tStatPhys) {
+		if(remSenTstat && !dupTstat && tStatPhys && !cannotLock) {
 			section("Select the Allowed (Rule) Action Type:") {
 				if(!remSenRuleType) {
 					paragraph "(Rule) Actions determine actions the automation takes when the temperature threshold is reached, using combinations of Heat/Cool/Fan to balance" +
@@ -5816,7 +5856,6 @@ def remSensorPage() {
 						if(vthermostat != null  && !parent?.addRemoveVthermostat(remSenTstat.deviceNetworkId, vthermostat, getMyLockId())) {
 							paragraph "Unable to ${(vthermostat ? "enable" : "disable")} Virtual Thermostat!!!.  Please Correct...", image: getAppImg("error_icon.png")
 						}
-						atomicState.remSenTstat = vthermostat ? remSenTstat.deviceNetworkId : null
 					}
 					section("(Optional) Use Motion Sensors to Evaluate Temps:") {
 						input "remSenMotion", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, state: remSenMotion ? "complete" : null, image: getAppImg("motion_icon.png")
