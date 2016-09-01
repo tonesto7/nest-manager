@@ -160,10 +160,10 @@ def startPage() {
 def authPage() {
 	//log.trace "authPage()"
 	getAccessToken()
-	preReqCheck()
+	def preReqOk = preReqCheck()
 	deviceHandlerTest()
 
-	if (!atomicState?.accessToken || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
+	if (!atomicState?.accessToken || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk))) {
 		return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall: false) {
 			section ("Status Page:") {
 				def desc
@@ -172,6 +172,9 @@ def authPage() {
 				}
 				else if (!atomicState?.devHandlersTested) {
 					desc = "Device Handlers are likely Missing or Not Published.  Please read the installation instructions and verify all device handlers are present before continuing."
+				}
+				else if (!preReqOk) {
+					desc = "SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE or Mobile App..."
 				}
 				else {
 					desc = "Application Status has not received any messages to display"
@@ -711,9 +714,8 @@ def uninstalled() {
 
 def initialize() {
 	//log.debug "initialize..."
-	if(parent && atomicState?.automationType != "webDash") {
+	if(parent) {
 		runIn(4, "initAutoApp", [overwrite: true])
-		//initAutoApp()
 	}
 	else {
 		initWatchdogApp()
@@ -5070,7 +5072,10 @@ def nameAutoPage() {
 }
 
 def initAutoApp() {
-	if(automationType != "webDash") {
+	if(settings["webDashFlag"]) {
+		atomicState?.automationType = "webDash"
+		LogAction("initAutoApp: We are running webDash in wrong code base","error", true)
+	} else {
 		if(settings["watchDogFlag"]) {
 			atomicState?.automationType = "watchDog"
 		}
