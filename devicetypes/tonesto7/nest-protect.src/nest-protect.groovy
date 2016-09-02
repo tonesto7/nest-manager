@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "3.0.1" }
+def devVer() { return "3.1.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -180,7 +180,7 @@ void runSmokeTest() {
         carbonSmokeStateEvent("ok", "emergency")
         schedEndTest()
     } catch (ex) {
-        log.error "runSmokeTest Exception: ${ex}", ex
+        log.error "runSmokeTest Exception:", ex
         exceptionDataHandler(ex.message, "runSmokeTest")
     }
 }
@@ -193,7 +193,7 @@ void runCoTest() {
         carbonSmokeStateEvent("emergency", "ok")
         schedEndTest()
     } catch (ex) {
-        log.error "runCoTest Exception: ${ex}", ex
+        log.error "runCoTest Exception:", ex
         exceptionDataHandler(ex.message, "runCoTest")
     }
 }
@@ -206,7 +206,7 @@ void runBatteryTest() {
         batteryStateEvent("replace")
         schedEndTest()
     } catch (ex) {
-        log.error "runBatteryTest Exception: ${ex}", ex
+        log.error "runBatteryTest Exception:", ex
         exceptionDataHandler(ex.message, "runBatteryTest")
     }
 }
@@ -216,7 +216,7 @@ void schedEndTest() {
         runIn(5, "endTest", [overwrite: true])
         refresh()  // this typically takes more than 5 seconds to complete
     } catch (ex) {
-        log.error "schedEndTest Exception: ${ex}", ex
+        log.error "schedEndTest Exception:", ex
         exceptionDataHandler(ex.message, "schedEndTest")
     }
 }
@@ -228,7 +228,7 @@ void endTest() {
         testingStateEvent("false")
         refresh()
     } catch (ex) {
-        log.error "endTest Exception: ${ex}", ex
+        log.error "endTest Exception:", ex
         exceptionDataHandler(ex.message, "endTest")
     }
 }
@@ -265,7 +265,8 @@ def processEvent() {
             uiColorEvent(results?.ui_color_state.toString())
             softwareVerEvent(results?.software_version.toString())
             deviceVerEvent(eventData?.latestVer.toString())
-            state?.cssUrl = eventData?.cssUrl
+            if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 
             lastUpdatedEvent()
         }
@@ -275,10 +276,13 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
+
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
@@ -600,6 +604,35 @@ def getImg(imgName) {
     }
 }
 
+def getFileBase64(url,preType,fileType) {
+    try {
+        def params = [
+            uri: url,
+            contentType: '$preType/$fileType'
+        ]
+        httpGet(params) { resp ->
+            if(resp.data) {
+                def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+                int size = 4096
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                    bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+                String s = buf?.encodeBase64()
+                //log.debug "resp: ${s}"
+                return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+            }
+        }
+    }
+    catch (ex) {
+        log.error "getFileBase64 Exception:", ex
+        exceptionDataHandler(ex.message, "getFileBase64")
+    }
+}
+
 def getCSS(){
     def params = [
         uri: state?.cssUrl.toString(),
@@ -610,12 +643,41 @@ def getCSS(){
     }
 }
 
+def getCssData() {
+    def cssData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
+        } else {
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        log.debug "getCssData: No Stored CSS Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+
 def getInfoHtml() {
     try {
+        log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
         def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
                 "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
-        def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
-        def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
+
         def testVal = device.currentState("isTesting")?.value
         def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
@@ -629,18 +691,17 @@ def getInfoHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
             </head>
             <body>
-              <style type="text/css">
-                ${getCSS()}
-              </style>
-              ${updateAvail} ${testModeHTML}
+              ${updateAvail}
+              ${testModeHTML}
               <div class="row">
                 <div class="offset-by-two four columns centerText">
-                  $coImg
+                  <img class='alarmImg' src="${getCarbonImg()}">
                 </div>
                 <div class="four columns centerText">
-                  $smokeImg
+                  <img class='alarmImg' src="${getSmokeImg()}">
                 </div>
               </div>
               <table>
@@ -695,7 +756,7 @@ def getInfoHtml() {
         render contentType: "text/html", data: html, status: 200
     }
     catch (ex) {
-        log.error "getInfoHtml Exception: ${ex}", ex
+        log.error "getInfoHtml Exception:", ex
         exceptionDataHandler(ex.message, "getInfoHtml")
     }
 }

@@ -40,24 +40,25 @@ This is a Child-SmartApp that allows you to creat different types of automations
 ## Version Info
 __SmartApp:__ | __Version:__ |
 :--- | :---: |
-Nest Manager | *v3.0.0* |
+Nest Manager | *v3.1.0* |
 
 __Device:__ | Version: |
 :--- | :---: |
-Nest Presence Device | *v3.0.0* |
-Nest Protect Device | *v3.0.0* |
-Nest Thermostat Device | *v3.0.0* |
-Nest Weather Device | *v3.0.0* |
-Nest Camera Device | *v1.0.0* |
+Nest Presence Device | *v3.1.0* |
+Nest Protect Device | *v3.1.0* |
+Nest Thermostat Device | *v3.1.0* |
+Nest Virtual Thermostat Device | *v3.1.0* |
+Nest Weather Device | *v3.1.0* |
+Nest Camera Device | *v1.1.0* |
 
 ## What's New
 
- * Please see the [Nest Manager Community Forum Link](https://community.smartthings.com/t/release-nest-manager-3-0/) for New Features
+ * Please see the [Nest Manager Community Forum Link](https://community.smartthings.com/t/release-nest-manager-3-1/) for New Features
 
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
 
-#### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager-3-0/)
+#### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager-3-1/)
 
 #### [Projects Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)
 
@@ -135,7 +136,7 @@ For advanced users who have their SmartThings IDE integrated with GitHub, the in
 
  * Go to "**My Device Handlers**" in the IDE
  * Under My Device Handlers Click on ***Update from Repo*** and select ***nest-manager*** from the drop-down
- * Check the box next to ***nest-presence***, ***nest-protect***, ***nest-thermostat***, ***nest-thermostat*** and ***nest-weather*** then check the **Publish** box and click **Execute Update**
+ * Check the box next to ***nest-presence***, ***nest-protect***, ***nest-thermostat***, ***nest-thermostat***, ***nest-virtual-thermostat*** and ***nest-weather*** then check the **Publish** box and click **Execute Update**
 
 That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps*** under the mobile app.
 
@@ -181,6 +182,9 @@ While on the GitHub site, find the **Raw** button and click it. This will bring 
 #### The Presence, Protect, and Thermostat Device Handlers
  ***Thermostat Source Code:*** **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-thermostat.src/nest-thermostat.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-thermostat.src/nest-thermostat.groovy)**
 
+***Virtual Thermostat Source Code:***
+ **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-virtual-thermostat.src/nest-virtual-thermostat.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-virtual-thermostat.src/nest-virtual-thermostat.groovy)**
+
  ***Protect Source Code:*** **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-protect.src/nest-protect.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-protect.src/nest-protect.groovy)**
 
  ***Presence Source Code:*** **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-presence.src/nest-presence.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-presence.src/nest-presence.groovy)**
@@ -188,7 +192,7 @@ While on the GitHub site, find the **Raw** button and click it. This will bring 
  ***Weather Source Code:*** **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-weather.src/nest-weather.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-weather.src/nest-weather.groovy)**
 
  ***Camera Source Code:***
- **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-camera.src/nest-weather.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-camera.src/nest-weather.groovy)**
+ **[https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-camera.src/nest-camera.groovy](https://github.com/tonesto7/nest-manager/blob/master/devicetypes/tonesto7/nest-camera.src/nest-camera.groovy)**
 
  ***Repeat these steps below in the same manner you did for the manager app under **My Device Handlers** for each device above:***
 

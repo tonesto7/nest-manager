@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "3.0.1" }
+def devVer() { return "3.1.0" }
 
 // for the UI
 metadata {
@@ -123,7 +123,7 @@ def processEvent() {
             presenceEvent(eventData?.pres)
             apiStatusEvent((!eventData?.apiIssues ? false : true))
             deviceVerEvent(eventData?.latestVer.toString())
-
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
             lastUpdatedEvent()
         }
         //This will return all of the devices state data to the logs.
@@ -131,7 +131,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -232,7 +232,7 @@ void setPresence() {
         else if (pres == "home") { setAway() }
     }
     catch (ex) {
-        log.error "setPresence Exception: ${ex}", ex
+        log.error "setPresence Exception:", ex
         exceptionDataHandler(ex.message, "setPresence")
     }
 }
@@ -244,7 +244,7 @@ def setAway() {
         presenceEvent("away")
     }
     catch (ex) {
-        log.error "setAway Exception: ${ex}", ex
+        log.error "setAway Exception:", ex
         exceptionDataHandler(ex.message, "setAway")
     }
 }
@@ -256,7 +256,7 @@ def setHome() {
         presenceEvent("home")
     }
     catch (ex) {
-        log.error "setHome Exception: ${ex}", ex
+        log.error "setHome Exception:", ex
         exceptionDataHandler(ex.message, "setHome")
     }
 }
@@ -310,9 +310,13 @@ def log(message, level = "trace") {
 }
 
 def exceptionDataHandler(msg, methodName) {
-    if(msg && methodName) {
-        def msgString = "${msg}"
-        parent?.sendChildExceptionData("presence", devVer(), msgString, methodName)
+    if(state?.allowDbException == false) {
+        return
+    } else {
+        if(msg && methodName) {
+            def msgString = "${msg}"
+            parent?.sendChildExceptionData("presence", devVer(), msgString, methodName)
+        }
     }
 }
 
