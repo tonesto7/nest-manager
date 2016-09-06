@@ -44,6 +44,7 @@ def appVerInfo() {
 	str += "V3.1.2 (September 6th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • ADDED: Ask Alexa (@MichaelS) Support. Automations now have the ability to send notifications to the Ask Alexa Message Queue..."
+	str += "\n • FIXED: nMODE and tMODE automations only run once per ST MODE change."
 
 	str += "\n\nV3.1.1 (September 1st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -4836,6 +4837,12 @@ def selectAutoPage() {
 	//log.trace "selectAutoPage()..."
 	if(!atomicState?.automationType) {
 		return dynamicPage(name: "selectAutoPage", title: "Choose an Automation Type...", uninstall: false, install: false, nextPage: "mainAutoPage") {
+			section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
+				href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
+			}
+			section("Set Thermostats Setpoints Based on ST Modes:") {
+				href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_setpoints_icon.png")
+			}
 			section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
 				href "mainAutoPage", title: "Remote Temp Sensors...", description: "", params: [autoType: "remSen"], image: getAppImg("remote_sensor_icon.png")
 			}
@@ -4847,12 +4854,6 @@ def selectAutoPage() {
 			}
 			section("Turn Thermostat On/Off when a Door/Window is Opened:") {
 				href "mainAutoPage", title: "Contact Sensors...", description: "", params: [autoType: "conWat"], image: getAppImg("open_window.png")
-			}
-			section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
-				href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
-			}
-			section("Set Thermostats Setpoints Based on ST Modes:") {
-				href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_setpoints_icon.png")
 			}
 			section("Turn Thermostat Off if Water Leak is Detected:") {
 				href "mainAutoPage", title: "Leak Sensors...", description: "", params: [autoType: "leakWat"], image: getAppImg("leak_icon.png")
@@ -5281,7 +5282,7 @@ def subscribeToEvents() {
 	//Nest Mode Subscriptions
 	if (autoType == "nMode") {
 		if(isNestModesConfigured()) {
-			if (!nModePresSensor && !nModeSwitch && (nModeHomeModes || nModeAwayModes)) { subscribe(location, "mode", nModeModeEvt, [filterEvents: false]) }
+			if (!nModePresSensor && !nModeSwitch && (nModeHomeModes || nModeAwayModes)) { subscribe(location, "mode", nModeSTModeEvt, [filterEvents: false]) }
 			if (nModePresSensor && !nModeSwitch) { subscribe(nModePresSensor, "presence", nModePresEvt) }
 			if (nModeSwitch && !nModePresSensor) { subscribe(nModeSwitch, "switch", nModeSwitchEvt) }
 		}
@@ -5289,7 +5290,7 @@ def subscribeToEvents() {
 	//ST Thermostat Mode Subscriptions
 	if (autoType == "tMode") {
 		if(isTstatModesConfigured()) {
-			subscribe(location, "mode", tModeModeEvt, [filterEvents: false])
+			subscribe(location, "mode", tModeSTModeEvt, [filterEvents: false])
 			subscribe(tModeTstats, "presence", tModePresEvt)
 		}
 	}
@@ -5335,7 +5336,10 @@ def scheduler() {
 
 def watchDogAutomation() {
 	LogAction("watchDogAutomation...", "trace", false)
-	runAutomationEval()
+	if (getLastAutomationSchedSec() > (1800)) {
+		atomicState?.lastAutomationSchedDt = getDtNow()
+		runAutomationEval()
+	}
 }
 
 def scheduleAutomationEval(schedtime = 20) {
@@ -7918,9 +7922,10 @@ def nestModePresPage() {
 						image: getAppImg("mode_away_icon.png")
 				if (nModeHomeModes && nModeAwayModes) {
 					def str = ""
-					str += location?.mode && parent?.locationPresence() ? "Location Status:" : ""
+					def pLocationPresence = getNestLocPres()
+					str += location?.mode && plocationPresence ? "Location Status:" : ""
 					str += location?.mode ? "\n ├ SmartThings Mode: ${location?.mode}" : ""
-					str += parent?.locationPresence() ? "\n └ Nest Location: (${parent?.locationPresence() == "away" ? "Away" : "Home"})" : ""
+					str += plocationPresence ? "\n └ Nest Location: (${plocationPresence == "away" ? "Away" : "Home"})" : ""
 					paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 				}
 			}
@@ -7965,7 +7970,7 @@ def nestModePresPage() {
 				href "setRecipientsPage", title: "(Optional) Select Recipients", description: getNotifConfigDesc(), params: [pName: "${pName}"], state: (getNotificationOptionsConf() ? "complete" : null),
 						image: getAppImg("recipient_icon.png")
 			}*/
-			section(getDmtSectionDesc(conWatPrefix())) {
+			section(getDmtSectionDesc(nModePrefix())) {
 				def pageDesc = getDayModeTimeDesc(pName)
 				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null),
 						image: getAppImg("cal_filter_icon.png")
@@ -8003,7 +8008,8 @@ def isNestModesConfigured() {
 	return devOk
 }
 
-def nModeModeEvt(evt) {
+def nModeSTModeEvt(evt) {
+	LogAction("Event | ST Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
 	if (atomicState?.disableAutomation) { return }
 	else if(!nModePresSensor && !nModeSwitch) {
 		storeLastEventData(evt)
@@ -8022,6 +8028,7 @@ def nModeModeEvt(evt) {
 }
 
 def nModePresEvt(evt) {
+	LogAction("Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()})", "trace", true)
 	if (atomicState?.disableAutomation) { return }
 	else if(nModeDelay) {
 		storeLastEventData(evt)
@@ -8038,6 +8045,7 @@ def nModePresEvt(evt) {
 }
 
 def nModeSwitchEvt(evt) {
+	LogAction("Event | Switch: ${evt?.displayName} - is (${evt?.value.toString().toUpperCase()})", "trace", true)
 	if (atomicState?.disableAutomation) { return }
 	else if(nModeSwitch && !nModePresSensor) {
 		storeLastEventData(evt)
@@ -8065,6 +8073,8 @@ def checkNestMode() {
 		if (atomicState?.disableAutomation) { return }
 		else if(!nModeScheduleOk()) {
 			LogAction("checkNestMode: Skipping because of Schedule Restrictions...", "info", true)
+			atomicState.lastStMode = null
+			atomicState.lastPresSenAway = null
 		} else {
 			def execTime = now()
 			atomicState?.lastEvalDt = getDtNow()
@@ -8078,38 +8088,57 @@ def checkNestMode() {
 			def modeDesc = ((!nModeSwitch && !nModePresSensor) && nModeHomeModes && nModeAwayModes) ? "The mode (${curStMode}) has triggered " : ""
 			def awayDesc = "${awayPresDesc}${awaySwitDesc}${modeDesc}"
 			def homeDesc = "${homePresDesc}${homeSwitDesc}${modeDesc}"
+
+			def previousStMode = atomicState?.lastStMode
+			def previousPresSenAway = atomicState?.lastPresSenAway
+
 			def away = false
 			def home = false
-			if(nModePresSensor || nModeSwitch) {
-				if (nModePresSensor && !nModeSwitch) {
-					if (!isPresenceHome(nModePresSensor)) { away = true }
-					else { home = true }
+
+			if (nModePresSensor && !nModeSwitch) {
+				if (!isPresenceHome(nModePresSensor)) {
+					away = true
+				} else {
+					home = true
 				}
-				else if (nModeSwitch && !nModePresSensor) {
-					def swOptAwayOn = (nModeSwitchOpt == "On") ? true : false
-					if(swOptAwayOn) {
-						!isSwitchOn(nModeSwitch) ? (home = true) : (away = true)
-					} else {
-						!isSwitchOn(nModeSwitch) ? (away = true) : (home = true)
-					}
+			} else if (nModeSwitch && !nModePresSensor) {
+				def swOptAwayOn = (nModeSwitchOpt == "On") ? true : false
+				if(swOptAwayOn) {
+					!isSwitchOn(nModeSwitch) ? (home = true) : (away = true)
+				} else {
+					!isSwitchOn(nModeSwitch) ? (away = true) : (home = true)
+				}
+			} else if(nModeHomeModes && nModeAwayModes) {
+				if (isInMode(nModeHomeModes)) {
+					home = true
+				} else {
+					if (isInMode(nModeAwayModes)) { away = true }
+				}
+			} else {
+				LogAction("checkNestMode: Nothing Matched", "info", true)
+			}
+
+			def modeMatch = false   // these check that we only change once per ST or presence change
+			if(nModeHomeModes && nModeAwayModes) {
+				if(previousStMode == curStMode) {
+					modeMatch = true
 				}
 			}
-			else {
-				if(nModeHomeModes && nModeAwayModes) {
-					if (isInMode(nModeHomeModes)) { home = true }
-					else {
-						if (isInMode(nModeAwayModes)) { away = true }
-					}
+			if (nModePresSensor && !nModeSwitch) {
+				if(previousPresSenAway != null && previousPresSenAway == away) {
+					modeMatch = true
 				}
 			}
 
-			LogAction("checkNestMode: isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
+			LogAction("checkNestMode: isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
 
-			if (away && !nestModeAway) {
+			if (away && !nestModeAway && !modeMatch) {
 				LogAction("${awayDesc} Nest 'Away'", "info", true)
 				if(parent?.setStructureAway(null, true)) {
 					storeLastAction("Set Nest Location (Away)", getDtNow())
 					atomicState?.nModeTstatLocAway = true
+					atomicState.lastStMode = curStMode
+					atomicState.lastPresSenAway = away
 					if(allowNotif) {
 						sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info")
 					}
@@ -8129,10 +8158,12 @@ def checkNestMode() {
 				}
 				scheduleAutomationEval(60)
 			}
-			else if (home && nestModeAway) {
+			else if (home && nestModeAway && !modeMatch) {
 				LogAction("${homeDesc} Nest 'Home'", "info", true)
 				if (parent?.setStructureAway(null, false)) {
 					atomicState?.nModeTstatLocAway = false
+					atomicState.lastStMode = curStMode
+					atomicState.lastPresSenAway = away
 					if(allowNotif) {
 						sendEventPushNotifications("${awayDesc} Nest 'Home'", "Info")
 					}
@@ -8153,7 +8184,7 @@ def checkNestMode() {
 				scheduleAutomationEval(60)
 			}
 			else {
-				LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
+				LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
 			}
 			storeExecutionHistory((now() - execTime), "checkNestMode")
 		}
@@ -8165,9 +8196,12 @@ def checkNestMode() {
 
 def getNestLocPres() {
 	if (atomicState?.disableAutomation) { return }
-	else if(!parent?.locationPresence()) { return null }
 	else {
-		return parent?.locationPresence()
+		def plocationPresence = parent?.locationPresence()
+		if(!plocationPresence) { return null }
+		else {
+			return plocationPresence
+		}
 	}
 }
 
@@ -8324,19 +8358,18 @@ def isTstatModesConfigured() {
 	return false
 }
 
-def tModeModeEvt(evt) {
+def tModeSTModeEvt(evt) {
 	if (atomicState?.disableAutomation) { return }
 	else {
 		storeLastEventData(evt)
 		if(tModeDelay) {
 			def delay = tModeDelayVal.toInteger()
-
 			if (delay > 20) {
-				LogAction("tModeModeEvt | ST Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
+				LogAction("tModeSTModeEvt | ST Mode is: ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
 				scheduleAutomationEval(delay)
 			} else { scheduleAutomationEval() }
 		} else {
-			LogAction("tModeModeEvt | ST Mode is: (${evt?.value})", "trace", true)
+			LogAction("tModeSTModeEvt | ST Mode is: (${evt?.value})", "trace", true)
 			scheduleAutomationEval()
 		}
 	}
@@ -8348,7 +8381,6 @@ def tModePresEvt(evt) {
 		storeLastEventData(evt)
 		if(tModeDelay) {
 			def delay = tModeDelayVal.toInteger()
-
 			if (delay > 20) {
 				LogAction("TstatSetpoint Event | Presence: ${evt?.displayName} - Presence is (${evt?.value.toString().toUpperCase()}) | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "trace", true)
 				scheduleAutomationEval(delay)
@@ -8378,13 +8410,19 @@ def checkTstatMode() {
 		//}
 		if (away) {
 			LogAction("checkTstatMode: Skipping because Nest is set AWAY", "info", true)
-			return
+			atomicState.lastStMode = null
 		}
 		else {
 			def curStMode = location?.mode
+			def previousStMode = atomicState?.lastStMode
 			def heatTemp = 0.0
 			def coolTemp = 0.0
-			if (tModeTstats) {
+
+			def modeMatch = false   // these check that we only change once per ST or presence change
+			if(previousStMode == curStMode) {
+				modeMatch = true
+			}
+			if (tModeTstats && !modeMatch) {
 				tModeTstats?.each { ts ->
 					def modes = settings?."${getTstatModeInputName(ts)}" ?: null
 					if (modes && (curStMode in modes)) {
@@ -8421,7 +8459,6 @@ def checkTstatMode() {
 							} else { heatTemp = null }
 						}
 
-
 						if(!isModeOff && atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool") {
 							def oldCool = ts?.currentCoolingSetpoint.toDouble()
 							coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toDouble()
@@ -8445,6 +8482,7 @@ def checkTstatMode() {
 						}
 					}
 				}
+				atomicState.lastStMode = curStMode
 			}
 		}
 		storeExecutionHistory((now() - execTime), "checkTstaMode")
