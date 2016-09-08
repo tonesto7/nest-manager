@@ -276,7 +276,7 @@ def deviceVerEvent(ver) {
     def curData = device.currentState("devTypeVer")?.value.toString()
     def pubVer = ver ?: null
     def dVer = devVer() ?: null
-    def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
+    def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
     state?.devTypeVer = newData
     state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
     if(!curData?.equals(newData)) {
