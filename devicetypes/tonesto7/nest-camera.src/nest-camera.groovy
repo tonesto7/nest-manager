@@ -415,7 +415,7 @@ def zoneSoundEvent(data) {
         def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
         isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
     }
-    def val = ((date?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
+    def val = ((data?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
     if(!isSound.equals(val)) {
         log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
         sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
