@@ -132,7 +132,7 @@ For advanced users who have their SmartThings IDE integrated with GitHub, the in
 
  * Go to "**My Device Handlers**" in the IDE
  * Under My Device Handlers Click on ***Update from Repo*** and select ***nest-manager*** from the drop-down
- * Check all the boxes tthen check the **Publish** box and click **Execute Update**
+ * Check all the boxes tfhen check the **Publish** box and click **Execute Update**
 
 That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps*** under the mobile app.
 
