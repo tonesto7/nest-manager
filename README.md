@@ -106,15 +106,14 @@ If you don't already have Git Integration setup please visit __*[GitHub Integrat
 
 **Git Integration is not currently available outside of US**
 
-For advanced users who have their SmartThings IDE integrated with GitHub, the installation and maintaining of code becomes very simple. This manual will not go into detail about setting up your IDE with GitHub; those instructions can be found on the SmartThings web site [[http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html?highlight=git]]
-
+For advanced users who have their SmartThings IDE integrated with GitHub, the installation and maintaining of code becomes very simple.
 
 #### The Manager App
 * First, find the **Settings** button at the top of your SmartThings IDE page (this will only appear after you integrate with GitHub)
 
 ![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/IdeSettings.jpg)
 
-* Clicking this button will open the GitHub Repository Integration page. To find the **Nest Manager** SmartApp code, enter the information as you see it below:
+* Clicking this button will open the GitHub Repository Integration page. Add the **Nest Manager** SmartApp code by selecting "Add new repository" and entering the information as you see it below:
 
 **Owner:** tonesto7
 
@@ -122,21 +121,18 @@ For advanced users who have their SmartThings IDE integrated with GitHub, the in
 
 ![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/GithubIntegration.png)
 
-* Close the GitHub Repository Integration page
-* Next, click the **Update from Repo** button at the upper-right corner of the IDE
-* On the right-hand column, scroll down to click the apps you want to install. This will typically be:
+* Close/save the GitHub Repository Integration page
+* Next, click the **Update from Repo** button at the upper-right corner of the IDE and selct "nest-manager"
+* On the right-hand column, select the apps you want to install. Typicallly this will be all of them.
+* Check the Publish box and click the **Execute Update** in the bottom-right corner of the screen. When done syncing, the new apps should now appear in your IDE. If they ever change color, that indicates a new version is available.
 
-    `**SmartApp**: smartapps/tonesto7/nest-manager.src/nest-manager.groovy`
-
-* Check the Publish box and Click the **Execute Update** in the bottom-right corner of the screen. When done syncing, the new apps should now appear in your IDE. If they ever change color, that indicates a new version is available.
-
- ***REMINDER!!!: Remember to Enable OAuth under the Nest Manager's App Settings (Instructions Below)***
+ ***REMINDER!!!: Remember to [Enable OAuth under the Nest Manager's App Settings (Instructions Below)](#enabling-oauth)***
 
 #### The Presence, Protect, Thermostat and Weather Device Handlers
 
  * Go to "**My Device Handlers**" in the IDE
  * Under My Device Handlers Click on ***Update from Repo*** and select ***nest-manager*** from the drop-down
- * Check the box next to ***nest-presence***, ***nest-protect***, ***nest-thermostat***, ***nest-thermostat***, ***nest-virtual-thermostat*** and ***nest-weather*** then check the **Publish** box and click **Execute Update**
+ * Check all the boxes tthen check the **Publish** box and click **Execute Update**
 
 That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps*** under the mobile app.
 
@@ -176,7 +172,7 @@ While on the GitHub site, find the **Raw** button and click it. This will bring 
 
 ![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/SavePublish.png)
 
- ***REMINDER!!!: Remember to Enable OAuth under the Nest Manager's App Settings (Instructions Below)***
+ ***REMINDER!!!: Remember to [Enable OAuth under the Nest Manager's App Settings (Instructions Below)](#enabling-oauth)***
 
  - - -
 #### The Presence, Protect, and Thermostat Device Handlers
@@ -206,7 +202,7 @@ While on the GitHub site, find the **Raw** button and click it. This will bring 
 ###Enabling OAuth
 **Nest Manager** requires OAuth to operate correctly.
 
-To enable OAuth, first find and click the **App Settings** button in the upper right corner of the page.
+To enable OAuth, navigate to your **Nest Manager** SmartApp in the IDE and click the **App Settings** button in the upper right corner of the page.
 
 From here, find the **OAuth** section toward the bottom of the page.
 
@@ -235,12 +231,7 @@ If you don't have Git Integration you will just need to copy/paste the code from
  * At the bottom of the list, select "**My Apps**"
  * Select "**Nest Manager**" from the list.
  * Enter you Nest Login credentials when prompted.
- * Choose **Structure**
- * Choose **Thermostats**
- * Choose **Protects**
- * Choose **Cameras**
- * Choose *Add Presence Device* (Optional)
- * Choose *Add Weather Device* (Optional)
+ * Set your **Nest Location** and add your Nest Devices
  * Modify any preferences you would like (Optional)
  * Tap on "**Done**"
 
@@ -248,9 +239,9 @@ If you don't have Git Integration you will just need to copy/paste the code from
 ## Issues and Troubleshooting
 
 ### Issues
-*If you are experiencing any issues, please let us know by heading over to projects issues page on GitHub. If you don't see the issue reported please help open an new one and provide as much detail as you can.*
+*If you are experiencing any issues, please let us know by heading over to projects issues page on GitHub. If you don't see the issue reported please help open a new one and provide as much detail as you can.*
 
-**[Project Issues Link](https://github.com/tonesto7/st-nest-unofficial/issues)**
+**[Project Issues Link](https://github.com/tonesto7/nest-manager/issues)**
 
 In an effort to make it easier for some of you troubleshoot without having to use the IDE constantly.  I have added in a diagnostic option under the preference section of the SmartApp.  
 Once this is enabled it will begin to store non-user identifiable error logs from the app and store in a local state variable of the app.  
@@ -261,7 +252,7 @@ This feature will help you to view and export the logs (*also see the tip below*
 _______
 
 ### Troubleshooting
-**Tip:** *The most common issue is forgetting to enable oAuth for the app under SmartThings*
+**Tip:** *The most common issue is forgetting to enable OAuth for the app under SmartThings*
 
 Please check the Help Page before posting questions in the community forum.
 **[Nest Manager Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)**
