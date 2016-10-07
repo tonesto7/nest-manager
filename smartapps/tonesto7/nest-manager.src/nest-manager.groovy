@@ -36,10 +36,15 @@ definition(
 	appSetting "clientSecret"
 }
 
-def appVersion() { "3.1.3" }
-def appVerDate() { "9-12-2016" }
+def appVersion() { "3.1.4" }
+def appVerDate() { "10-1-2016" }
 def appVerInfo() {
 	def str = ""
+
+	str += "V3.1.4 (October 1st, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • FIXED: Found a bug from recent platform change where multiple watchdog apps were being installed..."
+
 
 	str += "V3.1.3 (September 12th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -800,14 +805,22 @@ def uninstManagerApp() {
 }
 
 def initWatchdogApp() {
-	//log.trace "initWatchdogApp"
-	def watDogApp = getChildApps().findAll { it?.getAutomationType() == "watchDog" }
-	if(!watDogApp) {
+	//log.trace "initWatchdogApp..."
+	def watDogApp = getChildApps()?.findAll { it?.getAutomationType() == "watchDog" }
+	if(watDogApp?.size() < 1) {
 		LogAction("Installing Nest Watchdog App...", "info", true)
 		addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
-	} else {
+	} else if (watDogApp?.size() >= 1) {
+		def cnt = 1
 		watDogApp?.each { chld ->
-			chld.update()
+			if(cnt == 1) {
+				cnt = cnt+1
+				//LogAction("Running Update Command on Watchdog...", "warn", true)
+				chld.update()
+			} else if (cnt > 1) {
+				LogAction("Deleting Extra Watchdog Instance(${chld})...", "warn", true)
+				deleteChildApp(chld)
+			}
 		}
 	}
 }

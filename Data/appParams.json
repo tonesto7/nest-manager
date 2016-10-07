@@ -7,7 +7,7 @@
     },
     "versions": {
         "app": {
-            "ver": "3.1.3"
+            "ver": "3.1.4"
         },
         "thermostat": {
             "ver": "3.1.1"
@@ -30,7 +30,7 @@
     },
     "broadcast": {
         "msgId": "eavl9D2vry",
-        "message": "Nest Manager Broadcast: Version 3.1.3 is now available.  Please make sure to update the SmartApp and Devices...",
+        "message": "Nest Manager Broadcast: Version 3.1.4 is now available.  Please make sure to update the SmartApp and Devices...",
         "type": "info"
     },
     "updater": {
@@ -41,7 +41,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "3.1.3"
+                "ver": "3.1.4"
             },
             "thermostat": {
                 "ver": "3.1.1"
@@ -76,6 +76,9 @@
         "disableExceptions": true
     },
     "aaSupport": {
+        "enabled": true
+    },
+    "dashPrefs": {
         "enabled": true
     }
 }
