@@ -56,12 +56,12 @@
         "disableExceptions": true
     },
     "aaPrefs": {
-        "enAaMsgQueue": true,
+        "enAaMsgQueue": true
     },
     "reportPrefs": {
         "disVoiceZoneRprt": false,
         "disVoiceUsageRprt": false
-    }
+    },
     "dashPrefs": {
         "enabled": true
     },
