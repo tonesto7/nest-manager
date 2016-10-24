@@ -5,26 +5,6 @@
     "state": {
         "stateVarVer": 2
     },
-    "versions": {
-        "app": {
-            "ver": "4.0.2"
-        },
-        "thermostat": {
-            "ver": "4.0.0"
-        },
-        "protect": {
-            "ver": "4.0.0"
-        },
-        "camera": {
-            "ver": "2.0.2"
-        },
-        "presence": {
-            "ver": "4.0.0"
-        },
-        "weather": {
-            "ver": "4.0.0"
-        }
-    },
     "token": {
         "tokenNum": 2
     },
@@ -41,7 +21,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.0.0"
+                "ver": "4.0.2"
             },
             "thermostat": {
                 "ver": "4.0.0"
@@ -53,7 +33,7 @@
                 "ver": "4.0.0"
             },
             "camera": {
-                "ver": "2.0.0"
+                "ver": "2.0.2"
             },
             "presence": {
                 "ver": "4.0.0"
@@ -72,7 +52,17 @@
     "database": {
         "disableExceptions": true
     },
-    "aaSupport": {
-        "enabled": true
+    "aaPrefs": {
+        "enAaMsgQueue": true
+    },
+    "reportPrefs": {
+        "disVoiceZoneRprt": false,
+        "disVoiceUsageRprt": false
+    },
+    "clientBL": {
+        "clients": []
+    },
+    "pollMethod": {
+        "allowAsync": true
     }
 }

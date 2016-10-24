@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "3.1.1" }
+def devVer() { return "4.0.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -36,6 +36,7 @@ metadata {
 		capability "Relative Humidity Measurement"
 		capability "Temperature Measurement"
 		capability "Ultraviolet Index"
+		capability "Health Check"
 
 		command "refresh"
 		command "log"
@@ -99,7 +100,7 @@ mappings {
 }
 
 def initialize() {
-	LogAction("initialize")
+	Logger("initialize")
 }
 
 def parse(String description) {
@@ -136,7 +137,7 @@ def getTempColors() {
 }
 
 def poll() {
-	LogAction("Polling parent...")
+	Logger("Polling parent...")
 	parent.refresh(this)
 }
 
@@ -149,8 +150,8 @@ def refresh() {
 
 def generateEvent(Map eventData) {
 	//LogAction("generateEvent Parsing data ${eventData}", "trace")
-	state.eventData = eventData
-	runIn(3, "processEvent", [overwrite: true] )
+	state.eventData = eventData  // this data size is much larger than 2500 bytes
+	runIn(12, "processEvent", [overwrite: true] )
 }
 
 def processEvent() {
@@ -158,10 +159,10 @@ def processEvent() {
 	state.eventData = null
 	//LogAction("processEvent Parsing data ${eventData}", "trace")
 	try {
-		Logger("------------START OF API RESULTS DATA------------", "warn")
+		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.tempUnit = getTemperatureScale()
-
+			state.clientBl = eventData?.clientBl == true ? true : false
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
 			state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
@@ -175,7 +176,6 @@ def processEvent() {
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
-
 			//resetDataTables()
 			lastUpdatedEvent()
 		}
@@ -203,7 +203,7 @@ def getTimeZone() {
 	def tz = null
 	if (!state?.nestTimeZone) { tz = location?.timeZone }
 	else { tz = TimeZone.getTimeZone(state?.nestTimeZone) }
-	if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true) }
+	if(!tz) { Logger("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true) }
 	return tz
 }
 
@@ -226,7 +226,7 @@ def isCodeUpdateAvailable(newVer, curVer) {
 		}
 		result = (latestVer == newVer) ? true : false
 	}
-	Logger("newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result")
+	LogAction("newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result")
 	return result
 }
 
@@ -240,7 +240,7 @@ def deviceVerEvent(ver) {
 	if(!curData?.equals(newData)) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-	} else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
+	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
 def debugOnEvent(debug) {
@@ -249,9 +249,9 @@ def debugOnEvent(debug) {
 	state?.debugStatus = dVal
 	state?.debug = debug.toBoolean() ? true : false
 	if(!val.equals(dVal)) {
-		LogAction("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+		Logger("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-	} else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
+	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def lastUpdatedEvent() {
@@ -263,7 +263,7 @@ def lastUpdatedEvent() {
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
 	if(!lastUpd.equals(lastDt?.toString())) {
-		Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
+		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
 	}
 }
@@ -273,34 +273,34 @@ def apiStatusEvent(issue) {
 	def newStat = issue ? "issue" : "ok"
 	state?.apiStatus = newStat
 	if(!curStat.equals(newStat)) {
-		LogAction("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-	} else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
+	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
 def humidityEvent(humidity) {
 	def hum = device.currentState("humidity")?.value
 	if(!hum.equals(humidity)) {
-		LogAction("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
+		Logger("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
 		sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
-	} else { Logger("Humidity is (${humidity}) | Original State: (${hum})") }
+	} else { LogAction("Humidity is (${humidity}) | Original State: (${hum})") }
 }
 
 def illuminanceEvent(illum) {
 	def cur = device.currentState("illuminance")?.value.toString()
 	if(!cur.equals(illum.toString())) {
-		LogAction("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
+		Logger("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
 		sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
-	} else { Logger("Illuminance is (${illum}) | Original State: (${cur})") }
+	} else { LogAction("Illuminance is (${illum}) | Original State: (${cur})") }
 }
 
 def dewpointEvent(Double tempVal) {
 	def temp = device.currentState("dewpoint")?.value.toString()
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	if(!temp.equals(rTempVal.toString())) {
-		LogAction("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
+		Logger("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
 		sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Dew point Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
-	} else { Logger("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+	} else { LogAction("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
 def temperatureEvent(Double tempVal, Double feelsVal) {
@@ -308,10 +308,10 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
 	if(!temp.equals(rTempVal.toString())) {
-		LogAction("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
+		Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
 		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
 		sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
-	} else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+	} else { LogAction("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
 def getTemp() {
@@ -348,7 +348,7 @@ def wantMetric() { return (state?.tempUnit == "C") }
 def getWeatherConditions(Map weatData) {
 	try {
 		if(!weatData.current_observation) {
-			LogAction("There is an Issue getting the weather condition data", "warn")
+			Logger("There is an Issue getting the weather condition data", "warn")
 			return
 		} else {
 			def cur = weatData
@@ -407,7 +407,7 @@ def getWeatherConditions(Map weatData) {
 
 				sendEvent(name: "uvindex", value: cur?.current_observation?.UV)
 				sendEvent(name: "ultravioletIndex", value: cur?.current_observation?.UV)
-				Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
+				LogAction("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
 			}
 		}
 	}
@@ -420,7 +420,7 @@ def getWeatherConditions(Map weatData) {
 def getWeatherForecast(Map weatData) {
 	try {
 		if(!weatData) {
-			LogAction("There is an Issue getting the weather forecast", "warn")
+			Logger("There is an Issue getting the weather forecast", "warn")
 			return
 		} else {
 			def cur = weatData
@@ -446,7 +446,7 @@ def getWeatherForecast(Map weatData) {
 def getWeatherAstronomy(weatData) {
 	try {
 		if(!weatData) {
-			LogAction("There is an Issue getting the weather astronomy data", "warn")
+			Logger("There is an Issue getting the weather astronomy data", "warn")
 			return
 		} else {
 			def cur = weatData
@@ -468,7 +468,7 @@ def getWeatherAstronomy(weatData) {
 def getWeatherAlerts(weatData) {
 	try {
 		if(!weatData) {
-			LogAction("There is an Issue getting the weather alert data", "warn")
+			Logger("There is an Issue getting the weather alert data", "warn")
 			return
 		} else {
 			def cur = weatData
@@ -487,6 +487,8 @@ def getWeatherAlerts(weatData) {
 					sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
 					sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
 					state.walert = noneString
+					state.walertMessage = null
+					state.lastWeatherAlertNotif = null
 				}
 				else if (newKeys != oldKeys) {
 					if (oldKeys == null) {
@@ -522,6 +524,8 @@ def getWeatherAlerts(weatData) {
 					if (!newAlerts && device.currentValue("alert") != noneString) {
 						sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
 						state.walert = noneString
+						state.walertMessage = null
+						state.lastWeatherAlertNotif = null
 					}
 				}
 			}
@@ -672,7 +676,7 @@ def formatDt(dt) {
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
 	else {
-		LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
+		Logger("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
 	}
 	return tf.format(dt)
 }
@@ -689,7 +693,7 @@ def convertRfc822toDt(dt) {
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
-def LogAction(msg, logType = "debug") {
+void Logger(msg, logType = "debug") {
 	def smsg = "${device.displayName}: ${msg}"
 	switch (logType) {
 		case "trace":
@@ -713,10 +717,10 @@ def LogAction(msg, logType = "debug") {
 	}
 }
 
-// Local Device Logging
-def Logger(msg, logType = "debug") {
+// Local Application Logging
+void LogAction(msg, logType = "debug") {
 	if(state?.debug) {
-		LogAction(msg, logType)
+		Logger(msg, logType)
 	}
 }
 
@@ -761,7 +765,7 @@ def getImgBase64(url, type) {
 		}
 	}
 	catch (ex) {
-		log.error "getImageBase64 Exception:", ex
+		log.error "getImgBase64 Exception:", ex
 		exceptionDataHandler(ex.message, "getImgBase64")
 	}
 }
@@ -830,19 +834,19 @@ def getCssData() {
 				//LogAction("getCssData: CSS Data is Current | Loading Data from State...")
 				cssData = state?.cssData
 			} else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
-				LogAction("getCssData: CSS Data is Outdated | Loading Data from Source...")
+				//LogAction("getCssData: CSS Data is Outdated | Loading Data from Source...")
 				cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
 				state.cssData = cssData
 				state?.cssVer = htmlInfo?.cssVer
 			}
 		} else {
-			LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
+			//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
 			cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
 			state?.cssData = cssData
 			state?.cssVer = htmlInfo?.cssVer
 		}
 	} else {
-		LogAction("getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL...")
+		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
@@ -880,7 +884,7 @@ def getChartJsData() {
 def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
-def getWeatherIcon(weatherIcon) {
+def getWeatherIcon() {
 	try {
 		return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
 	}
@@ -1194,13 +1198,32 @@ def addNewData() {
 
 	// add latest dewpoint & temperature readings for the graph
 	def newDate = new Date()
-	temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
-	dewpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentDewpoint])
-	humidityTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentHumidity])
+        def hr = newDate.format("H", location.timeZone) as Integer
+        def mins = newDate.format("m", location.timeZone) as Integer
+	state.temperatureTable = addValue(temperatureTable, hr, mins, currentTemperature)
+	state.dewpointTable = addValue(dewpointTable, hr, mins, currentDewpoint)
+	state?.humidityTable = addValue(humidityTable, hr, mins, currentHumidity)
 
-	state.temperatureTable = temperatureTable
-	state.dewpointTable = dewpointTable
-	state?.humidityTable = humidityTable
+	//temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
+	//dewpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentDewpoint])
+	//humidityTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentHumidity])
+
+	//state.temperatureTable = temperatureTable
+	//state.dewpointTable = dewpointTable
+	//state?.humidityTable = humidityTable
+}
+
+def addValue(table, hr, mins, val) {
+        def newTable = table
+	if(table?.size() > 2) {
+		def last = table?.last()[2]
+		def secondtolast = table[-2][2]
+		if(val == last && val == secondtolast) {
+			newTable = table?.take(table.size() - 1)
+		}
+	}
+	newTable?.add([hr, mins, val])
+	return newTable
 }
 
 def getStartTime() {
@@ -1238,6 +1261,7 @@ def getWeatherHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
 		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
+		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 		def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
 
@@ -1371,6 +1395,7 @@ def getWeatherHTML() {
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 			</head>
 			<body>
+				  ${clientBl}
 				  ${updateAvail}
 				  <div class="container">
 				  <h4>Current Weather Conditions</h4>

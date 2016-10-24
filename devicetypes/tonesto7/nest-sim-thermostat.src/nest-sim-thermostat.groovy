@@ -12,13 +12,13 @@
  *
  */
 
-def devVer() { return "1.0.1"}
+def devVer() { return "1.0.2"}
 
 metadata {
     definition (name: "Nest Sim Thermostat", namespace: "tonesto7", author: "Anthony S.") {
         capability "Thermostat"
         capability "Relative Humidity Measurement"
-        
+
         command "tempUp"
         command "tempDown"
         command "heatUp"
@@ -33,7 +33,11 @@ metadata {
         command "safetyHumidityMaxDown"
         command "comfortDewpointMaxUp"
         command "comfortDewpointMaxDown"
-        command "changeMode"
+        command "changeOperState"
+        command "setHeating"
+        command "setCooling"
+        command "setFanOnly"
+        command "setIdle"
 
         command "safetyTempMinUp"
         command "safetyTempMinDown"
@@ -44,7 +48,7 @@ metadata {
         command "lockedTempMaxUp"
         command "lockedTempMaxDown"
         command "changeTempLock"
-        
+
         attribute "presence", "string"
         attribute "nestPresence", "string"
         attribute "safetyTempMin", "string"
@@ -56,8 +60,6 @@ metadata {
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
-        attribute "nestType", "string"
-        attribute "pauseUpdates", "string"
     }
 
     tiles(scale: 2) {
@@ -147,27 +149,28 @@ metadata {
             state "cool", action:"thermostat.auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png"
             state "auto", action:"thermostat.off", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png"
         }
-        
+
         standardTile("fanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
             state "auto",	action:"fanOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
             state "on",		action:"fanAuto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
             state "circulate",	action:"fanAuto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
             state "disabled", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_disabled_icon.png"
         }
-        
-        standardTile("operatingState", "device.thermostatOperatingState", width: 2, height: 2) {
-            state "idle", label:'${name}', backgroundColor:"#ffffff"
-            state "heating", label:'${name}', backgroundColor:"#ffa81e"
-            state "cooling", label:'${name}', backgroundColor:"#269bd2"
+
+        standardTile("operatingState", "device.thermostatOperatingState", width: 2, height: 2, decoration: "flat") {
+            state "idle", label:'${name}', action: "setHeating", backgroundColor:"#ffffff"
+            state "heating", label:'${name}', action: "setCooling", backgroundColor:"#ffa81e"
+            state "cooling", label:'${name}', action: "setFanOnly", backgroundColor:"#269bd2"
+            state "fan only", label:'${name}', action: "setIdle", backgroundColor:"#269bd2"
         }
-        
+
         standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
             state "home", 	    action: "changePresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
             state "away", 		action: "changePresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
             state "auto-away", 	action: "changePresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
             state "unknown",	action: "changePresence", 	icon: "st.unknown.unknown.unknown"
         }
-        
+
         valueTile("safetyTempMin", "device.safetyTempMin", width: 2, height: 2, decoration: "flat") {
             state "default", label:'Safety Temp Min\n${currentValue}', unit: "F", backgroundColor:"#ffffff"
         }
@@ -181,7 +184,7 @@ metadata {
         valueTile("safetyTempMax", "device.safetyTempMax", width: 2, height: 2, decoration: "flat") {
             state "default", label:'Safety Temp Max\n${currentValue}', unit: "F", backgroundColor:"#ffffff"
         }
-        
+
         standardTile("safetyTempMaxDown", "device.safetyTempMax", width: 2, height: 2, decoration: "flat") {
             state "default", action:"safetyTempMaxDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
         }
@@ -198,7 +201,7 @@ metadata {
         standardTile("safetyHumidityMaxUp", "device.safetyHumidityMax", width: 2, height: 2, decoration: "flat") {
             state "default", action:"safetyHumidityMaxUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
         }
-        
+
         valueTile("comfortDewpointMax", "device.comfortDewpointMax", width: 2, height: 2, decoration: "flat") {
             state "default", label:'Dewpoint Max\n${currentValue}', unit: "%", backgroundColor:"#ffffff"
         }
@@ -227,7 +230,7 @@ metadata {
         valueTile("lockedTempMax", "device.lockedTempMax", width: 2, height: 2, decoration: "flat") {
             state "default", label:'Temp Lock Max\n${currentValue}', unit: "F", backgroundColor:"#ffffff"
         }
-        
+
         standardTile("lockedTempMaxDown", "device.lockedTempMax", width: 2, height: 2, decoration: "flat") {
             state "default", action:"lockedTempMaxDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
         }
@@ -243,8 +246,8 @@ metadata {
             "thermostatMulti", "temperature","tempDown","tempUp",
             "mode", "fanMode", "operatingState",
             "heatingSetpoint", "heatDown", "heatUp",
-            "coolingSetpoint", "coolDown", "coolUp", 
-            "humidity", "humidityDown", "humidityUp", 
+            "coolingSetpoint", "coolDown", "coolUp",
+            "humidity", "humidityDown", "humidityUp",
             "nestPresence", "filler", "filler",
             "safetyTempMin", "safetyTempMinDown", "safetyTempMinUp",
             "safetyTempMax", "safetyTempMaxDown", "safetyTempMaxUp",
@@ -253,7 +256,7 @@ metadata {
             "tempLocked", "filler", "filler",
             "lockedTempMin", "lockedTempMinDown", "lockedTempMinUp",
             "lockedTempMax", "lockedTempMaxDown", "lockedTempMaxUp"
-            
+
         ])
     }
 }
@@ -277,7 +280,6 @@ def installed() {
     sendEvent(name: "tempLockOn", value: false, descriptionText: "Nest Temp Lock is: (Off)", displayed: false, isStateChange: true)
     sendEvent(name: "lockedTempMin", value: 60, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (60°${getTemperatureScale()})", displayed: false, isStateChange: true)
     sendEvent(name: "lockedTempMax", value: 80, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (80°${getTemperatureScale()})", displayed: false, isStateChange: true)
-    sendEvent(name: 'nestType', value: "physical", displayed: true)
 }
 
 def parse(String description) {
@@ -285,7 +287,6 @@ def parse(String description) {
 
 def evaluate(temp, heatingSetpoint, coolingSetpoint) {
     //log.debug "${device?.displayName} evaluate(Temp: $temp°${getTemperatureScale()}, HeatSetpoint: $heatingSetpoint°${getTemperatureScale()}, CoolSetpoint: $coolingSetpoint°${getTemperatureScale()})"
-    sendEvent(name: 'nestType', value: "physical", displayed: true)
     def threshold = 1.0
     def current = device.currentValue("thermostatOperatingState")
     def mode = device.currentValue("thermostatMode")
@@ -569,4 +570,44 @@ def lockedTempMaxDown() {
     sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
-private def virtType()     { return false }
+def changeOperState() {
+    def ts = device.currentThermostatOperatingState.toString()
+    switch(ts) {
+        case "idle":
+            setHeating()
+            break
+        case "heating":
+            setCooling()
+            break
+        case "cooling":
+            setFanOnly()
+            break
+        case "fan only":
+            setIdle()
+            break
+    }
+}
+
+def setIdle() {
+    def value = "idle"
+    log.debug "thermostatOperatingState is now: (${value})"
+    sendEvent(name: 'thermostatOperatingState', value: value, descriptionText: "OperatingState is now: (${value})", displayed: false, isStateChange: true)
+}
+
+def setHeating() {
+    def value = "heating"
+    log.debug "thermostatOperatingState is now: (${value})"
+    sendEvent(name: 'thermostatOperatingState', value: value, descriptionText: "OperatingState is now: (${value})", displayed: false, isStateChange: true)
+}
+
+def setCooling() {
+    def value = "cooling"
+    log.debug "thermostatOperatingState is now: (${value})"
+    sendEvent(name: 'thermostatOperatingState', value: value, descriptionText: "OperatingState is now: (${value})", displayed: false, isStateChange: true)
+}
+
+def setFanOnly() {
+    def value = "fan only"
+    log.debug "thermostatOperatingState is now: (${value})"
+    sendEvent(name: 'thermostatOperatingState', value: value, descriptionText: "OperatingState is now: (${value})", displayed: false, isStateChange: true)
+}
