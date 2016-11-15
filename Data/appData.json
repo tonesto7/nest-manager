@@ -67,5 +67,8 @@
     },
     "schedule": {
         "count": 4
+    },
+    "healthcheck": {
+        "timeout": 35
     }
 }
