@@ -1,6 +1,6 @@
 {
     "help": {
-        "showHelp": "false"
+        "showHelp": true
     },
     "state": {
         "stateVarVer": 2
