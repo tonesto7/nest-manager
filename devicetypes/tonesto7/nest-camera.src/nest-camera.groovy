@@ -516,11 +516,11 @@ def getPublicVideoId() {
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
 def chgStreaming() {
-	def cur = latestValue("isStreaming").toString()
+	def cur = device.latestValue("isStreaming").toString()
 	if(cur == "on" || cur == "unavailable" || !cur) {
-		streamingOn(true)
-	} else {
 		streamingOff(true)
+	} else {
+		streamingOn(true)
 	}
 }
 
@@ -648,8 +648,8 @@ def exceptionDataHandler(msg, methodName) {
 }
 
 def incHtmlLoadCnt() 		{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
-def incManStreamChgCnt() 	{ state?.manStreamChgCnt = (state?.manStreamChgCnt ? state?.manStreamChgCnt.toInteger()+1 : 1) }
-def incProgStreamChgCnt() 	{ state?.progStreamChgCnt = (state?.progStreamChgCnt ? state?.progStreamChgCnt.toInteger()+1 : 1) }
+def incManStreamChgCnt() 	{ state?.manStreamChgCnt = (state?.manStreamChgCnt ? state?.manStreamChgCnt.toInteger()+1 : 1); return ""; }
+def incProgStreamChgCnt() 	{ state?.progStreamChgCnt = (state?.progStreamChgCnt ? state?.progStreamChgCnt.toInteger()+1 : 1); return ""; }
 def incVideoBtnTapCnt()		{ state?.videoBtnTapCnt = (state?.videoBtnTapCnt ? state?.videoBtnTapCnt.toInteger()+1 : 1); return ""; }
 def incImageBtnTapCnt()		{ state?.imageBtnTapCnt = (state?.imageBtnTapCnt ? state?.imageBtnTapCnt.toInteger()+1 : 1); return ""; }
 def incEventBtnTapCnt()		{ state?.eventBtnTapCnt = (state?.eventBtnTapCnt ? state?.eventBtnTapCnt.toInteger()+1 : 1); return ""; }
