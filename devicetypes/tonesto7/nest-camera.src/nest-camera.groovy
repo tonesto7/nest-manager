@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.1.0" }
+def devVer() { return "2.1.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -165,7 +165,7 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-    verifyHC()
+	verifyHC()
 }
 
 void verifyHC() {
@@ -219,8 +219,12 @@ def processEvent() {
 			def results = eventData?.data
 			//log.debug "results: $results"
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
-            state.clientBl = eventData?.clientBl == true ? true : false
+			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
 			isStreamingEvent(results?.is_streaming)
@@ -515,16 +519,16 @@ def getPublicVideoId() {
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
-def chgStreaming() {
-	def cur = latestValue("isStreaming").toString()
+void chgStreaming() {
+	def cur = device.latestValue("isStreaming").stringValue
 	if(cur == "on" || cur == "unavailable" || !cur) {
-		streamingOn(true)
-	} else {
 		streamingOff(true)
+	} else {
+		streamingOn(true)
 	}
 }
 
-def streamingOn(manChg=false) {
+void streamingOn(manChg=false) {
 	try {
 		log.trace "streamingOn..."
 		if(parent?.setCamStreaming(this, "true")) {
@@ -539,7 +543,7 @@ def streamingOn(manChg=false) {
 	}
 }
 
-def streamingOff(manChg=false) {
+void streamingOff(manChg=false) {
 	try {
 		log.trace "streamingOff..."
 		if(parent?.setCamStreaming(this, "false")) {
@@ -553,15 +557,15 @@ def streamingOff(manChg=false) {
 	}
 }
 
-def on() {
+void on() {
 	streamingOn()
 }
 
-def off() {
+void off() {
 	streamingOff()
 }
 
-def take() {
+void take() {
 	try {
 		def img = getImgBase64(state?.snapshot_url,'jpeg')
 		//log.debug "img: $img"
