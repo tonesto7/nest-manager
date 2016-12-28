@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.0.1" }
+def devVer() { return "4.3.0" }
 
 // for the UI
 metadata {
@@ -36,6 +36,7 @@ metadata {
 		capability "Presence Sensor"
 		capability "Sensor"
 		capability "Refresh"
+		capability "Health Check"
 
 		command "setPresence"
 		command "refresh"
@@ -88,6 +89,25 @@ mappings {
 	path("/getHtml") {action: [GET: "getHtml"] }
 }
 
+void installed() {
+	Logger("installed...")
+	verifyHC()
+}
+
+void verifyHC() {
+	def val = device.currentValue("checkInterval")
+	def timeOut = state?.hcTimeout ?: 60
+	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+	}
+}
+
+def ping() {
+	Logger("ping...")
+	refresh()
+}
+
 def initialize() {
 	LogAction("initialize")
 }
@@ -117,13 +137,25 @@ def generateEvent(Map eventData) {
 }
 
 def processEvent(data) {
+	if(state?.swVersion != devVer()) {
+		installed()
+		state.swVersion = devVer()
+	}
 	def eventData = data?.evt
 	state.remove("eventData")
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
+			state.nestTimeZone = eventData?.tz ?: null
+			state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
 			state?.useMilitaryTime = !eventData?.mt ? false : true
 			debugOnEvent(!eventData?.debug ? false : true)
 			presenceEvent(eventData?.pres)
@@ -296,7 +328,7 @@ def setHome() {
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
-	def smsg = "${device.displayName}: ${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
 			log.trace "${smsg}"
@@ -316,6 +348,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "Presence DTH")
 	}
 }
 
@@ -342,6 +377,11 @@ def exceptionDataHandler(msg, methodName) {
 			parent?.sendChildExceptionData("presence", devVer(), msgString, methodName)
 		}
 	}
+}
+
+def incHtmlLoadCnt() { state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
+def getMetricCntData() {
+	return [presHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]
 }
 
 def getImgBase64(url,type) {
@@ -441,6 +481,7 @@ def getHtml() {
 			</body>
 		</html>
 		"""
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {

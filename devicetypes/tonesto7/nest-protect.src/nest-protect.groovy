@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.0.1" }
+def devVer() { return "4.3.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -143,7 +143,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5)
+		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 6)
 
 		main "main2"
 		details(["alarmState", "devInfoHtml", "refresh"])
@@ -159,10 +159,18 @@ def initialize() {
 	poll()
 }
 
-def installed() {
+void installed() {
 	Logger("installed...")
-	// Notify health check about this device with timeout interval 12 hrs
-	//sendEvent(name: "checkInterval", value: 12*60*60, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID], displayed: false)
+	verifyHC()
+}
+
+void verifyHC() {
+	def val = device.currentValue("checkInterval")
+	def timeOut = state?.hcTimeout ?: 35
+	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+	}
 }
 
 def ping() {
@@ -265,9 +273,16 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
-            state.clientBl = eventData?.clientBl == true ? true : false
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
+			state.nestTimeZone = eventData?.tz ?: null
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false
 			carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
 			if(!results?.last_connection) { lastCheckinEvent(null) }
@@ -499,7 +514,7 @@ def testingStateEvent(test) {
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
-	def smsg = "${device.displayName}: ${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
 			log.trace "${smsg}"
@@ -519,6 +534,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "Protect DTH")
 	}
 }
 
@@ -541,6 +559,12 @@ def exceptionDataHandler(msg, methodName) {
 		def msgString = "${msg}"
 		parent?.sendChildExceptionData("protect", devVer(), msgString, methodName)
 	}
+}
+
+def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
+def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
+def getMetricCntData() {
+	return [protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]//, protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
 }
 
 def getCarbonImg() {
@@ -685,15 +709,31 @@ def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile
 
 def getInfoHtml() {
 	try {
-		log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
 		def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
 				"<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
-		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
-		def html = """
+
+        def updateAvail = !state.updateAvailable ? "" : """
+        	<script>
+              vex.dialog.alert({
+                message: 'Device Update Available!',
+                className: 'vex-theme-top'
+              })
+			</script>
+        """
+
+        def clientBl = state?.clientBl ? """
+              <script>
+                vex.dialog.alert({
+                  unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
+                  className: 'vex-theme-top'
+                })
+			  </script>
+            """ : ""
+
+        def html = """
 		<!DOCTYPE html>
 		<html>
 			<head>
@@ -703,11 +743,15 @@ def getInfoHtml() {
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
 			</head>
 			<body>
-			  ${clientBl}
-			  ${updateAvail}
 			  ${testModeHTML}
 			  <div class="row">
 				<div class="offset-by-two four columns centerText">
@@ -731,41 +775,34 @@ def getInfoHtml() {
 					  </tr>
 					</tbody>
 			  </table>
-
-			  <p class="centerText">
-				<a href="#openModal" class="button">More info</a>
-			  </p>
-			  <div id="openModal" class="topModal">
-				<div>
-				  <a href="#close" title="Close" class="close">X</a>
-				  <table>
-					<tr>
-					  <th>Firmware Version</th>
-					  <th>Debug</th>
-					  <th>Device Type</th>
-					</tr>
-					<td>v${state?.softwareVer.toString()}</td>
-					<td>${state?.debugStatus}</td>
-					<td>${state?.devTypeVer.toString()}</td>
-				  </table>
-				  <table>
-					<thead>
-					  <th>Nest Last Checked-In</th>
-					  <th>Data Last Received</th>
-					</thead>
-					<tbody>
-					  <tr>
-						<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-						<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-					  </tr>
-					</tbody>
-				  </table>
-				</div>
-			  </div>
-			  </div>
+			  <table>
+				<tr>
+				  <th>Firmware Version</th>
+				  <th>Debug</th>
+				  <th>Device Type</th>
+				</tr>
+				<td>v${state?.softwareVer.toString()}</td>
+				<td>${state?.debugStatus}</td>
+				<td>${state?.devTypeVer.toString()}</td>
+			  </table>
+			  <table>
+				<thead>
+				  <th>Nest Last Checked-In</th>
+				  <th>Data Last Received</th>
+				</thead>
+				<tbody>
+				  <tr>
+					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+				  </tr>
+				</tbody>
+			  </table>
+              ${clientBl}
+			  ${updateAvail}
 			</body>
 		</html>
 		"""
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	}
 	catch (ex) {

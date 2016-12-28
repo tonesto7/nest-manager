@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.0.2" }
+def devVer() { return "2.3.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -43,7 +43,7 @@ metadata {
 		command "log", ["string","string"]
 		command "streamingOn"
 		command "streamingOff"
-		command "changeStreaming"
+		command "chgStreaming"
 
 		attribute "softwareVer", "string"
 		attribute "lastConnection", "string"
@@ -92,13 +92,15 @@ metadata {
 		}
 
 		standardTile("isStreamingStatus", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
-			state("on", label: "Streaming", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
-			state("off", label: "Off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
+			state("on", label: "Streaming", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
+			state("off", label: "Off", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
+			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state("unavailable", label: "Unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#F22000")
 		}
 		standardTile("isStreaming", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
-			state("on", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_stream_btn_icon.png")
-			state("off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
+			state("on", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_stream_btn_icon.png")
+			state("off", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
+			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state("unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_offline_btn_icon.png")
 		}
 		carouselTile("cameraDetails", "device.image", width: 4, height: 4) { }
@@ -144,7 +146,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 11, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main "isStreamingStatus"
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
@@ -161,10 +163,18 @@ def initialize() {
 	poll()
 }
 
-def installed() {
+void installed() {
 	Logger("installed...")
-	// Notify health check about this device with timeout interval 30 minutes
-	//sendEvent(name: "checkInterval", value: 3*60*60, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID], displayed: false)
+	verifyHC()
+}
+
+void verifyHC() {
+	def val = device.currentValue("checkInterval")
+	def timeOut = state?.hcTimeout ?: 35
+	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+	}
 }
 
 def ping() {
@@ -208,9 +218,16 @@ def processEvent() {
 		if(eventData) {
 			def results = eventData?.data
 			//log.debug "results: $results"
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
-            state.clientBl = eventData?.clientBl == true ? true : false
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
+			state.nestTimeZone = eventData?.tz ?: null
 			isStreamingEvent(results?.is_streaming)
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
 			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
@@ -386,13 +403,13 @@ def lastEventDataEvent(data) {
 	def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
 	def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) : "Not Available"
 	def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
-
+	def hasPerson = data?.has_person == "true" ? true : false
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 	state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
 	state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
 	state?.lastEventData = data
 
-	if(curStartDt != newStartDt || curEndDt != newEndDt) {
+	if((curStartDt != newStartDt || curEndDt != newEndDt) && hasPerson) {
 		Logger("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is now ${newStartDt}", displayed: false)
 		Logger("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
@@ -503,37 +520,53 @@ def getPublicVideoId() {
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
-def streamingOn() {
+void chgStreaming() {
+	def cur = device?.currentState("isStreaming")?.value.toString()
+	if(cur == "on" || cur == "unavailable" || !cur) {
+		streamingOff(true)
+	} else {
+		streamingOn(true)
+	}
+}
+
+void streamingOn(manChg=false) {
 	try {
 		log.trace "streamingOn..."
-		parent?.setCamStreaming(this, "true")
-		sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+		if(parent?.setCamStreaming(this, "true")) {
+			sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+			if(manChg) { incManStreamChgCnt() }
+			else { incProgStreamChgCnt() }
+		}
+
 	} catch (ex) {
 		log.error "streamingOn Exception:", ex
 		exceptionDataHandler(ex.message, "streamingOn")
 	}
 }
 
-def streamingOff() {
+void streamingOff(manChg=false) {
 	try {
 		log.trace "streamingOff..."
-		parent?.setCamStreaming(this, "false")
-		sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+		if(parent?.setCamStreaming(this, "false")) {
+			sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+			if(manChg) { incManStreamChgCnt() }
+			else { incProgStreamChgCnt() }
+		}
 	} catch (ex) {
 		log.error "streamingOff Exception:", ex
 		exceptionDataHandler(ex.message, "streamingOff")
 	}
 }
 
-def on() {
+void on() {
 	streamingOn()
 }
 
-def off() {
+void off() {
 	streamingOff()
 }
 
-def take() {
+void take() {
 	try {
 		def img = getImgBase64(state?.snapshot_url,'jpeg')
 		//log.debug "img: $img"
@@ -571,7 +604,7 @@ def take() {
 *************************************************************************************************/
 
 void Logger(msg, logType = "debug") {
-	def smsg = "${device.displayName}: ${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
 			log.trace "${smsg}"
@@ -591,6 +624,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "Camera DTH")
 	}
 }
 
@@ -617,6 +653,22 @@ def exceptionDataHandler(msg, methodName) {
 			parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
 		}
 	}
+}
+
+def incHtmlLoadCnt() 		{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
+def incManStreamChgCnt() 	{ state?.manStreamChgCnt = (state?.manStreamChgCnt ? state?.manStreamChgCnt.toInteger()+1 : 1) }
+def incProgStreamChgCnt() 	{ state?.progStreamChgCnt = (state?.progStreamChgCnt ? state?.progStreamChgCnt.toInteger()+1 : 1) }
+def incVideoBtnTapCnt()		{ state?.videoBtnTapCnt = (state?.videoBtnTapCnt ? state?.videoBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incImageBtnTapCnt()		{ state?.imageBtnTapCnt = (state?.imageBtnTapCnt ? state?.imageBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incEventBtnTapCnt()		{ state?.eventBtnTapCnt = (state?.eventBtnTapCnt ? state?.eventBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incInfoBtnTapCnt()		{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
+
+def getMetricCntData() {
+	return 	[
+			camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadCnt ?: 0)//,
+			//camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0), camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0),
+			//camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
+			]
 }
 
 /************************************************************************************************
@@ -896,39 +948,32 @@ def getCamHtml() {
 						</tr>
 					  </tbody>
 				</table>
-				<p class="centerText">
-				  <a href="#openModal" class="button">More info</a>
-				</p>
-				<div id="openModal" class="topModal">
-				  <div>
-					<a href="#close" title="Close" class="close">X</a>
-					<table>
-					  <tr>
-						<th>Firmware Version</th>
-						<th>Debug</th>
-						<th>Device Type</th>
-					  </tr>
-					  <td>v${state?.softwareVer.toString()}</td>
-					  <td>${state?.debugStatus}</td>
-					  <td>${state?.devTypeVer.toString()}</td>
-					</table>
-					<table>
-					  <thead>
-						<th>Last Online Change</th>
-						<th>Data Last Received</th>
-					  </thead>
-					  <tbody>
-						<tr>
-						  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-						  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-						</tr>
-					  </tbody>
-					</table>
-				  </div>
-				</div>
+				<table>
+				  <tr>
+					<th>Firmware Version</th>
+					<th>Debug</th>
+					<th>Device Type</th>
+				  </tr>
+				  <td>v${state?.softwareVer.toString()}</td>
+				  <td>${state?.debugStatus}</td>
+				  <td>${state?.devTypeVer.toString()}</td>
+				</table>
+				<table>
+				  <thead>
+					<th>Last Online Change</th>
+					<th>Data Last Received</th>
+				  </thead>
+				  <tbody>
+					<tr>
+					  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+					  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+					</tr>
+				  </tbody>
+				</table>
 			</body>
 		</html>
 		"""
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
