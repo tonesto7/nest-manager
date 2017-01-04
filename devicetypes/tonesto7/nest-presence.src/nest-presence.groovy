@@ -41,6 +41,8 @@ metadata {
 		command "setPresence"
 		command "refresh"
 		command "log"
+                command "setAway"
+                command "setHome"
 
 		attribute "lastConnection", "string"
 		attribute "apiStatus", "string"
