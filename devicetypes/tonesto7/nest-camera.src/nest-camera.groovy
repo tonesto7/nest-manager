@@ -354,6 +354,7 @@ def isStreamingEvent(isStreaming) {
 	if(!isOn.equals(val)) {
 		Logger("UPDATED | Streaming Video is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video is: ${val}", displayed: true, isStateChange: true, state: val)
+                sendEvent(name: "switch", value: val)
 	} else { LogAction("Streaming Video Status is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -534,6 +535,7 @@ void streamingOn(manChg=false) {
 		log.trace "streamingOn..."
 		if(parent?.setCamStreaming(this, "true")) {
 			sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+                        sendEvent(name: "switch", value: "on")
 			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
@@ -549,6 +551,7 @@ void streamingOff(manChg=false) {
 		log.trace "streamingOff..."
 		if(parent?.setCamStreaming(this, "false")) {
 			sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+                        sendEvent(name: "switch", value: "off")
 			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
