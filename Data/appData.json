@@ -58,6 +58,7 @@
         "allowRemoteDiag": true,
         "disableExceptions": false,
         "exceptionPath": "exceptionData",
+        "newexceptionPath": "newexceptionData",
         "remoteDiagPath": "remoteDiagLogs"
     },
     "aaPrefs": {
