@@ -384,19 +384,15 @@ tr {
 }
 
 .slideFooterMsg {
-	font-size: 3.0vw;
-	padding: 20px;
-	position: absolute;
-	width: 95%;
-	bottom: 0;
-	horizontal-align: center;
-	vertical-align: bottom;
+    font-size: 3.0vw;
+    padding: 20px;
+    margin:1em auto;
 }
 
 .pageFooterBtn {
-	padding: 10px;
-	horizontal-align: center;
-	vertical-align: bottom;
+    padding: 10px;
+    horizontal-align: center;
+    text-align: center;
 }
 
 .schedFill {
