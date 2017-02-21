@@ -27,23 +27,23 @@ var mySwiper = new Swiper ('.swiper-container', {
     paginationClickable: true
 })
 
-function reloadCamPage() {
+function reloadCamPage(String devId) {
     var url = "https://"
     url += window.location.host.toString()
-    url += "/api/devices/${device?.getId()}/getCamHTML"
+    url +="/api/devices/" + devId + "/getCamHTML"
     window.location = url;
 }
 
-function reloadTstatPage() {
+function reloadTstatPage(String devId) {
     var url = "https://"
     url += window.location.host.toString()
-    url += "/api/devices/${device?.getId()}/graphHTML"
+    url += "/api/devices/" + devId + "/graphHTML"
     window.location = url;
 }
 
-function reloadWeatherPage() {
+function reloadWeatherPage(String devId) {
     var url = "https://"
     url += window.location.host.toString()
-    url += "/api/devices/${device?.getId()}/getWeatherHTML"
+    url += "/api/devices/" + devId + "/getWeatherHTML"
     window.location = url;
 }
