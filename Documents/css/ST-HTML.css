@@ -242,6 +242,11 @@ tr {
   width:30px; height:15px;
 }
 
+.alarmImg {
+  vertical-align: top;
+  width:60px; height:60px;
+}
+
 .leafImg {
   width: 25px;
   height: 25px;
@@ -306,7 +311,6 @@ tr {
   margin:2px;
 }
 
-
 /*<--Bootstrap button -->*/
 .btn {
     display: inline-block;
@@ -331,8 +335,8 @@ tr {
 }
 .btn-info {
   color: #fff;
-  background-color: #5bc0de;
-  border-color: #46b8da;
+  background-color: #00a1db;
+  border-color: #00a1db;
 }
 
 .red{
@@ -400,9 +404,11 @@ tr {
 	font-size: 4.6vw;
   background: #00a1db;
 }
+
 .sched col {
 	font-size: 4.0vw;
 }
+
 .sched th, h5 {
 	background: gray;
 }
