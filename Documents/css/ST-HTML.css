@@ -496,12 +496,15 @@ tr {
 }
 
 .rangeslider__fill {
-    position: absolute;
+  background: #00ff00;
+  position: absolute;
 }
+
 .rangeslider--horizontal .rangeslider__fill {
   top: 0;
   height: 100%;
 }
+
 .rangeslider--vertical .rangeslider__fill {
   bottom: 0;
   width: 100%;
