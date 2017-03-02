@@ -20,7 +20,7 @@ input[type="checkbox"] {
   text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
 }
 
-.button {
+/**.button {
   background-color: #00a1db;
   border: none;
   color: white;
@@ -34,6 +34,18 @@ input[type="checkbox"] {
   border-radius: 3px;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
+} **/
+
+.button {
+    background: white;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.1));
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    color: #404040;
+    display: block;
+    width: 30%;
+    padding: .5em;
+    outline: 0;
 }
 
 .container {
@@ -419,17 +431,9 @@ tr {
 }
 
 .pageFooterBtn {
+    padding: 10px;
     horizontal-align: center;
     text-align: center;
-    background: white;
-    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.1));
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    color: #404040;
-    display: block;
-    width: 30%;
-    padding: .5em;
-    outline: 0;
 }
 
 .schedFill {
@@ -477,22 +481,4 @@ tr {
 .alarmClearCap {
     display: block;
     color: gray;
-}
-
-.sectionBg {
-    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
-    background: white;
-}
-.sectionBg h3 {
-    background-color: #00a1db;
-}
-.sectionBg table {
-    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
-    background: white;
-}
-.devInfo th {
-    background: transparent;
-    font-size: 3.8vw;
-    color: gray;
-    text-decoration: underline;
 }
