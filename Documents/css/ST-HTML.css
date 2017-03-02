@@ -421,6 +421,7 @@ tr {
 }
 
 .sched h4 {
+  font-size: 3.8vw;
   background: #00a1db;
 }
 
@@ -493,7 +494,10 @@ tr {
 }
 .sectionBg h3 {
     background-color: #00a1db;
+    font-size: 4.5vw;
+    padding: 0.6vw;
 }
+
 .sectionBg table {
     box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
     background: white;
