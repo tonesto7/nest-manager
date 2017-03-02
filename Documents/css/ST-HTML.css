@@ -223,7 +223,7 @@ th {
 }
 
 .devInfo th {
-    font-size: 4vw;
+    font-size: 3.8vw;
 }
 
 td {
@@ -442,6 +442,11 @@ tr {
 .swiper-container {
     width: 95%;
     min-height: 500px;
+    padding: 10px;
+}
+
+.default-container {
+    width: 95%;
     padding: 10px;
 }
 
