@@ -396,16 +396,16 @@ tr {
 }
 
 .sched h3 {
-	font-size: 4.6vw;
+  font-size: 4.6vw;
+  background: #00a1db;
+}
+
+.sched h4 {
   background: #00a1db;
 }
 
 .sched col {
 	font-size: 4.0vw;
-}
-
-.sched th, h5 {
-	background: gray;
 }
 
 .slideFooterMsg {
