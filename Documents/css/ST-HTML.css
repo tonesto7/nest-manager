@@ -222,6 +222,10 @@ th {
   background: #00a1db;
 }
 
+.devInfo th {
+    font-size: 4vw;
+}
+
 td {
   color: grey;
   text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
