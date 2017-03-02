@@ -254,6 +254,10 @@ tr {
   font-size: 3.4vw;
 }
 
+.dateTimeTextSmall {
+    font-size: 2.8vw;
+}
+
 .battImg {
   width:30px; height:15px;
 }
