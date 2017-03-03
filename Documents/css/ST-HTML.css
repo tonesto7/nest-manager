@@ -145,7 +145,6 @@ hr {
   pointer-events: none;
 }
 
-
 .topModal:target, .bottomModal:target {
   opacity:1;
   pointer-events: auto;
@@ -458,7 +457,7 @@ tr {
 
 .swiper-container {
     width: 95%;
-    min-height: 500px;
+    min-height: 200px;
     padding: 10px;
 }
 
@@ -475,14 +474,17 @@ tr {
   vertical-align: top;
   width:60px; height:60px;
 }
+
 .alarmWarnCap {
     display: block;
     color: gray;
 }
+
 .alarmEmerCap {
     display: block;
     color: gray;
 }
+
 .alarmClearCap {
     display: block;
     color: gray;
@@ -492,6 +494,7 @@ tr {
     box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
     background: white;
 }
+
 .sectionBg h3 {
     background-color: #00a1db;
     font-size: 4.5vw;
@@ -502,6 +505,7 @@ tr {
     box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
     background: white;
 }
+
 .devInfo th {
     background: transparent;
     font-size: 3.8vw;
