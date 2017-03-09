@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.5.0" }
+def devVer() { return "4.5.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -21,7 +21,7 @@ metadata {
 		capability "Smoke Detector"
 		capability "Carbon Monoxide Detector"
 		capability "Refresh"
-		capability "Health Check"
+		//capability "Health Check"
 
 		command "refresh"
 		command "poll"

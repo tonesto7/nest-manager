@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.5.1" }
+def devVer() { return "4.5.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -23,7 +23,7 @@ metadata {
 		capability "Relative Humidity Measurement"
 		capability "Temperature Measurement"
 		capability "Ultraviolet Index"
-		capability "Health Check"
+		//capability "Health Check"
 
 		command "refresh"
 		command "log"

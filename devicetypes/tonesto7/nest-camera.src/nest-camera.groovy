@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.5.0" }
+def devVer() { return "2.5.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -25,7 +25,7 @@ metadata {
 		capability "Image Capture"
 		capability "Video Camera"
 		//capability "Video Capture"
-		capability "Health Check"
+		//capability "Health Check"
 
 		command "refresh"
 		command "poll"
