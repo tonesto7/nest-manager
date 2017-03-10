@@ -477,12 +477,12 @@ tr {
 
 .alarmWarnCap {
     display: block;
-    color: gray;
+    color: rgb(232, 154, 21);
 }
 
 .alarmEmerCap {
     display: block;
-    color: gray;
+    color: rgb(223, 83, 22);
 }
 
 .alarmClearCap {
@@ -513,4 +513,12 @@ tr {
     font-size: 3.8vw;
     text-shadow: 0px 0px 1px lightgray;
     text-decoration: underline;
+}
+
+.redText {
+    color: red;
+}
+
+.orangeText {
+    color: orange;
 }
