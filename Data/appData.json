@@ -6,16 +6,16 @@
         "stateVarVer": 2
     },
     "token": {
-        "id": "af021508-b0b5-4401-a2b7-b028ed0d4600",
-        "secret": "q1Cm2bWBJmlM1G8512YuXcpsT",
-        "tokenNum": 6
+        "id": "9d132e83-11fc-45be-9a8d-95b7a7cb07a0",
+        "secret": "LDaJe8tAMvdPGyFPt0JJP165x",
+        "tokenNum": 4
     },
     "broadcast": {
         "msgId": "",
         "message": "",
         "type": "info",
         "devBannerMsg": {
-            "msgId": "7lVTfVCjHA",
+            "msgId": "7lVTfVFGjHA",
             "message": "You must obey me at all costs ;)",
             "type": "warn",
             "expireDt": "Wed Feb 15 00:00:00 EST 2017"
@@ -32,19 +32,19 @@
                 "ver": "4.5.2"
             },
             "thermostat": {
-                "ver": "4.5.1"
+                "ver": "4.5.2"
             },
             "protect": {
-                "ver": "4.5.0"
+                "ver": "4.5.1"
             },
             "camera": {
-                "ver": "2.5.0"
+                "ver": "2.5.1"
             },
             "presence": {
-                "ver": "4.5.0"
+                "ver": "4.5.1"
             },
             "weather": {
-                "ver": "4.5.1"
+                "ver": "4.5.2"
             }
         }
     },

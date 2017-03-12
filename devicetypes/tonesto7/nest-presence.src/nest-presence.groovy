@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.5.0" }
+def devVer() { return "4.5.1" }
 
 // for the UI
 metadata {
@@ -20,7 +20,7 @@ metadata {
 		capability "Presence Sensor"
 		capability "Sensor"
 		capability "Refresh"
-		capability "Health Check"
+		//capability "Health Check"
 
 		command "setPresence"
 		command "refresh"

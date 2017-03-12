@@ -20,7 +20,7 @@ input[type="checkbox"] {
   text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
 }
 
-.button {
+/**.button {
   background-color: #00a1db;
   border: none;
   color: white;
@@ -34,6 +34,18 @@ input[type="checkbox"] {
   border-radius: 3px;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
+} **/
+
+.button {
+    background: white;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.1));
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    color: #404040;
+    display: block;
+    width: 30%;
+    padding: .5em;
+    outline: 0;
 }
 
 .container {
@@ -133,7 +145,6 @@ hr {
   pointer-events: none;
 }
 
-
 .topModal:target, .bottomModal:target {
   opacity:1;
   pointer-events: auto;
@@ -222,6 +233,10 @@ th {
   background: #00a1db;
 }
 
+.devInfo th {
+    font-size: 3.8vw;
+}
+
 td {
   color: grey;
   text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
@@ -238,13 +253,12 @@ tr {
   font-size: 3.4vw;
 }
 
-.battImg {
-  width:30px; height:15px;
+.dateTimeTextSmall {
+    font-size: 2.8vw;
 }
 
-.alarmImg {
-  vertical-align: top;
-  width:60px; height:60px;
+.battImg {
+  width:30px; height:15px;
 }
 
 .leafImg {
@@ -311,6 +325,34 @@ tr {
   margin:2px;
 }
 
+/*<--Bootstrap button -->*/
+.btn {
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: normal;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -ms-touch-action: manipulation;
+      touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+.btn-info {
+  color: #fff;
+  background-color: #00a1db;
+  border-color: #00a1db;
+}
+
 .red{
   background-color:#db3a00;
 }
@@ -373,30 +415,29 @@ tr {
 }
 
 .sched h3 {
-	font-size: 4.6vw;
+  font-size: 4.6vw;
   background: #00a1db;
 }
+
+.sched h4 {
+  font-size: 3.8vw;
+  background: #00a1db;
+}
+
 .sched col {
 	font-size: 4.0vw;
 }
-.sched th, h5 {
-	background: gray;
-}
 
 .slideFooterMsg {
-	font-size: 3.0vw;
-	padding: 20px;
-	position: absolute;
-	width: 95%;
-	bottom: 0;
-	horizontal-align: center;
-	vertical-align: bottom;
+    font-size: 3.0vw;
+    padding: 20px;
+    margin:1em auto;
 }
 
 .pageFooterBtn {
-	padding: 10px;
-	horizontal-align: center;
-	vertical-align: bottom;
+    padding: 10px;
+    horizontal-align: center;
+    text-align: center;
 }
 
 .schedFill {
@@ -415,6 +456,69 @@ tr {
 }
 
 .swiper-container {
-    width: 97%;
-    min-height: 400px;
+    width: 95%;
+    min-height: 300px;
+    padding: 10px;
+}
+
+.default-container {
+    width: 95%;
+    padding: 10px;
+}
+
+.vex.vex-theme-default .vex-content {
+    width: 95%; padding: 3px;
+}
+
+.alarmImg {
+  vertical-align: top;
+  width:60px; height:60px;
+}
+
+.alarmWarnCap {
+    display: block;
+    color: rgb(232, 154, 21);
+}
+
+.alarmEmerCap {
+    display: block;
+    color: rgb(223, 83, 22);
+}
+
+.alarmClearCap {
+    display: block;
+    color: gray;
+}
+
+.sectionBg {
+    box-shadow: 0 1px 1px rgba(0,0,0,0.16), 0 1px 1px rgba(0,0,0,0.23);
+    background: white;
+}
+
+.sectionBg h3 {
+    background-color: #00a1db;
+    font-size: 4.5vw;
+    padding: 0.6vw;
+    text-shadow: 1px 1px 1px black;
+}
+
+.sectionBg table {
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    background: white;
+}
+
+.devInfo th {
+    color: #00a1db;
+    background: transparent;
+    font-size: 3.8vw;
+    text-shadow: 0px 0px 1px lightgray;
+    text-decoration: underline;
+}
+
+.redText {
+    color: red;
+}
+
+.orangeText {
+    color: orange;
 }

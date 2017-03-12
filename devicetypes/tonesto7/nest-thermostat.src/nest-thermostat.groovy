@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.5.1"}
+def devVer() { return "4.5.2"}
 
 // for the UI
 metadata {
@@ -30,7 +30,7 @@ metadata {
 		capability "Thermostat Operating State"
 		capability "Thermostat Setpoint"
 		capability "Temperature Measurement"
-		capability "Health Check"
+		//capability "Health Check"
 
 		command "refresh"
 		command "poll"
