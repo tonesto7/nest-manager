@@ -80,6 +80,10 @@
     "schedules": {
         "count": 8
     },
+    "eventStreaming": {
+        "enabled": true,
+        "requiredVersion": "0.1.0"
+    },
     "healthcheck": {
         "camTimeout": 120,
         "protWireTimeout": 35,
