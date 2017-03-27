@@ -62,7 +62,8 @@
         "remoteDiagPath": "remoteDiagLogs"
     },
     "aaPrefs": {
-        "enAaMsgQueue": true
+        "enAaMsgQueue": true,
+        "enMultiQueue": true
     },
     "reportPrefs": {
         "disVoiceZoneRprt": false,
