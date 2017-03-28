@@ -93,9 +93,5 @@
         "longTimeout": 120,
         "timeout": 35,
         "enabled": true
-    },
-    "devStatusPage": {
-        "enabled": true,
-        "path": "/Data/status_content.txt"
     }
 }
