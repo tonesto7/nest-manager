@@ -83,7 +83,7 @@
     },
     "eventStreaming": {
         "enabled": true,
-        "minServiceVer": "0.1.0"
+        "minServiceVer": "0.4.0"
     },
     "healthcheck": {
         "camTimeout": 120,
