@@ -1,0 +1,11 @@
+V5.0.0 (March 29th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • NEW: All-New HTML Design with swiping slides and refresh button to reload html content (refresh is iOS only).
+ • NEW: Camera Zone Info is now part of the device.
+    • Event Types (Ex. Has Motion, Has Person, Has Sound).
+    • If Zones are configured they be will displayed for each event.
+ • NEW: Fix Camera Streaming being off causing the device health to show offline.
+ • NEW: Made tweaks to help minimize the connection issues with iOS/android camera streams.
+
+ • NOTICE: As much as I want to add support for Password protected camera streams.
+        It's just not going to happen (At least at this time)

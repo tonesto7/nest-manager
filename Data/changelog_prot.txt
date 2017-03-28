@@ -1,0 +1,4 @@
+V5.0.0 (March 29th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • NEW:	All-New HTML design with new icons to indicate the alarm status
+ • NEW:	Add in algorithm to detect the protects power source type based on it's check in habit's.
