@@ -801,12 +801,21 @@ def softwareVerEvent(ver) {
 }
 
 def tempUnitEvent(unit) {
+<<<<<<< HEAD
+    def tmpUnit = device.currentState("temperatureUnit")?.value
+    state?.tempUnit = unit
+    if(!tmpUnit.equals(unit)) {   
+        log.debug("UPDATED | Temperature Unit: (${unit}) | Original State: (${tmpUnit})")
+        sendEvent(name:'temperatureUnit', value: unit, descriptionText: "Temperature Unit is now: '${unit}'", displayed: true, isStateChange: true)
+    } else { Logger("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
+=======
 	def tmpUnit = device.currentState("temperatureUnit")?.value
 	state?.tempUnit = unit
 	if(isStateChange(device, "temperatureUnit", unit.toString())) {
 		Logger("UPDATED | Temperature Unit: (${unit}) | Original State: (${tmpUnit})")
 		sendEvent(name:'temperatureUnit', value: unit, descriptionText: "Temperature Unit is now: '${unit}'", displayed: true, isStateChange: true)
 	} else { LogAction("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
+>>>>>>> tonesto7/master
 }
 
 // TODO NOT USED
@@ -892,6 +901,32 @@ def humidityEvent(humidity) {
 }
 
 def presenceEvent(presence) {
+<<<<<<< HEAD
+    def val = device.currentState("presence")?.value
+    def pres = (presence == "home") ? "present" : "not present"
+    def nestPres = getNestPresence()
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+    def statePres = state?.present
+    state?.present = (pres == "present") ? true : false
+    state?.nestPresence = newNestPres
+    if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
+        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
+        sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
+        sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
+    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
+}
+
+def hvacModeEvent(mode) {
+    def pres = getNestPresence()
+    def hvacMode = getHvacMode()
+    def newMode = (mode == "heat-cool") ? "auto" : mode
+    state?.hvac_mode = newMode
+    if(!hvacMode.equals(newMode)) {
+        log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
+        sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
+    } else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
+} 
+=======
 	def val = getPresence()
 	def pres = (presence == "home") ? "present" : "not present"
 	def nestPres = state?.nestPresence
@@ -976,6 +1011,7 @@ def hvacPreviousModeEvent(mode) {
 		sendEvent(name: "previousthermostatMode", value: newMode, descriptionText: "HVAC Previous mode is ${newMode} mode", displayed: true, isStateChange: true)
 	} else { LogAction("Hvac Previous Mode is (${newMode}) | Original State: (${hvacMode})") }
 }
+>>>>>>> tonesto7/master
 
 def fanModeEvent(fanActive) {
 	def val = state?.has_fan ? ((fanActive == "true") ? "on" : "auto") : "disabled"

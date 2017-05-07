@@ -600,6 +600,44 @@ def uiColorEvent(color) {
 }
 
 def batteryStateEvent(batt) {
+<<<<<<< HEAD
+    def stbattery = (batt == "replace") ? 5 : 100
+    def battVal = device.currentState("batteryState")?.value
+    def stbattVal = device.currentState("battery")?.value
+    state?.battVal = batt
+    if(!battVal.equals(batt) || !stbattVal) {
+        log.debug("Battery is: ${batt} | Original State: (${battVal})")
+        sendEvent(name:'batteryState', value: batt, descriptionText: "Nest Battery status is: ${batt}", displayed: true, isStateChange: true)
+        sendEvent(name:'battery', value: stbattery, descriptionText: "Battery is: ${stbattery}", displayed: true, isStateChange: true)
+    } else { Logger("Battery State: (${batt}) | Original State: (${battVal})") }
+}
+
+def smokeStateEvent(smoke) {
+    def smokeVal = device.currentState("Nestsmoke")?.value
+    def stsmokeVal = device.currentState("smoke")?.value
+// st values are detected clear tested
+// nest values are ok warning emergency
+    def stsmokestatus = ""
+    switch (smoke) {
+       case "ok":
+        stsmokestatus = "clear"
+        break
+       case "warning":
+        stsmokestatus = "detected"
+        break
+       case "emergency":
+        stsmokestatus = "detected"
+        break
+       default:
+        log.debug("Unknown Nest Smoke State is: ${smoke}")
+        break
+    }
+    if(!smokeVal.equals(smoke)) {
+    log.debug("Nest Smoke State is: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
+    sendEvent(name:'Nestsmoke', value: smoke,  descriptionText: "Nest Smoke State is: ${smoke.toString().toUpperCase()}", displayed: true, isStateChange: true)
+    sendEvent(name:'smoke', value: stsmokestatus,  descriptionText: "Smoke State is: ${stsmokestatus}", displayed: true, isStateChange: true)
+    } else { Logger("Smoke State: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
+=======
 	def stbattery = (batt == "replace") ? 5 : 100
 	def battVal = device.currentState("batteryState")?.value
 	def stbattVal = device.currentState("battery")?.value
@@ -609,6 +647,7 @@ def batteryStateEvent(batt) {
 		sendEvent(name:'batteryState', value: batt, descriptionText: "Nest Battery status is: ${batt}", displayed: true, isStateChange: true)
 		sendEvent(name:'battery', value: stbattery, descriptionText: "Battery is: ${stbattery}", displayed: true, isStateChange: true)
 	} else { LogAction("Battery State: (${batt}) | Original State: (${battVal})") }
+>>>>>>> tonesto7/master
 }
 
 def testingStateEvent(test) {

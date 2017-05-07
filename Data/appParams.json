@@ -1,4 +1,45 @@
 {
+<<<<<<< HEAD
+    "state": {
+        "stateVarVer": 1
+    },
+    "versions": {
+        "app": {
+            "type": "rel",
+            "ver": "2.0.9"
+        },
+        "autoapp": {
+            "type": "rel",
+            "ver": "1.2.5"
+        },
+        "thermostat": {
+            "type": "rel",
+            "ver": "2.0.4"
+        },
+        "protect": {
+            "type": "rel",
+            "ver": "2.0.3"
+        },
+        "presence": {
+            "type": "rel",
+            "ver": "2.0.3"
+        },
+        "weather": {
+            "type": "rel",
+            "ver": "1.1.2"
+        }
+    },
+    "updater": {
+        "updateVer": 1,
+        "updateMsg": "",
+        "updateDesc": "",
+        "updateType": "std"
+    },
+    "css": {
+        "cssVer": 1,
+        "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+    }
+=======
   "help": {
     "showHelp": true
   },
@@ -72,4 +113,5 @@
   "aaSupport": {
     "enabled": true
   }
+>>>>>>> tonesto7/master
 }

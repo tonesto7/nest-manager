@@ -317,6 +317,20 @@ def lastUpdatedEvent(sendEvt=false) {
 }
 
 def presenceEvent(presence) {
+<<<<<<< HEAD
+    def val = device.currentState("presence")?.value
+    def pres = (presence == "home") ? "present" : "not present"
+    def nestPres = getNestPresence()
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+    def statePres = state?.present
+    state?.present = (pres == "present") ? true : false
+    state?.nestPresence = newNestPres
+    if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
+        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
+        sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
+        sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
+    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
+=======
 	def val = device.currentState("presence")?.value
 	def pres = (presence == "home") ? "present" : "not present"
 	def nestPres = !device.currentState("nestPresence") ? null : device.currentState("nestPresence")?.value.toString()
@@ -329,6 +343,7 @@ def presenceEvent(presence) {
 		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
 	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
+>>>>>>> tonesto7/master
 }
 
 def apiStatusEvent(issue) {
@@ -456,6 +471,30 @@ void LogAction(msg, logType = "debug", frc=false) {
 
  //This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
+<<<<<<< HEAD
+    switch (level) {
+        case "trace":
+            log.trace "PARENT_Log>> " + message
+            break;
+        case "debug":
+            log.debug "PARENT_Log>> " + message
+            break
+        case "warn":
+            log.warn "PARENT_Log>> " + message
+            break
+        case "error":
+            log.error "PARENT_Log>> " + message
+            break
+        default:
+            log.error "PARENT_Log>> " + message
+            break;
+    }            
+    return null // always child interface call with a return value
+}
+
+private def textDevName()   { "Nest Presence${appDevName()}" }
+private def appDevType()    { false }
+=======
 	def smsg = "PARENT_Log>> " + message
 	LogAction(smsg, level)
 	return null // always child interface call with a return value
@@ -583,4 +622,5 @@ def getHtml() {
 
 private def textDevName()   { return "Nest Presence${appDevName()}" }
 private def appDevType()    { return false }
+>>>>>>> tonesto7/master
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }

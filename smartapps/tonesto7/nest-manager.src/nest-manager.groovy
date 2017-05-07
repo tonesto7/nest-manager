@@ -4516,6 +4516,173 @@ def storeLastCmdData(cmd, qnum) {
 }
 
 void workQueue() {
+<<<<<<< HEAD
+    //log.trace "workQueue..."
+    def cmdDelay = getChildWaitVal()
+
+    if (!atomicState?.cmdQlist) { atomicState.cmdQlist = [] }
+    def cmdQueueList = atomicState?.cmdQlist
+    def done = false
+    def nearestQ = 100
+    def qnum = 0
+    cmdQueueList.eachWithIndex { val, idx ->
+        if (done || !atomicState?."cmdQ${idx}" ) { return }
+        else {
+            if ( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
+                qnum = idx
+                done = true
+                return
+            } else {
+                if ((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
+                    nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay)
+                    qnum = idx
+                }
+            }
+        }
+    }
+
+    log.trace("workQueue Run queue: ${qnum}" )
+    if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
+    def cmdQueue = atomicState?."cmdQ${qnum}"
+    try {
+        if(cmdQueue?.size() > 0) {
+            runIn(60, "workQueue", [overwrite: true])  // lost schedule catchall
+            atomicState?.pollBlocked = true
+            cmdQueue = atomicState?."cmdQ${qnum}"
+            def cmd = cmdQueue?.remove(0)
+            atomicState?."cmdQ${qnum}" = cmdQueue
+
+            if (getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset 3 command limit
+
+            if (cmd[1] == "poll") {
+                atomicState.needStrPoll = true
+                atomicState.needDevPoll = true
+                atomicState.needChildUpd = true
+            } else {
+                cmdProcState(true)
+                def cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], qnum)
+                if ( !cmdres ) {
+                    atomicState.needChildUpd = true
+                    atomicState.pollBlocked = false
+                    runIn((cmdDelay * 2), "postCmd", [overwrite: true])
+                }
+                cmdProcState(false)
+            }
+
+            atomicState.needDevPoll = true
+            if(cmd[1] == apiVar().types.struct.toString()) {
+                atomicState.needStrPoll = true
+            }
+
+            qnum = 0
+            done = false
+            nearestQ = 100
+            cmdQueueList?.eachWithIndex { val, idx ->
+                if (done || !atomicState?."cmdQ${idx}" ) { return }
+                else {
+                    if ( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
+                        qnum = idx
+                        done = true
+                        return
+                    } else {
+                        if ((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
+                            nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay)
+                            qnum = idx
+                        }
+                    }
+                }
+            }
+
+            if (!atomicState?."cmdQ${qnum}") { atomicState?."cmdQ${qnum}" = [] }
+            cmdQueue = atomicState?."cmdQ${qnum}"
+            if(cmdQueue?.size() == 0) {
+                atomicState.pollBlocked = false
+                atomicState.needChildUpd = true
+                runIn(cmdDelay + 2, "postCmd", [overwrite: true])
+            }
+            else { schedNextWorkQ(null) }
+
+            atomicState?.cmdLastProcDt = getDtNow()
+            if(cmdQueue?.size() > 10) {
+                sendMsg("There is now ${cmdQueue?.size()} events in the Command Queue...", "Warning")
+                LogAction("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "warn", true)
+            }
+            return
+        } else { atomicState.pollBlocked = false }
+    }
+    catch (ex) {
+        LogAction("workQueue Exception Error: ${ex}", "error", true, true)
+        cmdProcState(false)
+        atomicState.needDevPoll = true
+        atomicState.needStrPoll = true
+        atomicState.needChildUpd = true
+        atomicState?.pollBlocked = false
+        runIn(60, "workQueue", [overwrite: true])
+        runIn((60 + 4), "postCmd", [overwrite: true])
+        return
+    }
+}
+
+def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
+    LogTrace("procNestApiCmd: typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, qnum: ${qnum},  isRedirUri: ${redir}")
+
+    def result = false
+    try {
+        def urlPath = redir ? "" : "/${type}/${typeId}"
+        def data = new JsonBuilder("${obj}":objVal)
+        def params = [
+            uri: uri,
+            path: urlPath,
+            contentType: "application/json",
+            query: [ "auth": atomicState?.authToken ],
+            body: data.toString()
+        ]
+        LogTrace("procNestApiCmd Url: $uri | params: ${params}")
+        log.trace "procNestApiCmd Url: $uri | params: ${params}"
+        atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
+
+        if (!redir && (getRecentSendCmd(qnum) > 0) && (getLastCmdSentSeconds(qnum) < 60)) {
+            def val = getRecentSendCmd(qnum)
+            val -= 1
+            setRecentSendCmd(qnum, val)
+        }
+        setLastCmdSentSeconds(qnum, getDtNow())
+
+        //log.trace "procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}"
+
+        httpPutJson(params) { resp ->
+            if (resp.status == 307) {
+                def newUrl = resp.headers.location.split("\\?")
+                LogTrace("NewUrl: ${newUrl[0]}")
+                if ( procNestApiCmd(newUrl[0], typeId, type, obj, objVal, qnum, true) ) {
+                    result = true
+                }
+            }
+            else if( resp.status == 200) {
+                LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!!!", "info", true)
+                atomicState?.apiIssues = false
+                result = true
+            }
+            else if(resp.status == 400) {
+                LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+            }
+            else {
+                LogAction("procNestApiCmd 'Unexpected' Response: ${resp.status}", "warn", true)
+            }
+        }
+    }
+    catch (ex) {
+        if(ex instanceof groovyx.net.http.HttpResponseException) {
+            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
+        }
+        if (ex.message.contains("Bad Request")) {
+            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
+        }
+        LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
+        atomicState.apiIssues = true
+    }
+    return result
+=======
 	LogTrace("workQueue")
 	def cmdDelay = getChildWaitVal()
 
@@ -4854,6 +5021,7 @@ def incAppNotifSentCnt() {
 	notCnt = notCnt?.toLong()+1
 	LogTrace("AppNotifSentCnt: $notCnt")
 	atomicState?.appNotifSentCnt = notCnt?.toLong()
+>>>>>>> tonesto7/master
 }
 
 /************************************************************************************************
