@@ -1,0 +1,24 @@
+<p style="font-size: 15px;"><strong>V5.0.4 (May 1st, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>UPDATED:</strong> Bug fixes to quiet logs</li>
+</ul>
+<br>
+<p style="font-size: 15px;"><strong>V5.0.3 (April 21th, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>UPDATED:</strong> Added pressure and precipitation displays to Weather interface.</li>
+</ul>
+<br>
+<p style="font-size: 15px;"><strong>V5.0.2 (April 6th, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>UPDATED:</strong> Self healing Fix for Device Health getting stuck offline. (Takes a Couple Minutes to Repair)</li>
+    <li><strong>UPDATED:</strong> Fix for broken graphs (Sorry!!!)</li>
+</ul>
+<br>
+<p style="font-size: 15px;"><strong>V5.0.1 (March 31st, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>FIXED: </strong> Found some arguments that needed to be modifed.</li>
+</ul>

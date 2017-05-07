@@ -1,0 +1,74 @@
+V5.0.8 (May 1st, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Detects and notifies on installation issues
+ • FIXED: Small bugs and optimization;  Quieting of logs
+
+Automation App:
+ • FIXED: Quieting of logs;  small bugs and optimizations
+ 
+V5.0.7 (April 25th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: Bugs and made various stability improvements.
+
+V5.0.5 (April 20th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Made a change to token distribution (based on Nest's suggestion).
+ • FIXED: Constant overwriting of custom device names.
+
+Automation App:
+ • FIXED: Issues with notifications that was causing exceptions.
+ • FIXED: Issues with duplicate notifications when Nest Mode automation is enabled.
+
+V5.0.4 (April 11th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: Automations v5.0.2 will display a message and prevent any configuration when installed from the Marketplace.
+
+V5.0.3 (April 6th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: Checking of Automation App Versions.
+ • ADDED: Much Improved Logging of Automation Migrations from V4.5.2 -> V5.0.1
+ • FIXED: As usual there are many bug fixes and tweaks.
+
+V5.0.2 (April 2nd, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: SMS notification issue.
+ • ADDED: Version check to automation app.
+ • FIXED: Automation migration fixes.
+ • FIXED: Other tiny bug fixes.
+
+V5.0.0 (March 30th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • NEW: Name Changed to NST Manager
+ • NEW: Manager and Automations codebase has been split into two individual files.
+    • There is a fully automated process to migrate your existing automation to this new file and remove the old ones.
+ • NEW: Find Weather Locations using integrated Wunderground's search API.
+ • NEW: Token's are now redacted from all IDE logs to prevent them from being shared.
+ • NEW: Fresh New Notification UI right off the first page of the Manager.
+    The New UI goes with the new notification system to handle the following events:
+    • Nest API Errors and Rate-Limiting
+    • Failed Commands (A maximum of 5 msgs/per 10 minutes)
+    • Nest Location Home/Away Changes
+    • Device Health Issues (Disconnects, etc.)
+    • Get Reminded when you leave debug logging and remote diagnostics on for more than 24 hours.
+    • Nest Cam streaming On/Off alerts
+ • NEW: Control Watch-Dog Notifications from Manager
+ • UPDATED: Re-Structured the Managers Setting Area to simplify getting to what you need.
+ • UPDATED: Moved device preferences to the Manage Devices section.
+ • NEW: Tests on Nest Protects are auto-disabled after 15 minutes if they are left on.
+ • NEW: Added Toggle to disable all automations right from the Automation section under the Manager.
+ • NEW: Turn graphs and event history on/off in the Thermostat and Weather devices from the Manager.
+ • NEW: Added support to send Automation Event history and Who set eco to the Thermostat device. (Part of the new Thermostat UI).
+ • NEW: Added Hub to the install of all new devices to help support ST's Device history.
+ • NEW: Added Change logs the are shown when a new version is published .
+
+ Automations App:
+ • NEW: Humidity Control Automation;  Works with Switch controlled humidifiers (*** Requires a third-party DTH for HVAC humidifiers)
+ • FIXED: Fixed input status text to auto-sort by device name
+ • FIXED: There were dozen's of cleanups and bug-fixes

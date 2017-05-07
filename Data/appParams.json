@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "state": {
         "stateVarVer": 1
     },
@@ -38,4 +39,79 @@
         "cssVer": 1,
         "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     }
+=======
+  "help": {
+    "showHelp": true
+  },
+  "state": {
+    "stateVarVer": 2
+  },
+  "versions": {
+    "app": {
+      "ver": "5.0.8"
+    },
+    "thermostat": {
+      "ver": "5.0.2"
+    },
+    "protect": {
+      "ver": "5.0.2"
+    },
+    "camera": {
+      "ver": "5.0.4"
+    },
+    "presence": {
+      "ver": "5.0.1"
+    },
+    "weather": {
+      "ver": "5.0.4"
+    }
+  },
+  "token": {
+    "tokenNum": 4
+  },
+  "broadcast": {
+    "msgId": "",
+    "message": "",
+    "type": "info"
+  },
+  "updater": {
+    "updateVer": 1,
+    "updateMsg": "",
+    "updateDesc": "",
+    "updateType": "std",
+    "setupVersion": 2,
+    "versions": {
+      "app": {
+        "ver": "5.0.8"
+      },
+      "thermostat": {
+        "ver": "5.0.2"
+      },
+      "protect": {
+        "ver": "5.0.2"
+      },
+      "camera": {
+        "ver": "5.0.4"
+      },
+      "presence": {
+        "ver": "5.0.1"
+      },
+      "weather": {
+        "ver": "5.0.4"
+      }
+    }
+  },
+  "html": {
+    "cssVer": 1,
+    "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css",
+    "chartJsVer": 1,
+    "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
+  },
+  "database": {
+    "disableExceptions": true
+  },
+  "aaSupport": {
+    "enabled": true
+  }
+>>>>>>> tonesto7/master
 }
