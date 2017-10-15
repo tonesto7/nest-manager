@@ -32,12 +32,11 @@ definition(
 {
 	appSetting "clientId"
 	appSetting "clientSecret"
-	appSetting "clientToken"
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.0" }
-def appVerDate() { "8-12-2017" }
+def appVersion() { "5.2.1" }
+def appVerDate() { "10-15-2017" }
 def minVersions() {
 	return [
 		"automation":["val":517, "desc":"5.1.7"],
@@ -145,12 +144,17 @@ def authPage() {
 	def stateSz = getStateSizePerc()
 	if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
 
-	if(!atomicState?.accessToken || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk)) || (stateSz > 80)) {
+	if(!atomicState?.accessToken || !nestDevAccountCheckOk() || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk)) || (stateSz > 80)) {
 		return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall: false) {
 			section ("Status Page:") {
 				def desc = ""
+				def showWiki = false
 				if(!atomicState?.accessToken) {
 					desc = "OAuth is not Enabled for ${appName()} application.  Please click remove and review the installation directions again"
+				}
+				else if(!nestDevAccountCheckOk()) {
+					desc = "You are missing the Client ID and Secret.\n\nWe can no longer provide you with a built-in Nest Client ID and Secret.  Please check the Wiki for Detailed instructions on creating your own Nest Dev ID and Secret."
+					showWiki = true
 				}
 				else if(!atomicState?.devHandlersTested) {
 					desc = "Device Handlers are Missing or Not Published.  Please verify the installation instructions and device handlers are present before continuing."
@@ -166,6 +170,9 @@ def authPage() {
 				}
 				LogAction("Status Message: $desc", "warn", true)
 				paragraph "$desc", required: true, state: null
+				if(showWiki) {
+					href url: getWikiPageUrl(), style:"embedded", required:false, title:"View the Projects Wiki", description:"Tap to open in browser", state: "complete", image: getAppImg("web_icon.png")
+				}
 			}
 			devPageFooter("authErrLoadCnt", execTime)
 		}
@@ -5883,7 +5890,9 @@ def webResponse(resp, data) {
 		if(atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) {
 			appUpdateNotify()
 		}
-		getFbAppSettings(data?.type == "async" ? false : true )
+		if(atomicState?.appData?.appSettings?.pullFromFB == true) {
+			getFbAppSettings(data?.type == "async" ? false : true )
+		}
 		atomicState?.lastWebUpdDt = getDtNow()
 		result = true
 	} else {
@@ -7002,7 +7011,7 @@ def callback() {
 				if(atomicState?.authToken) {
 					atomicState?.authTokenCreatedDt = getDtNow()
 					atomicState.authTokenExpires = resp?.data.expires_in
-					atomicState.authTokenNum = clientToken()
+					// atomicState.authTokenNum = clientToken()
 					atomicState.oauthInitState = UUID?.randomUUID().toString()
 				}
 			}
@@ -7192,33 +7201,26 @@ def toQueryString(Map m) {
 }
 
 def clientId() {
-	if(appSettings.clientId) {
-		return appSettings.clientId
+	if(appSettings?.clientId) {
+		return appSettings?.clientId
 	} else {
-		if(atomicState?.appData?.token?.id) {
-			return atomicState?.appData?.token?.id
-		} else { LogAction("clientId is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true) }
+		LogAction("clientId is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true)
+		return null
 	}
 }
 
 def clientSecret() {
-	if(appSettings.clientSecret) {
-		return appSettings.clientSecret
+	if(appSettings?.clientSecret) {
+		return appSettings?.clientSecret
 	} else {
-		if(atomicState?.appData?.token?.secret) {
-			return atomicState?.appData?.token?.secret
-		} else { LogAction("clientSecret is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true) }
+		LogAction("clientSecret is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true)
+		return null
 	}
 }
 
-def clientToken() {
-	if(appSettings.clientToken) {
-		return appSettings.clientToken
-	} else {
-		if(atomicState?.appData?.token?.tokenNum) {
-			return atomicState?.appData?.token?.tokenNum
-		} else { LogAction("clientToken is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true) }
-	}
+def nestDevAccountCheckOk() {
+	if(atomicState?.authToken == null && (clientId() == null || clientSecret() == null) ) { return false }
+	else { return true }
 }
 
 /************************************************************************************************

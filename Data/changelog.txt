@@ -1,3 +1,8 @@
+V5.2.1 (October 14th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: I have changed the app to no longer use our tokens and it will tell you when you are missing the required id and secret.
+
 V5.2.0 (July 22nd, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
