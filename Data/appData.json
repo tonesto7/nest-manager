@@ -59,6 +59,9 @@
         "newexceptionPath": "newexceptionData",
         "remoteDiagPath": "remoteDiagLogs"
     },
+    "appSettings": {
+        "pullFromFB": false
+    },
     "aaPrefs": {
         "enAaMsgQueue": true,
         "enMultiQueue": false
