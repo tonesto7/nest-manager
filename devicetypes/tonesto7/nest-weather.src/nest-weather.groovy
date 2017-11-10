@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.1.3" }
+def devVer() { return "5.2.0" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -235,13 +235,15 @@ def keepAwakeEvent() {
 
 void repairHealthStatus(data) {
 	Logger("repairHealthStatus($data)")
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -307,6 +309,7 @@ void processEvent() {
 		initialize()
 		state.swVersion = devVer()
 		state?.shownChgLog = false
+		state.androidDisclaimerShown = false
 	}
 	def eventData = state?.eventData
 	//LogAction("processEvent Parsing data ${eventData}", "trace")
@@ -316,6 +319,7 @@ void processEvent() {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
@@ -1591,6 +1595,13 @@ def forecastDay(day) {
 	return dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
 }
 
+def androidDisclaimerMsg() {
+	if(state?.mobileClientType == "android" && !state?.androidDisclaimerShown) {
+		state.androidDisclaimerShown = true
+		return """<div class="androidAlertBanner">FYI... The Android Client has a bug with reloading the HTML a second time.\nIt will only load once!\nYou will be required to completely close the client and reload to view the content again!!!</div>"""
+	} else { return "" }
+}
+
 def getChgLogHtml() {
 	def chgStr = ""
 	if(!state?.shownChgLog == true) {
@@ -1663,6 +1674,7 @@ def getWeatherHTML() {
 				</head>
 				<body>
 					${getChgLogHtml()}
+					${androidDisclaimerMsg()}
 					${devBrdCastHtml}
 					${clientBl}
 					${updateAvail}
@@ -1717,8 +1729,9 @@ def getWeatherHTML() {
 					</div>
 					<script>
 						function reloadWeatherPage() {
-							var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
-							window.location = url;
+							// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
+							// window.location = url;
+							window.location.reload();
 						}
 					</script>
 					<div class="pageFooterBtn">

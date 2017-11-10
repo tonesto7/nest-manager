@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.1.5" }
+def devVer() { return "5.2.0" }
 
 // for the UI
 metadata {
@@ -405,13 +405,15 @@ def keepAwakeEvent() {
 
 void repairHealthStatus(data) {
 	Logger("repairHealthStatus($data)")
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -450,6 +452,7 @@ void processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.restStreaming = eventData?.restStreaming == true ? true : false
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
@@ -470,6 +473,7 @@ void processEvent(data) {
 				initialize()
 				state.swVersion = devVer()
 				state?.shownChgLog = false
+				state.androidDisclaimerShown = false
 			}
 			state?.childWaitVal = eventData?.childWaitVal.toInteger()
 			state.clientBl = eventData?.clientBl == true ? true : false
@@ -480,7 +484,7 @@ void processEvent(data) {
 			if(eventData?.data?.is_locked != null) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
 			hasFan(eventData?.data?.has_fan.toString())
-			presenceEvent(eventData?.pres.toString())
+			presenceEvent(eventData?.pres)
 
 			def curMode = device?.currentState("nestThermostatMode")?.stringValue
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
@@ -967,19 +971,24 @@ def humidityEvent(humidity) {
 	} else { LogAction("Humidity is (${humidity}) | Original State: (${hum})") }
 }
 
-def presenceEvent(presence) {
+def presenceEvent(String presence) {
+	// log.trace "presenceEvent($presence)"
 	def val = getPresence()
-	def pres = (presence == "home") ? "present" : "not present"
+	def pres = (presence == "away" || presence == "auto-away") ? "not present" : "present"
 	def nestPres = state?.nestPresence
-	def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
-	def statePres = state?.present
-	state?.present = (pres == "present") ? true : false
+	def newNestPres = (pres == "present") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+	def statePres = state?.isPresent
+	state?.isPresent = (pres == "not present") ? false : true
 	state?.nestPresence = newNestPres
-	if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
-		Logger("UPDATED | Presence: ${pres.toString().capitalize()} | Original State: ${val.toString().capitalize()} | State Variable: ${statePres}")
+	if(isStateChange(device, "presence", pres.toString()) || isStateChange(device, "nestPresence", newNestPres.toString()) || nestPres == null) {
+		def chgType = ""
+		chgType += isStateChange(device, "presence", pres.toString()) ? "ST " : ""
+		chgType += isStateChange(device, "presence", pres.toString()) && isStateChange(device, "nestPresence", newNestPres.toString()) ? "| " : ""
+		chgType += isStateChange(device, "nestPresence", newNestPres.toString()) ? "Nest " : ""
+		Logger("UPDATED | ${chgType} Presence: ${pres.toString().capitalize()} | Original State: ${val.toString().capitalize()} | State Variable: ${statePres}")
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
 		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
-	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
+	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.isPresent}") }
 }
 
 void whoMadeChanges(autoType, desc, dt) {
@@ -3230,6 +3239,13 @@ def getChgLogHtml() {
 	return chgStr
 }
 
+def androidDisclaimerMsg() {
+	if(state?.mobileClientType == "android" && !state?.androidDisclaimerShown) {
+		state.androidDisclaimerShown = true
+		return """<div class="androidAlertBanner">FYI... The Android Client has a bug with reloading the HTML a second time.\nIt will only load once!\nYou will be required to completely close the client and reload to view the content again!!!</div>"""
+	} else { return "" }
+}
+
 def getGraphHTML() {
 	try {
 		def tempStr = "°F"
@@ -3380,6 +3396,7 @@ def getGraphHTML() {
 			</head>
 			<body>
 				${getChgLogHtml()}
+				${androidDisclaimerMsg()}
 				${devBrdCastHtml}
 				${clientBl}
 		  		${updateAvail}
@@ -3500,8 +3517,9 @@ def getGraphHTML() {
 						paginationClickable: true
 					})
 					function reloadTstatPage() {
-						var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML"
-						window.location = url;
+						// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML"
+						// window.location = url;
+						window.location.reload();
 					}
 				</script>
 				${refreshBtnHtml}

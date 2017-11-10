@@ -1,35 +1,15 @@
+<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>ADDED:</strong> Preference now available to only modify motion events when person detected (Requires Nest Aware Subscription!).</li>
+    <li><strong>ADDED:</strong> Android Disclaimer for HTML.</li>
+    <li><strong>ADDED:</strong> Added New Attribute called 'motionPerson' for WebCoRE to Monitor for changes.</li>
+    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
+    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
+</ul>
+<br>
 <p style="font-size: 15px;"><strong>V5.1.4 (July 21st, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>FIXED:</strong> The bug discovered with Storing the Images to ST is not entirely fixed but is now handled correctly and reporting the error.</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.1.2 (June 21st, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> On motion events, camera takes snapshot if streaming is on.  If Nest account has Nest Aware, this stores the motion event taken by Nest Aware.</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.1.1 (June 17th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Fixed command calls</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.1.0 (June 5th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> version number updated to match 5.1.x</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.6 (May 25th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Updates to healthcheck parameters & optimizations</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.5 (May 13th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Removed capability that is not available (Notification) & optimizations</li>
 </ul>
