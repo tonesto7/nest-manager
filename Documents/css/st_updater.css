@@ -1,0 +1,144 @@
+@font-face {
+    font-family: 'Swiss 721 W01 Thin';
+    src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot');
+    src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot?#iefix') format('embedded-opentype'), url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.woff') format('woff'), url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.ttf') format('truetype'), url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.svg#swis721_th_btthin') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Swiss 721 W01 Light';
+    src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot');
+    src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot?#iefix') format('embedded-opentype'), url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.woff') format('woff'), url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.ttf') format('truetype'), url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.svg#swis721_lt_btlight') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+    min-width: 375px;
+}
+
+body {
+    padding: 1em;
+    background: #2B3134;
+    color: #ffffff;
+    text-align: center;
+    font-family: "Gill sans", sans-serif;
+    width: 90%;
+    height: 100%;
+    margin: 0 auto;
+}
+
+h1 {
+    margin: 1em 0;
+    border-bottom: 1px solid;
+    padding-bottom: 1em;
+    font-weight: lighter;
+}
+
+#loader {
+    height: auto;
+    width: auto;
+    min-height: 100px;
+    min-width: 100px;
+    max-height: 240px;
+    max-width: 240px;
+    text-align: center;
+    padding: 1em;
+    margin: 0 auto 1em;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.animate-bottom {
+    position: relative;
+    -webkit-animation-name: animatebottom;
+    -webkit-animation-duration: 1s;
+    animation-name: animatebottom;
+    animation-duration: 1s
+}
+
+@-webkit-keyframes animatebottom {
+    from {
+        bottom: -300px;
+        opacity: 0
+    }
+    to {
+        bottom: 0;
+        opacity: 1
+    }
+}
+
+@keyframes animatebottom {
+    from {
+        bottom: -300px;
+        opacity: 0
+    }
+    to {
+        bottom: 0;
+        opacity: 1
+    }
+}
+
+.center {
+    text-align: center;
+}
+
+#results {
+    font-size: 2.2em;
+    font-family: 'Swiss 721 W01 Thin';
+    color: #c8c2c2;
+    margin-bottom: 0;
+}
+
+#resultList {
+    text-align: left;
+    font-size: 1.2em;
+    font-family: 'Swiss 721 W01 Thin';
+    color: #c8c2c2;
+    margin-bottom: 0;
+    /* padding: 0 10px; */
+    border-radius: 25px;
+    border: 2px solid gray;
+}
+
+.listDiv {
+    width: 375px;
+}
+
+.listDiv:empty {
+    display: none;
+}
+
+ul:empty {
+    display: none;
+}
+
+.centered {
+    margin: 0 auto;
+    text-align: left;
+    padding-right: 10px;
+}
+
+.chkMark {
+    color: #008000;
+}
+
+.hidden {
+    display: none;
+}
+
+.logoIcn {
+    /*width: 1.7em;*/
+    height: auto;
+    max-width: 64px;
+    max-height: 64px;
+    vertical-align: middle;
+}
+
+.title-text {
+    font-size: 2.0em;
+    vertical-align: middle;
+}

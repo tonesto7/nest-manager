@@ -389,6 +389,16 @@ tr {
   padding: 8px 0px;
 }
 
+.androidAlertBanner {
+  font-size: 6vw;
+  font-weight: bold;
+  text-align: center;
+  background: #6f786f;
+  -webkit-text-stroke: 1.0px #000000;
+  -webkit-text-fill-color: #FFFFFF;
+  padding: 8px 0px;
+}
+
 .orangeAlertBanner {
   font-size: 6vw;
   font-weight: bold;

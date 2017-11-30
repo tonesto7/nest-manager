@@ -1,33 +1,13 @@
-<p style="font-size: 15px;"><strong>V5.1.4 (July 21st, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>FIXED:</strong> Fixed and modified broken voice reports for the Tstat.</li>
+    <li><strong>ADDED:</strong> Added Android Disclaimer for HTML.</li>
+    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
+    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
 </ul>
 <br>
-<p style="font-size: 15px;"><strong>V5.1.2 (June 17th, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.1.6 (November 7th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Fixed command calls</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.1.0 (June 5th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Reduced logging 5.1.1</li>
-</ul>
-<br>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> version number updated to match 5.1.x</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.6 (June 1st, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>FIXED:</strong> OperatingState in Graphs.</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.5 (May 25th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>FIXED:</strong> Update healthcheck parameters & remove false positives</li>
+    <li><strong>FIXED:</strong> Cleanups and minor bugfixes.</li>
 </ul>

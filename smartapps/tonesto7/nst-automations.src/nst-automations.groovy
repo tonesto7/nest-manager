@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.1.7" }
-def appVerDate() { "8-2-2017" }
+def appVersion() { "5.2.0" }
+def appVerDate() { "11-8-2017" }
 
 preferences {
 	//startPage
@@ -399,8 +399,8 @@ def mainAutoPage(params) {
 						if(isNestModesConfigured()) {
 							nDesc += "\n • Set Thermostats to ECO: (${nModeSetEco ? "On" : "Off"})"
 							if(parent?.settings?.cameras) {
-								nDesc += "\n • Turn Cams On when Away: (${nModeCamOnAway ? "On" : "Off"})"
-								nDesc += "\n • Turn Cams Off when Home: (${nModeCamOffHome ? "On" : "Off"})"
+								nDesc += "\n • Cams On when Away: (${nModeCamOnAway ? "On" : "Off"})"
+								nDesc += "\n • Cams Off when Home: (${nModeCamOffHome ? "On" : "Off"})"
 								if(settings?.nModeCamsSel) {
 									nDesc += "\n • Nest Cams Selected: (${nModeCamsSel.size()})"
 								}
@@ -527,8 +527,8 @@ def createAutoBackupJson() {
 		def getIds4These = ["phone", "contact"]
 		def setObj = null
 		if(itemType?.contains("capability") || itemType in getIds4These) {
-			if(itemVal instanceof List) { setObj = settings[item?.key].collect { it?.getId() } }
-			else { setObj = settings[item?.key].getId() }
+			if(itemVal instanceof List) { setObj = settings[item?.key]?.collect { it?.getId() } }
+			else { setObj = settings[item?.key]?.getId() }
 		}
 		else {
 			if(itemType == "mode" || itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
@@ -537,7 +537,7 @@ def createAutoBackupJson() {
 			else { setObj = itemVal.toString() }
 		}
 		//log.debug "setting item ${item?.key}: ${getObjType(itemVal)} | result: $setObj"
-		setData[item?.key].value = setObj
+		setData[item?.key]?.value = setObj
 	}
 	setData["automationTypeFlag"] = getAutoType().toString()
 	def data = [:]
@@ -783,45 +783,6 @@ def getStateVal(var) {
 	return state[var] ?: null
 }
 
-/*
-def getAutoIcon(type) {
-	if(type) {
-		switch(type) {
-			case "remSen":
-				return getAppImg("remote_sensor_icon.png")
-				break
-			case "fanCtrl":
-				return getAppImg("fan_control_icon.png")
-				break
-			case "conWat":
-				return getAppImg("open_window.png")
-				break
-			case "leakWat":
-				return getAppImg("leak_icon.png")
-				break
-			case "humCtrl":
-				return getAppImg("humidity_automation_icon.png")
-				break
-			case "extTmp":
-				return getAppImg("external_temp_icon.png")
-				break
-			case "nMode":
-				return getAppImg("mode_automation_icon.png")
-				break
-			case "schMot":
-				return getAppImg("thermostat_automation_icon.png")
-				break
-			case "tMode":
-				return getAppImg("mode_setpoints_icon.png")
-				break
-			case "watchDog":
-				return getAppImg("watchdog_icon.png")
-				break
-		}
-	}
-}
-*/
-
 def automationsInst() {
 	atomicState.isNestModesConfigured = 	isNestModesConfigured() ? true : false
 	atomicState.isWatchdogConfigured = 	isWatchdogConfigured() ? true : false
@@ -953,7 +914,7 @@ def subscribeToEvents() {
 					subscribe(humCtrlHumidity, "humidity", automationGenericEvt)
 					if(!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) { subscribe(humCtrlTempSensor, "temperature", automationGenericEvt) }
 					if(settings?.humCtrlUseWeather) {
-						atomicState.NeedwUpd = true
+						atomicState.needWeathUpd = true
 						if(parent?.getWeatherDeviceInst()) {
 							def weather = parent?.getWeatherDevice()
 							if(weather) {
@@ -978,7 +939,7 @@ def subscribeToEvents() {
 			if(settings?.schMotExternalTempOff) {
 				if(isExtTmpConfigured()) {
 					if(settings?.extTmpUseWeather) {
-						atomicState.NeedwUpd = true
+						atomicState.needWeathUpd = true
 						if(parent?.getWeatherDeviceInst()) {
 							def weather = parent?.getWeatherDevice()
 							if(weather) {
@@ -1248,9 +1209,9 @@ def scheduleAutomationEval(schedtime = defaultAutomationTime()) {
 		if(timeLeftPrev > (theTime + 5) || waitOverride) {
 			if(Math.abs(timeLeftPrev - theTime) > 3) {
 				runIn(theTime, "runAutomationEval", [overwrite: true])
-				LogAction("scheduleAutomationEval: changed time ${timeLeftPrev} to ${theTime}", "debug", true)
+				LogAction("scheduleAutomationEval: Eval Schedule Changed from (${timeLeftPrev}sec) to (${theTime}sec)", "debug", true)
 			}
-		} else { LogAction("scheduleAutomationEval: skipped time ${theTime} because ${timeLeftPrev}", "debug", true) }
+		} else { LogAction("scheduleAutomationEval: Skipping Schedule Change: (${theTime}sec) because (${timeLeftPrev}sec) Left", "debug", true) }
 	}
 }
 
@@ -1367,7 +1328,7 @@ def automationGenericEvt(evt) {
 		atomicState.needChildUpdate = true
 	}
 	if(settings?.humCtrlUseWeather && isHumCtrlConfigured()) {
-		atomicState.NeedwUpd = true
+		atomicState.needWeathUpd = true
 	}
 	doTheEvent(evt)
 }
@@ -2964,7 +2925,7 @@ def getExtConditions( doEvent = false ) {
 		}
 		//log.debug "set weatherDeviceInst to ${atomicState?.weatherDeviceInst}"
 	}
-	if(atomicState?.NeedwUpd && atomicState?.weatherDeviceInst) {
+	if(atomicState?.needWeathUpd && atomicState?.weatherDeviceInst) {
 		try {
 			def cur = parent?.getWData()
 			def weather = parent.getWeatherDevice()
@@ -2992,7 +2953,7 @@ def getExtConditions( doEvent = false ) {
 				atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f //
 				atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
 
-				atomicState.NeedwUpd = false
+				atomicState.needWeathUpd = false
 			}
 		} catch (ex) {
 			log.error "getExtConditions Exception:", ex
@@ -3431,7 +3392,7 @@ def extTmpGenericEvt(evt) {
 def extTmpDpOrTempEvt(type) {
 	if(atomicState?.disableAutomation) { return }
 	else {
-		atomicState.NeedwUpd = true
+		atomicState.needWeathUpd = true
 		if(settings?.extTmpUseWeather) { getExtConditions() }
 
 		def lastTempWithinThreshold = atomicState?.extTmpLastWithinThreshold
@@ -4210,7 +4171,7 @@ def checkNestMode() {
 			def homePresDesc = (nModePresSensor && !nModeSwitch) ? "A Presence Device is Now Present setting " : ""
 			def awaySwitDesc = (nModeSwitch && !nModePresSensor) ? "${nModeSwitch} State is 'Away' setting " : ""
 			def homeSwitDesc = (nModeSwitch && !nModePresSensor) ? "${nModeSwitch} State is 'Home' setting " : ""
-			def modeDesc = ((!nModeSwitch && !nModePresSensor) && nModeHomeModes && nModeAwayModes) ? "The mode (${curStMode}) has triggered " : ""
+			def modeDesc = ((!nModeSwitch && !nModePresSensor) && nModeHomeModes && nModeAwayModes) ? "The ST Mode (${curStMode}) has triggered" : ""
 			def awayDesc = "${awayPresDesc}${awaySwitDesc}${modeDesc}"
 			def homeDesc = "${homePresDesc}${homeSwitDesc}${modeDesc}"
 
@@ -4241,7 +4202,7 @@ def checkNestMode() {
 			}
 
 			def didsomething = false
-			//if(away && !nestModeAway && !modeMatch) {
+
 			if(away && !nestModeAway) {
 				LogAction("checkNestMode: ${awayDesc} Nest 'Away'", "info", true)
 				didsomething = true
@@ -4255,9 +4216,8 @@ def checkNestMode() {
 					sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info", pName)
 				}
 				if(nModeCamOnAway) { adjustCameras(true, pName) }
-			}
-			//else if(home && nestModeAway && !modeMatch) {
-			else if(home && nestModeAway) {
+
+			} else if(home && nestModeAway) {
 				LogAction("checkNestMode: ${homeDesc} Nest 'Home'", "info", true)
 				didsomething = true
 				setAway(false)
@@ -5610,7 +5570,7 @@ this does not work...
 						} else {
 							if(!settings?.humCtrlTempSensor) {
 								input "humCtrlUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-								atomicState.NeedwUpd = true
+								atomicState.needWeathUpd = true
 								if(settings?.humCtrlUseWeather) {
 									if(atomicState?.curWeather == null) {
 										getExtConditions()
@@ -5647,7 +5607,7 @@ this does not work...
 					} else {
 						if(!settings?.extTmpTempSensor) {
 							input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-							atomicState.NeedwUpd = true
+							atomicState.needWeathUpd = true
 							if(settings?.extTmpUseWeather) {
 								if(atomicState?.curWeather == null) {
 									getExtConditions()
@@ -7755,38 +7715,6 @@ def getRemLogData() {
 }
 
 /*
-def navHtmlBuilder(navMap, idNum) {
-	def res = [:]
-	def htmlStr = ""
-	def jsStr = ""
-	if(navMap?.key) {
-		htmlStr += """\n<li><a id="nav-key-item${idNum}">${navMap?.key}<span class="icon"></span></a></li>"""
-		jsStr += navJsBuilder("nav-key-item${idNum}", "key-item${idNum}")
-	}
-	if(navMap?.items) {
-		def nItems = navMap?.items
-		htmlStr += """\n<ul style="list-style-type: disc;">"""
-		nItems?.each {
-			htmlStr += """\n<li><a id="nav-subitem${idNum}-${it?.toString().toLowerCase()}">${it}<span class="icon"></span></a></li>"""
-			jsStr += navJsBuilder("nav-subitem${idNum}-${it?.toString().toLowerCase()}", "item${idNum}-${it?.toString().toLowerCase()}")
-		}
-		htmlStr += """\n</ul>"""
-	}
-	htmlStr += """\n</br>"""
-	res["html"] = htmlStr
-	res["js"] = jsStr
-	return res
-}
-
-def navJsBuilder(btnId, divId) {
-	def res = """
-		\$("#${btnId}").click(function() {
-			\$('html, body').animate({ scrollTop: \$("#${divId}").offset().top - hdrHeight-20 }, 500);
-		});
-	"""
-	return "\n${res}"
-}
-
 def clearRemDiagData(force=false) {
 	atomicState?.remDiagLogDataStore = null
 	//atomicState?.remDiagLogActivatedDt = null	// NOT done to have force off then on to re-enable
@@ -8058,7 +7986,7 @@ def lastN(String input, n) {
 def LogTrace(msg, logSrc=null) {
 	def trOn = (showDebug && advAppDebug) ? true : false
 	if(trOn) {
-		def theId = lastN(getId().toString(),5)
+		def theId = lastN(app?.getId().toString(),5)
 		def theLogSrc = (logSrc == null) ? (parent ? "Automation-${theId}" : "NestManager") : logSrc
 		Logger(msg, "trace", theLogSrc, atomicState?.enRemDiagLogging)
 	}
@@ -8066,7 +7994,7 @@ def LogTrace(msg, logSrc=null) {
 
 def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 	def isDbg = showDebug ? true : false
-	def theId = lastN(app.getId().toString(),5)
+	def theId = lastN(app?.getId().toString(),5)
 	def theLogSrc = (logSrc == null) ? (parent ? "Automation-${theId}" : "NestManager") : logSrc
 	if(showAlways) { Logger(msg, type, theLogSrc) }
 	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }

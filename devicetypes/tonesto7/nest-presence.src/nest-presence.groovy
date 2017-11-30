@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.1.2" }
+def devVer() { return "5.2.0" }
 
 // for the UI
 metadata {
@@ -149,13 +149,15 @@ def keepAwakeEvent() {
 
 void repairHealthStatus(data) {
 	Logger("repairHealthStatus($data)")
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -195,6 +197,7 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
