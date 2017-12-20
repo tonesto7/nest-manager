@@ -1,17 +1,13 @@
+<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>ADDED:</strong> Added Android Disclaimer for HTML.</li>
+    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
+    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
+</ul>
+<br>
 <p style="font-size: 15px;"><strong>V5.1.1 (June 17th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>UPDATED:</strong> Fixed command calls</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.1.0 (June 5th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> version number updated to match 5.1.x</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.3 (May 25th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Update Healthcheck parameters & remove false positives</li>
 </ul>

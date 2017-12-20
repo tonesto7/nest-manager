@@ -1,0 +1,182 @@
+@font-face {
+    font-family: "Swiss 721 W01 Thin";
+    src: url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot");
+    src: url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot?#iefix") format("embedded-opentype"), url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.woff") format("woff"), url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.ttf") format("truetype"), url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.svg#swis721_th_btthin") format("svg");
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Swiss 721 W01 Light";
+    src: url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot");
+    src: url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot?#iefix") format("embedded-opentype"), url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.woff") format("woff"), url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.ttf") format("truetype"), url("https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.svg#swis721_lt_btlight") format("svg");
+    font-weight: normal;
+    font-style: normal;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+    min-width: 375px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizelegibility;
+}
+
+body {
+    padding: 1em;
+    background: #2b3134;
+    color: #ffffff;
+    text-align: center;
+    font-family: "Gill sans", sans-serif;
+    width: 90%;
+    height: 100%;
+    margin: 0 auto;
+}
+
+h1 {
+    margin: 1em 0;
+    font-family: "Swiss 721 W01 Thin";
+    font-weight: lighter;
+}
+
+ul {
+    text-align: left;
+    font-family: "Swiss 721 W01 Thin";
+    color: #c8c2c2;
+    list-style: none;
+    border: 2px solid gray;
+    border-radius: 25px;
+    padding: 10px 20px;
+    margin: 0;
+    display: inline-block;
+}
+
+.center {
+    text-align: center;
+}
+
+.logoIcn {
+    width: 15%;
+    height: auto;
+    min-width: 80px;
+    max-width: 150px;
+}
+
+.title-div {
+    vertical-align: middle;
+    display: inline-block;
+    text-align: center;
+}
+
+.title-text {
+    /* 	max-width: 800px; */
+    vertical-align: middle;
+    font-size: 5vw;
+    border-bottom: 2px solid;
+    padding: 0px 0px 20px 0px;
+}
+
+#loaderText1 {
+    font-size: 4px;
+}
+
+#loaderText2 {
+    font-size: 7px;
+}
+
+#loader {
+    max-width: 350px;
+    max-height: 350px;
+}
+
+#finishedImg {
+    font-size: 4em;
+    color: green;
+    text-align: center;
+    padding: 20px 0 0 0;
+}
+
+#results {
+    font-size: 1.5em;
+    font-family: "Swiss 721 W01 Thin";
+    color: #c8c2c2;
+    margin-bottom: 0;
+    padding: 0 20px 20px 20px;
+}
+
+#errResults {
+    font-size: 1.3em;
+    font-family: "Swiss 721 W01 Thin";
+    color: #dd8989;
+    margin-bottom: 0;
+    padding: 10px 0;
+}
+
+#resultsTitle {
+    padding-top: 10px;
+    display: inline-block;
+    font-family: "Swiss 721 W01 Thin";
+    margin: 0;
+}
+
+#resultList {
+    margin: 0 auto;
+    min-width: 350px;
+    max-width: 500px;
+    /* 	font-size: 1.5em; */
+}
+
+#resultList:empty {
+    border: 0px solid gray;
+}
+
+.listDiv {
+    width: 100%;
+    text-align: center;
+}
+
+.listDiv:empty {
+    display: none;
+}
+
+ul:empty {
+    display: none;
+}
+
+.centered {
+    margin: 0 auto;
+}
+
+.red {
+    color: red
+}
+
+.green {
+    color: green;
+}
+
+.chkMark {
+    color: #008000;
+}
+
+.hidden {
+    display: none;
+}
+
+section {
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+@media only screen and (max-width: 600px) {
+    #loader {
+        padding: 20px;
+    }
+    #loaderText1 {
+        font-size: 0.3em;
+    }
+    #loaderText2 {
+        font-size: 0.4em;
+    }
+}
