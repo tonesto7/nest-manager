@@ -3,16 +3,19 @@
 ## Verify the following before opening an issue:
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
 <!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
+- [ ] You followed the Nest Developer documentation here? [Nest Developer Account Creation](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/html/Create_Dev_Account.html)
 - [ ] That _OAuth_ is Enabled for the SmartApp under the IDE.
-- [ ] The SmartApp and Device are using the latest version.
-- [ ] You have reviewed the Readme for potential fixes.
-- [ ] That the Device Types have been _Published for You_.
+- [ ] The SmartApps and *_ALL_* (5) Devices Handlers are using the latest code available.
+- [ ] You have reviewed the [NST Manager Wiki](http://thingsthataresmart.wiki/index.php?title=NST_Manager) for potential fixes.
+- [ ] That ALL SmartApps and Device Handlers have been _Published for You_ in the IDE.
 
 
 ## About Your Setup:
 * How many Thermostats?:
 * How many Protects?
-* Are you Using the Nest Presence Device?
+* How many Cameras?
+* Using the Nest Presence Device?
+* Using the Nest Weather Device?
 * iOS or Android?:
 * Mobile App Version:
 
@@ -37,4 +40,4 @@
 ## Context
 <!--- How has this issue affected you? What are you trying to accomplish? -->
 <!--- Providing context helps us come up with a solution that is most useful in the real world -->
-Please include a copy of your log under the IDE if possible>>>
+Please include a copy of your log under the IDE if possible

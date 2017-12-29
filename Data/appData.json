@@ -27,7 +27,7 @@
                 "ver": "5.2.3"
             },
             "autoapp": {
-                "ver": "5.2.0"
+                "ver": "5.2.1"
             },
             "thermostat": {
                 "ver": "5.2.0"
@@ -44,7 +44,8 @@
             "weather": {
                 "ver": "5.2.0"
             }
-        }
+        },
+        "allowInApp": false
     },
     "html": {
         "cssVer": 1,
