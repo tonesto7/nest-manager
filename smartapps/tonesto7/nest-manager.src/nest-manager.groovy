@@ -35,11 +35,11 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.3" }
-def appVerDate() { "11-20-2017" }
+def appVersion() { "5.2.4" }
+def appVerDate() { "12-31-2017" }
 def minVersions() {
 	return [
-		"automation":["val":520, "desc":"5.2.0"],
+		"automation":["val":521, "desc":"5.2.1"],
 		"thermostat":["val":520, "desc":"5.2.0"],
 		"protect":["val":520, "desc":"5.2.0"],
 		"presence":["val":520, "desc":"5.2.0"],
@@ -2062,9 +2062,8 @@ def initialize() {
 	}
 	else {
 		if(checkMigrationRequired()) { return true }	// This will call updated later
-		reInitBuiltins()	// These are to have these apps release subscriptions to devices (in case of delete)
+		runIn(5, "reInitBuiltins", [overwrite: true])	// These are to have these apps release subscriptions to devices (in case of delete)
 		runIn(21, "initManagerApp", [overwrite: true])	// need to give time for watchdog updates before we try to delete devices.
-		//runIn(34, "reInitBuiltins", [overwrite: true])	// need to have watchdog/nestmode check if we created devices
 	}
 }
 
@@ -2074,7 +2073,67 @@ def reInitBuiltins() {
 	diagLogProcChange((settings?.enDiagWebPage && settings?.enRemDiagLogging))
 }
 
+def initBuiltin(btype) {
+	LogTrace("initBuiltin(${btype})")
+	def keepApp = false
+	def autoStr = ""
+	switch (btype) {
+		case "initNestModeApp":
+			if(automationNestModeEnabled()) {
+				keepApp = true
+				autoStr = "nMode"
+			}
+			break
+		case "initWatchdogApp":
+			if(atomicState?.isInstalled) {
+				keepApp = true
+			}
+			autoStr = "watchDog"
+			break
+		case "initRemDiagApp":
+			if(atomicState?.enRemDiagLogging) {
+				keepApp = true
+			}
+			autoStr = "remDiag"
+			break
+		default:
+ 			LogAction("initBuiltin BAD btype ${btype}", "warn", true)
+			break
+	}
+	if(autoStr) {
+		def mynestApp = getChildApps()?.findAll { it?.getAutomationType() == autoStr }
+		if(keepApp && mynestApp?.size() < 1 && btype != "initNestModeApp") {
+			LogAction("Installing ${autoStr}", "info", true)
+			try {
+				if(btype == "initRemDiagApp") {
+					addChildApp(appNamespace(), autoAppName(), getRemDiagAppChildName(), [settings:[remDiagFlag:["type":"bool", "value":true]]])
+				}
+				if(btype == "initWatchdogApp") {
+					addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
+				}
+			} catch (ex) {
+				appUpdateNotify(true)
+			}
+		} else if(mynestApp?.size() >= 1) {
+			def cnt = 1
+			mynestApp?.each { chld ->
+				if(keepApp && cnt == 1) {
+					LogTrace("initBuiltin: Running Update Command on ${autoStr}")
+					chld.update()
+				} else if(!keepApp || cnt > 1) {
+					def slbl = keepApp ? "warn" : "info"
+					LogAction("initBuiltin: Deleting ${keepApp ? "Extra " : ""}${autoStr} (${chld?.id})", slbl, true)
+					deleteChildApp(chld)
+				}
+				cnt = cnt+1
+			}
+		}
+	}
+}
+
 def initNestModeApp() {
+	initBuiltin("initNestModeApp");
+/*
 	LogTrace("initNestModeApp")
 	if(automationNestModeEnabled()) {
 		def nestModeApp = getChildApps()?.findAll { it?.getAutomationType() == "nMode" }
@@ -2092,9 +2151,12 @@ def initNestModeApp() {
 			}
 		}
 	}
+*/
 }
 
 def initWatchdogApp() {
+	initBuiltin("initWatchdogApp");
+/*
 	LogTrace("initWatchdogApp")
 	def watDogApp = getChildApps()?.findAll { it?.getAutomationType() == "watchDog" }
 	if(watDogApp?.size() < 1) {
@@ -2117,9 +2179,12 @@ def initWatchdogApp() {
 			cnt = cnt+1
 		}
 	}
+*/
 }
 
 def initRemDiagApp() {
+	initBuiltin("initRemDiagApp");
+/*
 	LogTrace("initRemDiagApp")
 	def keepApp = atomicState?.enRemDiagLogging == true ? true : false
 	def remDiagApp = getChildApps()?.findAll { it?.getAutomationType() == "remDiag" }
@@ -2144,6 +2209,7 @@ def initRemDiagApp() {
 			cnt = cnt+1
 		}
 	}
+*/
 }
 
 def initManagerApp() {
@@ -2203,6 +2269,7 @@ def finishInitManagerApp() {
 			}
 		}
 	}
+	runIn(5, "reInitBuiltins", [overwrite: true])	// need to have watchdog/nestmode check if we created devices
 }
 
 def createSavedNest() {
