@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.0.2" }
+def devVer() { return "5.2.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -20,6 +20,7 @@ metadata {
 		capability "Sensor"
 		capability "Battery"
 		capability "Smoke Detector"
+		capability "Power Source"
 		capability "Carbon Monoxide Detector"
 		capability "Refresh"
 		capability "Health Check"
@@ -48,7 +49,7 @@ metadata {
 		attribute "carbonMonoxide", "string"
 		attribute "smoke", "string"
 		attribute "nestCarbonMonoxide", "string"
-		attribute "powerSource", "string"
+		attribute "powerSourceNest", "string"
 		attribute "nestSmoke", "string"
 	}
 
@@ -56,7 +57,7 @@ metadata {
 		multiAttributeTile(name:"alarmState", type:"generic", width:6, height:4) {
 			tileAttribute("device.alarmState", key: "PRIMARY_CONTROL") {
 				attributeState("default", label:'--', icon: "st.unknown.unknown.unknown")
-				attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
+				attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#ffffff")
 				attributeState("smoke-warning", label:"SMOKE!\nWARNING", icon:"st.alarm.smoke.smoke", backgroundColor:"#e8d813")
 				attributeState("smoke-emergency", label:"SMOKE!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13")
 				attributeState("co-warning", label:"CO!\nWARNING!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e8d813")
@@ -64,7 +65,7 @@ metadata {
 			}
 			tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
 				attributeState("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-				attributeState("ok", label: "Battery: OK", backgroundColor: "#44B621",
+				attributeState("ok", label: "Battery: OK", backgroundColor: "#00a0dc",
 					icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_ok_v.png")
 				attributeState("replace", label: "Battery: REPLACE!", backgroundColor: "#e86d13",
 					icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_low_v.png")
@@ -72,7 +73,7 @@ metadata {
 		}
 		standardTile("main2", "device.alarmState", width: 2, height: 2) {
 			state("default", label:'--', icon: "st.unknown.unknown.unknown")
-			state("ok", label:"clear", backgroundColor:"#44B621",
+			state("ok", label:"clear", backgroundColor:"#ffffff",
 				icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/alarm_clear.png")
 			state("smoke-warning", label:"SMOKE!\nWARNING", backgroundColor:"#e8d813",
 				icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
@@ -174,7 +175,7 @@ def useTrackedHealth() { return state?.useTrackedHealth ?: false }
 def getHcTimeout() {
 	def toBatt = state?.hcBattTimeout
 	def toWire = state?.hcWireTimeout
-	return ((device.currentValue("powerSource") == "wired") ? (toWire instanceof Integer ? toWire : 35) : (toBatt instanceof Integer ? toBatt : 1500))*60
+	return ((device.currentValue("powerSourceNest") == "wired") ? (toWire instanceof Integer ? toWire : 35) : (toBatt instanceof Integer ? toBatt : 1500))*60
 }
 
 void verifyHC() {
@@ -200,10 +201,10 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-	if(useTrackedHealth()) {
+//	if(useTrackedHealth()) {
 		Logger("ping...")
 		keepAwakeEvent()
-	}
+//	}
 }
 
 def keepAwakeEvent() {
@@ -218,14 +219,16 @@ def keepAwakeEvent() {
 }
 
 void repairHealthStatus(data) {
-	log.trace "repairHealthStatus($data)"
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	Logger("repairHealthStatus($data)")
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -233,12 +236,12 @@ def parse(String description) {
 	LogAction("Parsing '${description}'")
 }
 
-def poll() {
+void poll() {
 	Logger("polling parent...")
 	parent.refresh(this)
 }
 
-def refresh() {
+void refresh() {
 	poll()
 }
 
@@ -317,6 +320,7 @@ def processEvent(data) {
 		initialize()
 		state.swVersion = devVer()
 		state?.shownChgLog = false
+		state.androidDisclaimerShown = false
 	}
 	def eventData = data?.evt
 	state.remove("eventData")
@@ -326,17 +330,19 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
+			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.restStreaming = eventData?.restStreaming == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-			if(useTrackedHealth()) {
+//			if(useTrackedHealth()) {
 				if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
 					state.hcBattTimeout = eventData?.hcBattTimeout
 					state.hcWireTimeout = eventData?.hcWireTimeout
 					verifyHC()
 				}
-			}
+//			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -461,29 +467,33 @@ def deviceVerEvent(ver) {
 }
 
 def lastCheckinEvent(checkin, isOnline) {
-	//Logger("lastCheckinEvent($checkin, $isOnline)")
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-	def lastChk = device.currentState("lastConnection")?.value
-	def prevOnlineStat = device.currentState("onlineStatus")?.value
-	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
-
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
+
+	def lastChk = device.currentState("lastConnection")?.value
+	def lastConnSeconds = lastChk ? getTimeDiffSeconds(lastChk) : 9000   // try not to disrupt running average for pwr determination
+
+	def prevOnlineStat = device.currentState("onlineStatus")?.value
 
 	def hcTimeout = getHcTimeout()
-	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
-	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
-	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
+	def curConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def curConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def curConnSeconds = (checkin && curConnFmt != "Not Available") ? getTimeDiffSeconds(curConnFmt) : 3000
 
-	state?.lastConnection = lastConn?.toString()
-	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
-		LogAction("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
+	LogAction("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+	if(hcTimeout && isOnline.toString() == "true" && curConnSeconds > hcTimeout && lastConnSeconds > hcTimeout) {
+		onlineStat = "offline"
+		LogAction("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
+	}
 
-		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }
-		//log.debug "lastConnSeconds: $lastConnSeconds"
-		if(lastConnSeconds >=0) { addCheckinTime(lastConnSeconds) }
-	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
+	state?.lastConnection = curConn?.toString()
+	if(isStateChange(device, "lastConnection", curConnFmt.toString())) {
+		LogAction("UPDATED | Last Nest Check-in was: (${curConnFmt}) | Original State: (${lastChk})")
+		sendEvent(name: 'lastConnection', value: curConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+		if(lastConnSeconds >= 0 && onlineStat == "online") { addCheckinTime(lastConnSeconds) }
+	} else { LogAction("Last Nest Check-in was: (${curConnFmt}) | Original State: (${lastChk})") }
 
 	state?.onlineStatus = onlineStat
 	modifyDeviceStatus(onlineStat)
@@ -495,7 +505,7 @@ def lastCheckinEvent(checkin, isOnline) {
 
 def addCheckinTime(val) {
 	def list = state?.checkinTimeList ?: []
-	def listSize = 7
+	def listSize = 12
 	if(list?.size() < listSize) {
 		list.push(val)
 	}
@@ -516,20 +526,24 @@ def addCheckinTime(val) {
 def determinePwrSrc() {
 	if(!state?.checkinTimeList) { state?.checkinTimeList = [] }
 	def checkins = state?.checkinTimeList
-	def checkinAvg = checkins?.size() ? (checkins?.sum()/checkins?.size()).toDouble().round(0).toInteger() : null
-	if(checkinAvg && checkinAvg < 10000) {
-		powerTypeEvent(true)
-	} else { powerTypeEvent(false) }
+	def checkinAvg = checkins?.size() ? (checkins?.sum()/checkins?.size()).toDouble().round(0).toInteger() : null //
+	if(checkins?.size() > 7) {
+		if(checkinAvg && checkinAvg < 10000) {
+			powerTypeEvent(true)
+		} else { powerTypeEvent(false) }
+	}
 	//log.debug "checkins: $checkins | Avg: $checkinAvg"
 }
 
 def powerTypeEvent(wired) {
-	def curVal = device.currentState("powerSource")?.value
-	def newVal = wired == true ? "wired" : "battery"
-	state?.powerSource = newVal
-	if(isStateChange(device, "powerSource", newVal)) {
+	def curVal = device.currentState("powerSourceNest")?.value
+	def newValSt = wired == true ? "wired" : "battery"
+	def newVal = wired == true ? "mains" : "battery"
+	state?.powerSource = newValSt
+	if(isStateChange(device, "powerSource", newVal) || isStateChange(device, "powerSourceNest", newValSt)) {
 		Logger("UPDATED | The Device's Power Source is: (${newVal}) | Original State: (${curVal})")
 		sendEvent(name: 'powerSource', value: newVal, displayed: true, isStateChange: true)
+		sendEvent(name: 'powerSourceNest', value: newValSt, displayed: true, isStateChange: true)
 		verifyHC()
 	} else { LogAction("The Device's Power Source is: (${newVal}) | Original State: (${curVal})") }
 }
@@ -686,6 +700,10 @@ def checkHealth() {
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
+def lastN(String input, n) {
+  return n > input?.size() ? null : n ? input[-n..-1] : ''
+}
+
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
@@ -708,8 +726,9 @@ void Logger(msg, logType = "debug") {
 			log.debug "${smsg}"
 			break
 	}
+	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "Protect DTH")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Protect-${theId}")
 	}
 }
 
@@ -818,7 +837,7 @@ def getWebData(params, desc, text=true) {
 	}
 }
 def gitRepo()		{ return "tonesto7/nest-manager"}
-def gitBranch()		{ return "master" }
+def gitBranch()		{ return state?.isBeta ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def devVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog_prot.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
 
@@ -869,6 +888,13 @@ def disclaimerMsg() {
 	if(!state?.disclaimerMsgShown) {
 		state.disclaimerMsgShown = true
 		return """<div class="orangeAlertBanner">Safety Disclaimer!\nUsing your Nest Protect with SmartThings will not allow for realtime alerts of Fire and Carbon Monoxide!!!</div>"""
+	} else { return "" }
+}
+
+def androidDisclaimerMsg() {
+	if(state?.mobileClientType == "android" && !state?.androidDisclaimerShown) {
+		state.androidDisclaimerShown = true
+		return """<div class="androidAlertBanner">FYI... The Android Client has a bug with reloading the HTML a second time.\nIt will only load once!\nYou will be required to completely close the client and reload to view the content again!!!</div>"""
 	} else { return "" }
 }
 
@@ -942,6 +968,7 @@ def getInfoHtml() {
 			<body>
 			  ${getChgLogHtml()}
 			  ${disclaimerMsg()}
+			  ${androidDisclaimerMsg()}
 			  ${devBrdCastHtml}
 			  ${testModeHTML}
 			  ${clientBl}
@@ -1027,8 +1054,9 @@ def getInfoHtml() {
 				</div>
 			  <script>
 				  function reloadProtPage() {
-					  var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getInfoHtml"
-					  window.location = url;
+					  // var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getInfoHtml"
+					  // window.location = url;
+					  window.location.reload();
 				  }
 			  </script>
 			  <div class="pageFooterBtn">

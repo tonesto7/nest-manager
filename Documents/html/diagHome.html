@@ -1,0 +1,152 @@
+<head>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+			<meta name="description" content="NST Diagnostics">
+			<meta name="author" content="Anthony S.">
+
+			<title>NST Diagnostics</title>
+
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+			<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+			<script src="https://use.fontawesome.com/fbe6a4efc7.js"></script>
+			<script src="https://fastcdn.org/FlowType.JS/1.1/flowtype.js"></script>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css">
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hamburgers/0.9.1/hamburgers.min.css">
+			<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+			<link rel="stylesheet" href="https://cdn.rawgit.com/toubou91/percircle/master/dist/css/percircle.css">
+			<script src="https://cdn.rawgit.com/toubou91/percircle/master/dist/js/percircle.js"></script>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js"></script>
+			<link rel="stylesheet" href="https://rawgit.com/tonesto7/nest-manager/master/Documents/css/diaghome.min.css">
+			<style>
+			</style>
+		</head>
+		<body>
+			<button onclick="topFunction()" id="scrollTopBtn" title="Go to top"><i class="fa fa-arrow-up centerText" aria-hidden="true"></i> Back to Top</button>
+
+			<!-- Your Content -->
+			<div id="container">
+				<div id="top-hdr" class="navbar navbar-default navbar-fixed-top">
+					<div class="centerText">
+						<div class="row">
+							<div class="col-xs-2"></div>
+							<div class="col-xs-8 centerText">
+								<h3 class="title-text"><img class="logoIcn" src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_icon.png"> Diagnostics Home</img></h3>
+							</div>
+							<div class="col-xs-2 right-head-col pull-right">
+								<button id="rfrshBtn" type="button" class="btn refresh-btn pull-right" title="Refresh Page Content"><i id="rfrshBtnIcn" class="fa fa-refresh" aria-hidden="true"></i></button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Page Content -->
+				<div id="page-content-wrapper">
+					<div class="container">
+
+					   	<!--First Panel Section -->
+					   	<div class="panel panel-primary">
+							<!--First Panel Section Heading-->
+							<div class="panel-heading">
+								<div class="row">
+									<div class="col-xs-12">
+										<h1 class="panel-title panel-title-text">Install Details:</h1>
+									</div>
+								</div>
+						</div>
+
+							<!--First Panel Section Body -->
+							<div class="panel-body" style="overflow-y: auto;">
+								<div class="container-fluid">
+									<!--First Panel Section Body Row 1-->
+									<div class="row" style="min-height: 100px;">
+
+										<!--First Panel Section Body Row 1 - Col1 -->
+										<div class=" col-xs-12 col-sm-8">
+											<div id="instContDiv" style="padding: 0 10px;">
+												<div class="row panel-border centerText">
+													<div class="col-xs-12 col-sm-6 install-content">
+														<span><b>Version:</b></br><small>${appVersion()}</small></span>
+													</div>
+													<div class="col-xs-12 col-sm-6 install-content">
+														<span><b>Install ID:</b></br><small>${atomicState?.installationId}</small></span>
+													</div>
+													<div class="col-xs-12 col-sm-6 install-content">
+													<span><b>Token Num:</b></br><small>${atomicState?.authTokenNum ?: "Not Found"}</small></span>
+												</div>
+													<div class="col-xs-12 col-sm-6 install-content">
+													<span><b>API Token Ver:</b></br><small>${atomicState?.metaData?.client_version}</small></span>
+												</div>
+												<div class="col-xs-12 col-sm-6 install-content">
+													<span><b>Install Date:</b></br><small>${instData?.dt}</small></span>
+												</div>
+												<div class="col-xs-12 col-sm-6 install-content">
+													<span><b>Last Updated:</b></br><small>${instData?.updatedDt}</small></span>
+												</div>
+												<div class="col-xs-12 col-sm-6 install-content">
+													<span><b>Init. Version:</b></br><small>${instData?.initVer}</small></span>
+												</div>
+												<div class="col-xs-12 col-sm-6 install-content">
+													<span><b>Fresh Install:</b></br><small>${instData?.freshInstall}</small></span>
+												</div>
+											</div>
+										</div>
+									</div>
+									<!--First Panel Section Body Row 1 - Col2 -->
+									<div class="col-xs-12 col-sm-4" style="padding: 25px;">
+								 			<div style="pull-right">
+												<div class="stateUseTitleText">State Usage</div>
+												<div id="stateUseCirc" data-percent="${sPerc}" data-text="<p class='stateUseCircText'>${sPerc}%</p>" class="small blue2 center"></div>
+											</div>
+										</div>
+									</div>
+									<hr/>
+									<!--First Panel Section Body Row 2 -->
+									<div class="row" style="min-height: 100px;">
+										<!--First Panel Section Body Row 2 - Col 1 -->
+									  	<div id="instContDiv" style="padding: 0 10px;">
+											<div class="panel panel-default">
+												<div id="item${appNum}-settings" class="panel-heading">
+													<h1 class="panel-title subpanel-title-text">Last Command Info:</h1>
+												</div>
+												<div class="panel-body">
+													<div><pre class="mapDataFmt">${lastCmdDesc().toString().replaceAll("\n", "<br>")}</pre></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!--Second Panel Section -->
+				  		<div class="panel panel-info">
+				   			<div class="panel-heading">
+								<h1 class="panel-title">Shortcuts</h1>
+				   			</div>
+				   			<div class="panel-body">
+								<div class="col-xs-6 centerText">
+							 		<p><a class="btn btn-primary btn-md shortcutBtns" href="${logUrl}" role="button">View Logs</a></p>
+								 	<p><a class="btn btn-primary btn-md shortcutBtns" href="${managerUrl}" role="button">Manager Data</a></p>
+								 	<p><a class="btn btn-primary btn-md shortcutBtns" href="${autoUrl}" role="button">Automation Data</a></p>
+								</div>
+								<div class="col-xs-6 centerText">
+								 	<p><a class="btn btn-primary btn-md shortcutBtns" href="${deviceUrl}" role="button">Device Data</a></p>
+									<p><a class="btn btn-primary btn-md shortcutBtns" href="${instDataUrl}" role="button">Install Data</a></p>
+									<p><a class="btn btn-primary btn-md shortcutBtns" href="${appDataUrl}" role="button">AppData File</a></p>
+								</div>
+							</div>
+					   	</div>
+						<footer class="footer">
+							<div class="container">
+			   					<div class="well well-sm footerText">
+			 						<span>External Access URL: <button id="copyUrlBtn" class="btn" title="Copy URL to Clipboard" type="button" data-clipboard-action="copy" data-clipboard-text="${remDiagUrl}"><i class="fa fa-clipboard" aria-hidden="true"></i></button></span>
+								</div>
+							</div>
+					  	</footer>
+					</div>
+				</div>
+		  	</div>
+			<script src="https://rawgit.com/tonesto7/nest-manager/master/Documents/js/diaghome.min.js"></script>
+		</body>

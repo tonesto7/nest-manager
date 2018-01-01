@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.4" }
+def devVer() { return "5.2.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -23,7 +23,6 @@ metadata {
 		capability "Motion Sensor"
 		capability "Sound Sensor"
 		capability "Refresh"
-		capability "Notification"
 		capability "Image Capture"
 		capability "Video Camera"
 		//capability "Video Capture"
@@ -46,6 +45,7 @@ metadata {
 		attribute "isStreaming", "string"
 		attribute "audioInputEnabled", "string"
 		attribute "videoHistoryEnabled", "string"
+		attribute "motionPerson", "string"
 		attribute "minVideoHistoryHours", "string"
 		attribute "maxVideoHistoryHours", "string"
 		attribute "publicShareEnabled", "string"
@@ -125,12 +125,15 @@ metadata {
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
 		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails", "motion", "sound" ])
 	}
+	preferences {
+		input "enableEvtSnapShot", "bool", title: "Take Snapshot on Motion Events?", description: "", defaultValue: true, displayDuringSetup: false
+		input "motionOnPersonOnly", "bool", title: "Only Trigger Motion Events When Person is Detected?", description: "", defaultValue: false, displayDuringSetup: false
+	}
 }
 
 mappings {
 	path("/getInHomeURL") {action: [GET: "getInHomeURL"]}
 	path("/getOutHomeURL") {action: [GET: "getOutHomeURL"]}
-
 	path("/getCamHtml") {action: [GET: "getCamHtml"]}
 }
 
@@ -165,7 +168,7 @@ def useTrackedHealth() { return state?.useTrackedHealth ?: false }
 
 def getHcTimeout() {
 	def to = state?.hcTimeout
-	return ((to instanceof Integer) ? to.toInteger() : 60)*60
+	return ((to instanceof Integer) ? to.toInteger() : 120)*60
 }
 
 void verifyHC() {
@@ -191,10 +194,10 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-	if(useTrackedHealth()) {
-		Logger("ping...")
+	Logger("ping...")
+//	if(useTrackedHealth()) {
 		keepAwakeEvent()
-	}
+//	}
 }
 
 def keepAwakeEvent() {
@@ -209,14 +212,16 @@ def keepAwakeEvent() {
 }
 
 void repairHealthStatus(data) {
-	log.trace "repairHealthStatus($data)"
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	Logger("repairHealthStatus($data)")
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -224,16 +229,16 @@ def parse(String description) {
 	LogAction("Parsing '${description}'", "debug")
 }
 
-def poll() {
+void poll() {
 	Logger("polling parent...")
 	parent.refresh(this)
 }
 
-def refresh() {
+void refresh() {
 	poll()
 }
 
-def cltLiveStreamStart() {
+void cltLiveStreamStart() {
 	//log.trace "video stream start()"
 	def url = getCamPlaylistURL().toString()
 	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
@@ -257,11 +262,10 @@ def processEvent() {
 		initialize()
 		state.swVersion = devVer()
 		state?.shownChgLog = false
+		state.androidDisclaimerShown = false
 	}
 	def eventData = state?.eventData
 	state.eventData = null
-	state?.ok2Checkin = false
-	state?.ok2CheckinRes = []
 	def dtNow = getDtNow()
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
@@ -269,18 +273,21 @@ def processEvent() {
 		if(eventData) {
 			def results = eventData?.data
 			//log.debug "results: $results"
+			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
+			state.takeSnapOnEvt = eventData?.camTakeSnapOnEvt == true ? true : false
 			state.restStreaming = eventData?.restStreaming == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.streamMsg = eventData?.streamNotify == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
 			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal.toInteger() : 60
-			if(useTrackedHealth()) {
+//			if(useTrackedHealth()) {
 				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 					state.hcTimeout = eventData?.hcTimeout
 					verifyHC()
 				}
-			}
+//			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -304,8 +311,9 @@ def processEvent() {
 			if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
 			if(results?.last_event) {
-				if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
+				state?.animation_url = null
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
+				if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
@@ -326,7 +334,7 @@ def processEvent() {
 }
 
 def getStateSize()      { return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) } //
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -336,7 +344,16 @@ def getDeviceStateData() {
 	return getState()
 }
 
+def evtSnapShotOk() {
+	if(state?.takeSnapOnEvt != true) { return false }
+	return settings?.enableEvtSnapShot == false ? false : true
+}
+
 def addCheckinReason(str) {
+	if(state?.ok2Checkin != true) {
+		state?.ok2CheckinRes = []
+		state?.ok2Checkin = true
+	}
 	def res = state?.ok2CheckinRes ?: []
 	res.push(str?.toString())
 	state?.ok2CheckinRes = res
@@ -386,7 +403,6 @@ def deviceVerEvent(ver) {
 	if(isStateChange(device, "devTypeVer", newData?.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-		state?.ok2Checkin = true
 		addCheckinReason("devTypeVer")
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
@@ -400,7 +416,8 @@ def lastCheckinEvent(checkin) {
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConn?.toString())) {
 		LogAction("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false)
+		state?.ok2Checkin = false
 	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }
 
@@ -414,7 +431,6 @@ def lastOnlineEvent(dt) {
 	if(isStateChange(device, "lastOnlineChange", lastOnl?.toString())) {
 		Logger("UPDATED | Last Online Change was: (${lastOnl}) | Original State: (${lastOnlVal})")
 		sendEvent(name: 'lastOnlineChange', value: lastOnl, displayed: false, isStateChange: true)
-		state?.ok2Checkin = true
 		addCheckinReason("lastOnlineChange")
 	} else { LogAction("Last Online Change was: (${lastOnl}) | Original State: (${lastOnlVal})") }
 }
@@ -429,7 +445,6 @@ def onlineStatusEvent(isOnline) {
 	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
-		state?.ok2Checkin = true
 		addCheckinReason("onlineStatusChange")
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
@@ -446,9 +461,8 @@ def isStreamingEvent(isStreaming, override=false) {
 	if(isStateChange(device, "isStreaming", val.toString())) {
 		Logger("UPDATED | Camera Live Video Streaming is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Camera Live Video Streaming is: ${val}", displayed: true, isStateChange: true, state: val)
-		sendEvent(name: "switch", value: (val == "on" ? val : "off"))
+		sendEvent(name: "switch", value: (val == "on" ? val : "off"), displayed: false)
 		cameraStreamNotify(state?.isStreaming)
-		state?.ok2Checkin = true
 		addCheckinReason("isStreaming")
 	} else { LogAction("Camera Live Video Streaming is: (${val}) | Original State: (${isOn})") }
 }
@@ -460,7 +474,6 @@ def audioInputEnabledEvent(on) {
 	if(isStateChange(device, "audioInputEnabled", val.toString())) {
 		Logger("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		state?.ok2Checkin = true
 		addCheckinReason("audioInputEnabled")
 	} else { LogAction("Audio Input Status is: (${val}) | Original State: (${isOn})") }
 }
@@ -472,7 +485,6 @@ def videoHistEnabledEvent(on) {
 	if(isStateChange(device, "videoHistoryEnabled", val.toString())) {
 		Logger("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		state?.ok2Checkin = true
 		addCheckinReason("videoHistoryEnabled")
 	} else { LogAction("Video History Status is: (${val}) | Original State: (${isOn})") }
 }
@@ -484,7 +496,6 @@ def publicShareEnabledEvent(on) {
 	if(isStateChange(device, "publicShareEnabled", val.toString())) {
 		Logger("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		state?.ok2Checkin = true
 		addCheckinReason("publicShareEnabled")
 	} else { LogAction("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
 }
@@ -495,7 +506,6 @@ def softwareVerEvent(ver) {
 	if(isStateChange(device, "softwareVer", ver.toString())) {
 		Logger("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
 		sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
-		state?.ok2Checkin = true
 		addCheckinReason("softwareVer")
 	} else { LogAction("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
@@ -510,6 +520,7 @@ def lastEventDataEvent(data) {
 	def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
 
 	def hasPerson = data?.has_person ? data?.has_person?.toBoolean() : false
+	state?.motionPerson = hasPerson
 	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
 	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
 	def actZones = state?.activityZones
@@ -535,19 +546,23 @@ def lastEventDataEvent(data) {
 	state.lastEventTime = "${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "h:mm:ssa")} to ${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), "h:mm:ssa")}"
 	if(state?.lastEventData) { state.lastEventData == null }
 
-	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType.toString())  || isStateChange(device, "lastEventZones", evtZoneNames.toString())) {
+	def tryPic = false
+
+	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType.toString()) || isStateChange(device, "lastEventZones", evtZoneNames.toString())) {
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is ${newStartDt}", displayed: false)
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is ${newEndDt}", displayed: false)
 		sendEvent(name: 'lastEventType', value: evtType, descriptionText: "Last Event Type was ${evtType}", displayed: false)
 		sendEvent(name: 'lastEventZones', value: evtZoneNames.toString(), descriptionText: "Last Event Zones: ${evtZoneNames}", displayed: false)
-		state.lastCamEvtData = ["startDt":newStartDt, "endDt":newEndDt, "hasMotion":hasMotion, "hasSound":hasSound, "hasPerson":hasPerson, "actZones":(data?.activity_zone_ids ?: null)]
-		Logger("└────────────────────────────────")
+		state.lastCamEvtData = ["startDt":newStartDt, "endDt":newEndDt, "hasMotion":hasMotion, "hasSound":hasSound, "hasPerson":hasPerson, "motionOnPersonOnly":(settings?.motionOnPersonOnly == true), "actZones":(data?.activity_zone_ids ?: null)]
+		tryPic = evtSnapShotOk()
+		Logger(state?.enRemDiagLogging ? "└──────────────" : "└────────────────────────────")
+		//Logger("│	URL: ${state?.animation_url ?: "None"}")
+		Logger("│	Took Snapshot: (${tryPic})")
 		Logger("│	Zones: ${evtZoneNames ?: "None"}")
 		Logger("│	End Time: (${newEndDt})")
 		Logger("│	Start Time: (${newStartDt})")
 		Logger("│	Type: ${evtType}")
-		Logger("┌──────────New Camera Event──────────")
-		state?.ok2Checkin = true
+		Logger(state?.enRemDiagLogging ? "┌───New Camera Event────" : "┌────────New Camera Event────────")
 		addCheckinReason("lastEventData")
 	} else {
 		LogAction("Last Event Start Time: (${newStartDt}) - Zones: ${evtZoneNames} | Original State: (${curStartDt})")
@@ -555,6 +570,13 @@ def lastEventDataEvent(data) {
 		LogAction("Last Event Type: (${evtType}) - Zones: ${evtZoneNames}")
 	}
 	motionSoundEvtHandler()
+	if(tryPic) {
+		if(state?.videoHistoryEnabled == "Enabled") {
+			takePicture(state?.animation_url)
+		} else {
+			takePicture(state?.snapshot_url)
+		}
+	}
 }
 
 def motionSoundEvtHandler() {
@@ -565,12 +587,13 @@ def motionSoundEvtHandler() {
 	}
 }
 
-def motionEvtHandler(data) {
+void motionEvtHandler(data) {
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def dtNow = new Date()
 	def curMotion = device.currentState("motion")?.stringValue
 	def motionStat = "inactive"
+	def motionPerStat = "inactive"
 	if(state?.restStreaming == true && data) {
 		if(data?.endDt && data?.hasMotion) {
 			def newEndDt = null
@@ -578,24 +601,24 @@ def motionEvtHandler(data) {
 				newEndDt = Date.parse("E MMM dd HH:mm:ss z yyyy", data?.endDt.toString())+1.minutes
 			}
 			if(newEndDt) {
-				//log.debug "motionEvt now: ${tf.format(dtNow)} | end: ${tf.format(newEndDt)}"
-				//log.debug "motionEvt newEndDt > dtNow: (${newEndDt > dtNow})"
-				if(newEndDt > dtNow) {
+				def motGo = (data?.motionOnPersonOnly == true && data?.hasPerson != true) ? false : true
+				if(newEndDt > dtNow && motGo) {
 					motionStat = "active"
+					if(data?.hasPerson) { motionPerStat = "active" }
 					runIn(state?.motionSndChgWaitVal.toInteger()+6, "motionSoundEvtHandler", [overwrite: true])
 				}
 			}
 		}
 	}
-	if(isStateChange(device, "motion", motionStat.toString())) {
-		Logger("UPDATED | Motion Sensor is: (${motionStat}) | Original State: (${curMotion})")
+	if(isStateChange(device, "motion", motionStat.toString()) || isStateChange(device, "motionPerson", motionPerStat?.toString())) {
+		Logger("UPDATED | Motion Sensor is: (${motionStat}) | Person: (${motionPerStat}) | Original State: (${curMotion})")
 		sendEvent(name: "motion", value: motionStat, descriptionText: "Motion Sensor is: ${motionStat}", displayed: true, isStateChange: true, state: motionStat)
-		state?.ok2Checkin = true
+		sendEvent(name: "motionPerson", value: motionPerStat, descriptionText: "Motion Person is: ${motionPerStat}", displayed: true, isStateChange: true, state: motionPerStat)
 		addCheckinReason("motion")
 	} else { LogAction("Motion Sensor is: (${motionStat}) | Original State: (${curMotion})") }
 }
 
-def soundEvtHandler(data) {
+void soundEvtHandler(data) {
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 		tf.setTimeZone(getTimeZone())
 	def dtNow = new Date()
@@ -608,8 +631,6 @@ def soundEvtHandler(data) {
 				newEndDt = Date.parse("E MMM dd HH:mm:ss z yyyy", data?.endDt.toString())+1.minutes
 			}
 			if(newEndDt) {
-				// log.debug "soundEvt now: ${tf.format(dtNow)} | end: ${tf.format(newEndDt)}"
-				// log.debug "soundEvt newEndDt > dtNow: (${newEndDt > dtNow})"
 				if(newEndDt > dtNow) {
 					sndStat = "detected"
 					runIn(state?.motionSndChgWaitVal.toInteger()+6, "motionSoundEvtHandler", [overwrite: true])
@@ -620,7 +641,6 @@ def soundEvtHandler(data) {
 	if(isStateChange(device, "sound", sndStat.toString())) {
 		Logger("UPDATED | Sound Sensor State: (${sndStat}) | Original State: (${curSound})")
 		sendEvent(name: "sound", value: sndStat, descriptionText: "Sound Sensor is: ${sndStat}", displayed: true, isStateChange: true, state: sndStat)
-		state?.ok2Checkin = true
 		addCheckinReason("sound")
 	} else { LogAction("Sound Sensor State: (${sndStat}) | Original State: (${curSound})") }
 }
@@ -633,7 +653,6 @@ def debugOnEvent(debug) {
 	if(isStateChange(device, "debugOn", dVal.toString())) {
 		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-		state?.ok2Checkin = true
 		addCheckinReason("debugOn")
 	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
@@ -645,7 +664,6 @@ def apiStatusEvent(issue) {
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-		state?.ok2Checkin = true
 		addCheckinReason("apiStatus")
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
@@ -661,7 +679,6 @@ def lastUpdatedEvent(sendEvt=false) {
 	if(sendEvt && state?.isOnline) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
-		state?.ok2Checkin = true
 		addCheckinReason("lastUpdatedDt")
 	}
 }
@@ -679,7 +696,6 @@ def vidHistoryTimeEvent() {
 		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
 		sendEvent(name: "minVideoHistoryHours", value: newMin, descriptionText: "Minimum Video Recording History Hours is Now: (${newMin} hours)", displayed: false, isStateChange: true, state: newMin)
 		sendEvent(name: "maxVideoHistoryHours", value: newMax, descriptionText: "Maximum Video Recording History Hours is Now: (${newMax} hours)", displayed: false, isStateChange: true, state: newMax)
-		state?.ok2Checkin = true
 		addCheckinReason("videoHistoryTime")
 	} else { LogAction("Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})") }
 }
@@ -733,7 +749,7 @@ def getRecTimeDesc(val) {
 	def result = null
 	if(val && val instanceof Integer) {
 		if(val.toInteger() > 24) {
-			def nVal = (val/24).toDouble().round(0)
+			def nVal = (val/24).toDouble().round(0) //
 			result = "${nVal.toInteger()} days"
 		} else {
 			result = "${val} hours"
@@ -770,7 +786,7 @@ def healthNotifyOk() {
 
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
-	if(isOnline || state?.healthMsg != true || state?.healthInRepair == true) { return }
+	if(state?.healthMsg != true || state?.healthInRepair == true || isOnline) { return }
 	if(healthNotifyOk()) {
 		def now = new Date()
 		parent?.deviceHealthNotify(this, isOnline)
@@ -828,7 +844,15 @@ void off() {
 }
 
 void take() {
-	takePicture()
+	takePicture(state?.snapshot_url)
+}
+
+void mute() {
+	Logger("Nest API does not allow turning microphone off...")
+}
+
+void unmute() {
+	Logger("Nest API does not allow turning microphone on...")
 }
 
 private getPictureName() {
@@ -840,20 +864,25 @@ private getImageWidth() {
 	return 1280
 }
 
-private takePicture() {
+private takePicture(String url) {
 	try {
 		if(state?.isOnline) {
-			def imageBytes
-			def params = [
-				uri: state?.snapshot_url,
-				requestContentType: "application/x-www-form-urlencoded"
-			]
-			httpGet(params) { resp ->
-				imageBytes = resp?.data
-				if (imageBytes) {
-					storeImage(getPictureName(), imageBytes)
-					return true
+			if(url?.startsWith("https://")) {
+				ByteArrayInputStream imageBytes
+				def params = [
+					uri: url,
+					requestContentType: "application/x-www-form-urlencoded"
+				]
+				httpGet(params) { resp ->
+					imageBytes = resp?.data
+					if (imageBytes) {
+						storeImage(getPictureName(), imageBytes)
+						return true
+					}
 				}
+			} else {
+				exceptionDataHandler("takePicture Error: non-standard url received ($url)")
+				return
 			}
 		}
 	} catch (ex) {
@@ -866,6 +895,9 @@ private takePicture() {
 /************************************************************************************************
 |							EXCEPTION HANDLING & LOGGING FUNCTIONS								|
 *************************************************************************************************/
+def lastN(String input, n) {
+  return n > input?.size() ? null : n ? input[-n..-1] : ''
+}
 
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
@@ -889,8 +921,9 @@ void Logger(msg, logType = "debug") {
 			log.debug "${smsg}"
 			break
 	}
+	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "Camera DTH")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Camera-${theId}")
 	}
 }
 
@@ -929,7 +962,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-			def diff = (int) (long) (stop - start) / 1000
+			def diff = (int) (long) (stop - start) / 1000 //
 			return diff
 		} else { return null }
 	} catch (ex) {
@@ -1050,7 +1083,7 @@ def getWebData(params, desc, text=true) {
 	}
 }
 def gitRepo()		{ return "tonesto7/nest-manager"}
-def gitBranch()		{ return "master" }
+def gitBranch()		{ return state?.isBeta ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def devVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog_cam.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
 
@@ -1148,6 +1181,13 @@ def getCamApiServer() {
 	return data ?: null
 }
 
+def androidDisclaimerMsg() {
+	if(state?.mobileClientType == "android" && !state?.androidDisclaimerShown) {
+		state.androidDisclaimerShown = true
+		return """<div class="androidAlertBanner">FYI... The Android Client has a bug with reloading the HTML a second time.\nIt will only load once!\nYou will be required to completely close the client and reload to view the content again!!!</div>"""
+	} else { return "" }
+}
+
 def getChgLogHtml() {
 	def chgStr = ""
 	//log.debug "shownChgLog: ${state?.shownChgLog}"
@@ -1174,6 +1214,7 @@ def getChgLogHtml() {
 def getCamHtml() {
 	try {
 		// These are used to determine the URL for the nest cam stream
+		//def refreshUrl = "https://api.smartthings.com/elder/${location?.id}/api/devices/${device?.getId()}/getCamHtml"
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 		def pubVidUrl = state?.public_share_url
@@ -1214,6 +1255,7 @@ def getCamHtml() {
 			</head>
 			<body>
 				${getChgLogHtml()}
+				${androidDisclaimerMsg()}
 				${devBrdCastHtml}
 				${clientBl}
 				${updateAvail}
@@ -1321,7 +1363,6 @@ def getCamHtml() {
 						iOSEdgeSwipeDetection: true,
 						parallax: true,
 						slideToClickedSlide: true,
-
 						effect: 'coverflow',
 						coverflow: {
 						  rotate: 50,
@@ -1339,8 +1380,7 @@ def getCamHtml() {
 						paginationClickable: true
 					})
 					function reloadCamPage() {
-					    var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getCamHtml"
-					    window.location = url;
+					    window.location.reload();
 					}
 				</script>
 				<div class="pageFooterBtn">
@@ -1351,6 +1391,7 @@ def getCamHtml() {
 			</body>
 		</html>
 		"""
+/* """ */
 		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
@@ -1381,6 +1422,7 @@ def showCamHtml() {
 
 	def data = """
 		<div class="swiper-slide">
+			${androidDisclaimerMsg()}
 			<div style="padding: 5px;">
 				<section class="sectionBg">
 					<h3>Last Camera Event</h3>

@@ -1,23 +1,15 @@
-<p style="font-size: 15px;"><strong>V5.0.4 (May 1st, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Bug fixes to quiet logs</li>
+    <li><strong>ADDED:</strong> Preference now available to only modify motion events when person detected (Requires Nest Aware Subscription!).</li>
+    <li><strong>ADDED:</strong> Android Disclaimer for HTML.</li>
+    <li><strong>ADDED:</strong> Added New Attribute called 'motionPerson' for WebCoRE to Monitor for changes.</li>
+    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
+    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
 </ul>
 <br>
-<p style="font-size: 15px;"><strong>V5.0.3 (April 25th, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.1.4 (July 21st, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Bug fixes to devices with public url not being shared</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.2 (April 6th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Self healing Fix for Device Health getting stuck offline. (Takes a Couple Minutes to Repair)</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.1 (April 3rd, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Updated the logic to attempt a second data refresh 15 seconds after new install to initiate a check for the camera id</li>
+    <li><strong>FIXED:</strong> The bug discovered with Storing the Images to ST is not entirely fixed but is now handled correctly and reporting the error.</li>
 </ul>

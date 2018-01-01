@@ -1,11 +1,13 @@
-<p style="font-size: 15px;"><strong>V5.0.2 (May 1st, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Bug fixes to quiet logs</li>
+    <li><strong>ADDED:</strong> Added Android Disclaimer for HTML.</li>
+    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
+    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
 </ul>
 <br>
-<p style="font-size: 15px;"><strong>V5.0.1 (April 6th, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.1.6 (November 7th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Self healing Fix for Device Health getting stuck offline. (Takes a Couple Minutes to Repair)</li>
+    <li><strong>FIXED:</strong> Cleanups and minor bugfixes.</li>
 </ul>

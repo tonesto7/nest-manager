@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.4" }
+def devVer() { return "5.2.0" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -34,32 +34,58 @@ metadata {
 		attribute "devTypeVer", "string"
 		attribute "lastUpdatedDt", "string"
 
+// from original smartweather tile
 		attribute "localSunrise", "string"
 		attribute "localSunset", "string"
 		attribute "city", "string"
 		attribute "timeZoneOffset", "string"
 		attribute "weather", "string"
 		attribute "wind", "string"
-		attribute "windgust", "string"
-		attribute "windDir", "string"
-		attribute "wind_degrees", "string"
 		attribute "weatherIcon", "string"
 		attribute "forecastIcon", "string"
 		attribute "feelsLike", "string"
 		attribute "percentPrecip", "string"
-		attribute "uvindex", "string"
-		attribute "dewpoint", "string"
+		attribute "alert", "string"
+		attribute "alertKeys", "string"
+
+// original, not used
+//		attribute "sunriseDate", "string"
+//		attribute "sunsetDate", "string"
+
+// smartweather tile 2.0
+		attribute "winddirection", "string"
+/*
+		attribute "wind_gust", "string"
+		attribute "winddirection_deg", "string"
+		attribute "windinfo", "string"
+		attribute "uv_index", "string"
+		attribute "water", "string"
+		attribute "percentPrecipToday", "string"
+		attribute "percentPrecipLastHour", "string"
+		attribute "pressure", "string"
+*/
+		attribute "solarradiation", "string"
 		attribute "visibility", "string"
+		//attribute "pressureTrend", "string"
+
+		attribute "dewpoint", "string"
+		attribute "wind_degrees", "string"
+
+// nst manager data
+		attribute "windgust", "string"
 		attribute "pressure_mb", "string"
 		attribute "pressure_in", "string"
 		attribute "pressure_trend", "string"
-		attribute "alert", "string"
 		attribute "alert2", "string"
 		attribute "alert3", "string"
 		attribute "alert4", "string"
-		attribute "alertKeys", "string"
 		attribute "weatherObservedDt", "string"
 		attribute "precip_today", "string"
+		attribute "precip_lasthour", "string"
+
+// old versions compatibility
+		attribute "uvindex", "string"
+		attribute "windDir", "string"
 	}
 
 	simulator { }
@@ -191,9 +217,9 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	LogAction("Ping", "info", true)
-	if(useTrackedHealth()) {
+//	if(useTrackedHealth()) {
 		keepAwakeEvent()
-	}
+//	}
 }
 
 def keepAwakeEvent() {
@@ -208,14 +234,16 @@ def keepAwakeEvent() {
 }
 
 void repairHealthStatus(data) {
-	log.trace "repairHealthStatus($data)"
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	Logger("repairHealthStatus($data)")
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -262,7 +290,7 @@ def poll() {
 	parent.refresh(this)
 }
 
-def refresh() {
+void refresh() {
 	poll()
 }
 
@@ -281,6 +309,7 @@ void processEvent() {
 		initialize()
 		state.swVersion = devVer()
 		state?.shownChgLog = false
+		state.androidDisclaimerShown = false
 	}
 	def eventData = state?.eventData
 	//LogAction("processEvent Parsing data ${eventData}", "trace")
@@ -289,6 +318,8 @@ void processEvent() {
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
@@ -298,12 +329,12 @@ void processEvent() {
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()
-			if(useTrackedHealth()) {
+//			if(useTrackedHealth()) {
 				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 					state.hcTimeout = eventData?.hcTimeout
 					verifyHC()
 				}
-			}
+//			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
@@ -336,7 +367,7 @@ void processEvent() {
 }
 
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()	{ return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSizePerc()	{ return (int) ((stateSize/100000)*100).toDouble().round(0) } //
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -556,7 +587,7 @@ def getWeatherConditions(Map weatData) {
 				def Tc = Math.round(cur?.current_observation?.feelslike_c as Double) as Double
 				state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
 				if (state.curWeatherTemp_c < state.curWeatherDewPoint_c) { state.curWeatherDewPoint_c = state.curWeatherTemp_c }
-				state.curWeatherDewPoint_f = Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
+				state.curWeatherDewPoint_f = Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0) //
 				dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
 
 				getSomeData(true)
@@ -565,29 +596,36 @@ def getWeatherConditions(Map weatData) {
 				def wspeed = 0.0
 				def wgust = 0.0
 				def precip = 0.0
+				def precip1hr = 0.0
 				if(wantMetric()) {
 					wspeed = Math.round(cur?.current_observation?.wind_kph as float)
 					wgust = Math.round(cur?.current_observation?.wind_gust_kph as float)
 					precip = Math.round(cur?.current_observation?.precip_today_metric as float)
+					precip1hr = Math.round(cur?.current_observation?.precip_1hr_metric as float)
 					sendEvent(name: "visibility", value: cur?.current_observation?.visibility_km, unit: "km")
 					sendEvent(name: "wind", value: wspeed as String, unit: "KPH")
 					sendEvent(name: "windgust", value: wgust as String, unit: "KPH")
 					sendEvent(name: "precip_today", value: precip as String, unit: "mm")
+					sendEvent(name: "precip_lasthour", value: precip1hr as String, unit: "mm")
 					wspeed += " KPH"
 					wgust += " KPH"
 				} else {
 					wspeed = Math.round(cur?.current_observation?.wind_mph as float)
 					wgust = Math.round(cur?.current_observation?.wind_gust_mph as float)
-					precip = Math.round(cur?.current_observation?.precip_today_in as float)
+					precip = cur?.current_observation?.precip_today_in ? Math.round(cur?.current_observation?.precip_today_in as float) : 0.0
+					precip1hr = cur?.current_observation?.precip_1hr_in ? Math.round(cur?.current_observation?.precip_1hr_in as float) : 0.0
 					sendEvent(name: "visibility", value: cur?.current_observation?.visibility_mi, unit: "miles")
 					sendEvent(name: "wind", value: wspeed as String, unit: "MPH")
 					sendEvent(name: "windgust", value: wgust as String, unit: "MPH")
 					sendEvent(name: "precip_today", value: precip as String, unit: "in")
+					sendEvent(name: "precip_lasthour", value: precip1hr as String, unit: "in")
 					wspeed += " MPH"
 					wgust += " MPH"
 				}
 				def wdir = cur?.current_observation?.wind_dir
-				sendEvent(name: "windDir", value: wdir)
+				sendEvent(name: "windDir", value: wdir) // obsolete;  for transition time
+				sendEvent(name: "winddirection", value: wdir)
+
 				sendEvent(name: "wind_degrees", value: cur?.current_observation?.wind_degrees)
 				state.windStr = "From the ${wdir} at ${wspeed} Gusting to ${wgust}"
 
@@ -601,6 +639,7 @@ def getWeatherConditions(Map weatData) {
 
 				sendEvent(name: "uvindex", value: cur?.current_observation?.UV)
 				sendEvent(name: "ultravioletIndex", value: cur?.current_observation?.UV)
+				sendEvent(name: "solarradiation", value: cur?.current_observation?.solarradiation)
 
 				def obsrDt = cur?.current_observation?.observation_time_rfc822
 				if(obsrDt) {
@@ -622,7 +661,7 @@ def getWeatherConditions(Map weatData) {
 	}
 	catch (ex) {
 		log.error "getWeatherConditions Exception:", ex
-		parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherConditions")
+		exceptionDataHandler("${ex}", "getWeatherConditions")
 	}
 }
 
@@ -648,7 +687,7 @@ def getWeatherForecast(Map weatData) {
 	}
 	catch (ex) {
 		log.error "getWeatherForecast Exception:", ex
-		parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherForecast")
+		exceptionDataHandler("${ex}", "getWeatherForecast")
 	}
 }
 
@@ -670,7 +709,7 @@ def getWeatherAstronomy(weatData) {
 	}
 	catch (ex) {
 		log.error "getWeatherAstronomy Exception:", ex
-		parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherAstronomy")
+		exceptionDataHandler("${ex}", "getWeatherAstronomy")
 	}
 }
 
@@ -796,13 +835,13 @@ def getWeatherAlerts(weatData) {
 	}
 	catch (ex) {
 		log.error "getWeatherAlerts Exception:", ex
-		parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherAlerts")
+		exceptionDataHandler("${ex}", "getWeatherAlerts")
 	}
 }
 
 private pad(String s, size = 25) {
 	try {
-		def n = (size - s.size()) / 2
+		def n = (size - s.size()) / 2 //
 		if (n > 0) {
 			def sb = ""
 			n.times {sb += " "}
@@ -821,14 +860,14 @@ private pad(String s, size = 25) {
 }
 
 private estimateDewPoint(double rh,double t) {
-	def L = Math.log(rh/100)
+	def L = Math.log(rh/100) //
 	def M = 17.27 * t
 	def N = 237.3 + t
-	def B = (L + (M/N)) / 17.27
-	def dp = (237.3 * B) / (1 - B)
+	def B = (L + (M/N)) / 17.27 //
+	def dp = (237.3 * B) / (1 - B) //
 
-	def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) )
-	def ave = (dp + dp1)/2
+	def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) ) //
+	def ave = (dp + dp1)/2 //
 	//LogAction("dp: ${dp.round(1)} dp1: ${dp1.round(1)} ave: ${ave.round(1)}")
 	ave = dp1
 	return ave.round(1)
@@ -888,12 +927,12 @@ private estimateLux(weatherIcon) {
 				//LogAction("now: $now afterSunrise: $afterSunrise beforeSunset: $beforeSunset oneHour: $oneHour")
 				if(afterSunrise < oneHour) {
 					//dawn
-					lux = (long)(lux * (afterSunrise/oneHour))
+					lux = (long)(lux * (afterSunrise/oneHour)) //
 					runIn(5*60, "luxUpdate", [overwrite: true])
 				} else if (beforeSunset < oneHour) {
 					//dusk
 					//LogAction("dusk", "trace")
-					lux = (long)(lux * (beforeSunset/oneHour))
+					lux = (long)(lux * (beforeSunset/oneHour)) //
 					runIn(5*60, "luxUpdate", [overwrite: true])
 				} else if (beforeSunset < (oneHour*2)) {
 					//LogAction("before dusk", "trace")
@@ -918,7 +957,7 @@ private estimateLux(weatherIcon) {
 	}
 	catch (ex) {
 		log.error "estimateLux Exception:", ex
-		parent?.sendChildExceptionData("weather", devVer(), ex, "estimateLux")
+		exceptionDataHandler("${ex}", "estimateLux")
 	}
 	return null
 }
@@ -979,7 +1018,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "Weather DTH")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Weather")
 	}
 }
 
@@ -1103,7 +1142,7 @@ def getWebData(params, desc, text=true) {
 	}
 }
 def gitRepo()		{ return "tonesto7/nest-manager"}
-def gitBranch()		{ return "master" }
+def gitBranch()		{ return state?.isBeta ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def devVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog_weath.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
 
@@ -1556,6 +1595,13 @@ def forecastDay(day) {
 	return dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
 }
 
+def androidDisclaimerMsg() {
+	if(state?.mobileClientType == "android" && !state?.androidDisclaimerShown) {
+		state.androidDisclaimerShown = true
+		return """<div class="androidAlertBanner">FYI... The Android Client has a bug with reloading the HTML a second time.\nIt will only load once!\nYou will be required to completely close the client and reload to view the content again!!!</div>"""
+	} else { return "" }
+}
+
 def getChgLogHtml() {
 	def chgStr = ""
 	if(!state?.shownChgLog == true) {
@@ -1628,6 +1674,7 @@ def getWeatherHTML() {
 				</head>
 				<body>
 					${getChgLogHtml()}
+					${androidDisclaimerMsg()}
 					${devBrdCastHtml}
 					${clientBl}
 					${updateAvail}
@@ -1682,8 +1729,9 @@ def getWeatherHTML() {
 					</div>
 					<script>
 						function reloadWeatherPage() {
-							var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
-							window.location = url;
+							// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
+							// window.location = url;
+							window.location.reload();
 						}
 					</script>
 					<div class="pageFooterBtn">

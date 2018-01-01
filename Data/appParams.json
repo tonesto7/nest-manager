@@ -7,22 +7,22 @@
   },
   "versions": {
     "app": {
-      "ver": "5.0.8"
+      "ver": "5.1.10"
     },
     "thermostat": {
-      "ver": "5.0.2"
+      "ver": "5.1.5"
     },
     "protect": {
-      "ver": "5.0.2"
+      "ver": "5.1.4"
     },
     "camera": {
-      "ver": "5.0.4"
+      "ver": "5.1.4"
     },
     "presence": {
-      "ver": "5.0.1"
+      "ver": "5.1.2"
     },
     "weather": {
-      "ver": "5.0.4"
+      "ver": "5.1.3"
     }
   },
   "token": {
@@ -41,22 +41,22 @@
     "setupVersion": 2,
     "versions": {
       "app": {
-        "ver": "5.0.8"
+        "ver": "5.1.10"
       },
       "thermostat": {
-        "ver": "5.0.2"
+        "ver": "5.1.5"
       },
       "protect": {
-        "ver": "5.0.2"
+        "ver": "5.1.4"
       },
       "camera": {
-        "ver": "5.0.4"
+        "ver": "5.1.4"
       },
       "presence": {
-        "ver": "5.0.1"
+        "ver": "5.1.2"
       },
       "weather": {
-        "ver": "5.0.4"
+        "ver": "5.1.3"
       }
     }
   },

@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.2.0" }
 
 // for the UI
 metadata {
@@ -63,10 +63,10 @@ metadata {
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
 		}
-		valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
+		valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
-        htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main ("presence")
 		details ("presence", "nestPresence", "refresh", "html")
@@ -130,9 +130,9 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	Logger("ping...")
-	if(useTrackedHealth()) {
+//	if(useTrackedHealth()) {
 		keepAwakeEvent()
-	}
+//	}
 }
 
 def keepAwakeEvent() {
@@ -148,14 +148,16 @@ def keepAwakeEvent() {
 }
 
 void repairHealthStatus(data) {
-	log.trace "repairHealthStatus($data)"
-	if(data?.flag) {
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
-		state?.healthInRepair = false
-	} else {
-		state.healthInRepair = true
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(7, repairHealthStatus, [data: [flag: true]])
+	Logger("repairHealthStatus($data)")
+	if(state?.hcRepairEnabled != false) {
+		if(data?.flag) {
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+			state?.healthInRepair = false
+		} else {
+			state.healthInRepair = true
+			sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+			runIn(7, repairHealthStatus, [data: [flag: true]])
+		}
 	}
 }
 
@@ -170,7 +172,7 @@ def poll() {
 	parent.refresh(this)
 }
 
-def refresh() {
+void refresh() {
 	poll()
 }
 
@@ -194,15 +196,17 @@ def processEvent(data) {
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.isBeta = eventData?.isBeta == true ? true : false
+			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-			if(useTrackedHealth()) {
+//			if(useTrackedHealth()) {
 				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 					state.hcTimeout = eventData?.hcTimeout
 					verifyHC()
 				}
-			}
+//			}
 			state.nestTimeZone = eventData?.tz ?: null
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -219,7 +223,7 @@ def processEvent(data) {
 				//log.debug "newDt: $newDt"
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
-				if((lastDt + 10*60*1000) < curDt) {
+				if((lastDt + 14*60*1000) < curDt) {
 					modifyDeviceStatus("offline")
 				} else {
 					modifyDeviceStatus("online")
@@ -393,7 +397,7 @@ void setPresence() {
 	}
 }
 
-def setAway() {
+void setAway() {
 	try {
 		log.trace "setAway()..."
 		parent.setStructureAway(this, "true")
@@ -405,7 +409,7 @@ def setAway() {
 	}
 }
 
-def setHome() {
+void setHome() {
 	try {
 		log.trace "setHome()..."
 		parent.setStructureAway(this, "false")
@@ -443,7 +447,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "Presence DTH")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Presence")
 	}
 }
 

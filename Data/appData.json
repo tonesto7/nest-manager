@@ -24,27 +24,28 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.0.8"
+                "ver": "5.2.4"
             },
             "autoapp": {
-                "ver": "5.0.4"
+                "ver": "5.2.1"
             },
             "thermostat": {
-                "ver": "5.0.2"
+                "ver": "5.2.0"
             },
             "protect": {
-                "ver": "5.0.2"
+                "ver": "5.2.0"
             },
             "camera": {
-                "ver": "5.0.4"
+                "ver": "5.2.0"
             },
             "presence": {
-                "ver": "5.0.1"
+                "ver": "5.2.0"
             },
             "weather": {
-                "ver": "5.0.4"
+                "ver": "5.2.0"
             }
-        }
+        },
+        "allowInApp": false
     },
     "html": {
         "cssVer": 1,
@@ -59,6 +60,9 @@
         "newexceptionPath": "newexceptionData",
         "remoteDiagPath": "remoteDiagLogs"
     },
+    "appSettings": {
+        "pullFromFB": false
+    },
     "aaPrefs": {
         "enAaMsgQueue": true,
         "enMultiQueue": false
@@ -71,7 +75,7 @@
         "clients": []
     },
     "clientRemDiagAuth": {
-        "clients": ["bad978ab-f37e-48c9-909c-1971e1970364", "44360aba-62c0-4f6b-a2c9-c93668c64352", "14157c70-619b-4718-b34d-55e6cfb06200"]
+        "clients": []
     },
     "pollMethod": {
         "allowAsync": true
@@ -80,8 +84,8 @@
         "count": 8
     },
     "eventStreaming": {
-        "enabled": false,
-        "minVersion": "0.4.0"
+        "enabled": true,
+        "minVersion": "1.0.0"
     },
     "healthcheck": {
         "camTimeout": 120,
@@ -90,7 +94,8 @@
         "tstatTimeout": 35,
         "longTimeout": 120,
         "timeout": 35,
-        "enabled": true
+        "enabled": true,
+        "repairEnabled": false
     },
     "devStatusPage": {
         "enabled": false,

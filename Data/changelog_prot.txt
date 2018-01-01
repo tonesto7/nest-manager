@@ -1,18 +1,13 @@
-<p style="font-size: 15px;"><strong>V5.0.2 (May 1st, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Bug fixes to quiet logs</li>
+    <li><strong>ADDED:</strong> Added Android Disclaimer for HTML.</li>
+    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
+    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
 </ul>
 <br>
-<p style="font-size: 15px;"><strong>V5.0.1 (April 6th, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.1.1 (June 17th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Self healing Fix for Device Health getting stuck offline. (Takes a Couple Minutes to Repair)</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.0.0 (March 30th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>NEW: </strong> All-New HTML design with new icons to indicate the current alarm status</li>
-    <li><strong>NEW: </strong> Device now determines the power source (Wired or Battery) type based on it's check in habit's.</li>
+    <li><strong>UPDATED:</strong> Fixed command calls</li>
 </ul>
