@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.1" }
-def appVerDate() { "12-16-2017" }
+def appVersion() { "5.2.2" }
+def appVerDate() { "01-02-2018" }
 
 preferences {
 	//startPage
@@ -1740,7 +1740,7 @@ private remSenCheck() {
 		} else {
 			//log.info "remSenCheck: Evaluating Event"
 
-			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode.toString() : null
+			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode?.toString() : null
 			if(hvacMode in [ "off", "eco"] ) {
 				LogAction("Remote Sensor: Skipping Evaluation; The Current Thermostat Mode is '${strCapitalize(hvacMode)}'", "info", true)
 				disableOverrideTemps()
@@ -2074,7 +2074,7 @@ def getRemSenCoolSetTemp(curMode=null, useCurrent=true) {
 	def theMode = curMode != null ? curMode : null
 	if(theMode == null) {
 		def tstat = schMotTstat
-		theMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
+		theMode = tstat ? tstat?.currentnestThermostatMode?.toString() : null
 	}
 	if(theMode != "eco") {
 		if(getLastOverrideCoolSec() < (3600 * 4)) {
@@ -2115,7 +2115,7 @@ def getRemSenHeatSetTemp(curMode=null, useCurrent=true) {
 	def theMode = curMode != null ? curMode : null
 	if(theMode == null) {
 		def tstat = schMotTstat
-		theMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
+		theMode = tstat ? tstat?.currentnestThermostatMode?.toString() : null
 	}
 	if(theMode != "eco") {
 		if(getLastOverrideHeatSec() < (3600 * 4)) {
@@ -2333,7 +2333,7 @@ def fanCtrlCheck() {
 		if(isFanCircConfigured()) {
 			def adjust = (getTemperatureScale() == "C") ? 0.5 : 1.0
 			def threshold = !fanCtrlTempDiffDegrees ? adjust : fanCtrlTempDiffDegrees.toDouble()
-			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode.toString() : null
+			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode?.toString() : null
 /*
 			def curTstatFanMode = schMotTstat?.currentThermostatFanMode.toString()
 			def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
@@ -2414,9 +2414,9 @@ def doFanOperation(tempDiff, curTstatTemp, curHeatSetpoint, curCoolSetpoint) {
 		def curCoolSetpoint = getRemSenCoolSetTemp()
 		def curHeatSetpoint = getRemSenHeatSetTemp()
 */
-		def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
-		def curTstatOperState = tstat?.currentThermostatOperatingState.toString()
-		def curTstatFanMode = tstat?.currentThermostatFanMode.toString()
+		def hvacMode = tstat ? tstat?.currentnestThermostatMode?.toString() : null
+		def curTstatOperState = tstat?.currentThermostatOperatingState?.toString()
+		def curTstatFanMode = tstat?.currentThermostatFanMode?.toString()
 		LogAction("doFanOperation: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)
 
 		if(atomicState?.haveRunFan == null) { atomicState.haveRunFan = false }
@@ -2545,8 +2545,8 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def tstatsMir = schMotTstatMir
 
 	def theFanIsOn = false
-	def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
-	def curTstatFanMode = tstat?.currentThermostatFanMode.toString()
+	def hvacMode = tstat ? tstat?.currentnestThermostatMode?.toString() : null
+	def curTstatFanMode = tstat?.currentThermostatFanMode?.toString()
 	def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
 
 	def returnToAuto = can_Circ ? false : true
@@ -2567,7 +2567,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 		returnToAuto = true
 	}
 
-	def curOperState = tstat?.currentnestThermostatOperatingState.toString()
+	def curOperState = tstat?.currentnestThermostatOperatingState?.toString()
 
 	def tstatOperStateOk = (curOperState == "idle") ? true : false
 	// if ac or heat is on, we should put fan back to auto
@@ -2819,9 +2819,9 @@ def humCtrlCheck() {
 		def execTime = now()
 
 		def tstat = schMotTstat
-		def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
-		def curTstatOperState = tstat?.currentThermostatOperatingState.toString()
-		def curTstatFanMode = tstat?.currentThermostatFanMode.toString()
+		def hvacMode = tstat ? tstat?.currentnestThermostatMode?.toString() : null
+		def curTstatOperState = tstat?.currentThermostatOperatingState?.toString()
+		def curTstatFanMode = tstat?.currentThermostatFanMode?.toString()
 		//def curHum = humCtrlHumidity?.currentHumidity
 		def curHum = getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")
 		def curExtTemp = getHumCtrlTemperature()
@@ -2945,7 +2945,7 @@ def getExtConditions( doEvent = false ) {
 
 				def dp = 0.0
 				if(weather) {  // Dewpoint is calculated in dth
-					dp = weather?.currentValue("dewpoint")?.toString().replaceAll("\\[|\\]", "").toDouble()
+					dp = weather?.currentValue("dewpoint") ? weather?.currentValue("dewpoint")?.toString()?.replaceAll("\\[|\\]", "")?.toDouble() : 0.0
 				}
 				def c_temp = 0.0
 				def f_temp = 0 as Integer
@@ -2993,7 +2993,7 @@ def getExtTmpDewPoint() {
 
 def getDesiredTemp() {
 	def extTmpTstat = settings?.schMotTstat
-	def curMode = extTmpTstat.currentnestThermostatMode.toString()
+	def curMode = extTmpTstat.currentnestThermostatMode?.toString()
 	def modeOff = (curMode in ["off"]) ? true : false
 	def modeEco = (curMode in ["eco"]) ? true : false
 	def modeCool = (curMode == "cool") ? true : false
@@ -3051,7 +3051,7 @@ def extTmpTempOk(disp=false, last=false) {
 		def curDp = getExtTmpDewPoint()
 		def diffThresh = Math.abs(getExtTmpTempDiffVal())
 
-		def curMode = extTmpTstat.currentnestThermostatMode.toString()
+		def curMode = extTmpTstat?.currentnestThermostatMode?.toString()
 		def modeOff = (curMode == "off") ? true : false
 		def modeCool = (curMode == "cool") ? true : false
 		def modeHeat = (curMode == "heat") ? true : false
@@ -3408,7 +3408,7 @@ def extTmpDpOrTempEvt(type) {
 		if(lastTempWithinThreshold == null || tempWithinThreshold != lastTempWithinThreshold) {
 
 			def extTmpTstat = settings?.schMotTstat
-			def curMode = extTmpTstat?.currentnestThermostatMode.toString()
+			def curMode = extTmpTstat?.currentnestThermostatMode?.toString()
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
 			def offVal = getExtTmpOffDelayVal()
 			def onVal = getExtTmpOnDelayVal()
@@ -3499,7 +3499,7 @@ def conWatCheck(cTimeOut = false) {
 			if(!atomicState?."${pName}timeOutOn") { atomicState."${pName}timeOutOn" = false }
 			if(cTimeOut) { atomicState."${pName}timeOutOn" = true }
 			def timeOut = atomicState."${pName}timeOutOn" ?: false
-			def curMode = conWatTstat ? conWatTstat?.currentnestThermostatMode.toString() : null
+			def curMode = conWatTstat ? conWatTstat?.currentnestThermostatMode?.toString() : null
 			def modeEco = (curMode in ["eco"]) ? true : false
 			//def curNestPres = getTstatPresence(conWatTstat)
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
@@ -3683,7 +3683,7 @@ def conWatContactEvt(evt) {
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def conWatTstat = settings?.schMotTstat
-		def curMode = conWatTstat?.currentnestThermostatMode.toString()
+		def curMode = conWatTstat?.currentnestThermostatMode?.toString()
 		def isModeOff = (curMode in ["eco"]) ? true : false
 		def conOpen = (evt?.value == "open") ? true : false
 		def canSched = false
@@ -4744,7 +4744,7 @@ def setTstatTempCheck() {
 
 		def pName = schMotPrefix()
 
-		def curMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
+		def curMode = tstat ? tstat?.currentnestThermostatMode?.toString() : null
 
 		def lastMode = atomicState?."${pName}lastMode"
 		def samemode = lastMode == curMode ? true : false
@@ -6928,7 +6928,7 @@ def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 
 void sendTTS(txt, pName) {
 	LogAction("sendTTS(data: ${txt})", "trace", true)
 	try {
-		def msg = txt.toString().replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
+		def msg = txt?.toString()?.replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
 		def spks = settings?."${pName}SpeechDevices"
 		def meds = settings?."${pName}SpeechMediaPlayer"
 		def res = settings?."${pName}SpeechAllowResume"
@@ -7269,7 +7269,7 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, pName, mir=null) {
 	def curHeatSetpoint
 
 	if(tstat) {
-		hvacMode = tstat?.currentnestThermostatMode.toString()
+		hvacMode = tstat?.currentnestThermostatMode?.toString()
 		LogAction("setTstatAutoTemps: [tstat: ${tstat?.displayName} | Mode: ${hvacMode} | coolSetpoint: ${coolSetpoint}${tUnitStr()} | heatSetpoint: ${heatSetpoint}${tUnitStr()}]", "info", true)
 
 		retVal = true
@@ -7496,7 +7496,7 @@ def devPageFooter(var, eTime) {
 	def res = []
 	if(getDevOpt()) {
 		res += 	section() {
-					paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
+					paragraph "   Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
 				}
 	}
 	return res?.size() ? res : ""
@@ -7536,7 +7536,7 @@ def savetoRemDiagChild(List newdata) {
 				stateSz = getStateSizePerc()
 				cnt += 1
 			}
-			log.debug "(${data?.size()} | State: ${stateSz}%)"
+			log.debug "Log Items (${data?.size()} | State: ${stateSz}%)"
 		} else { log.error "bad call to savetoRemDiagChild - no data" }
 	} else { Logger("bad call to savetoRemDiagChild - wrong automation") }
 }

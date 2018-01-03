@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.2.0" }
+def devVer() { return "5.2.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -571,7 +571,7 @@ def lastEventDataEvent(data) {
 	}
 	motionSoundEvtHandler()
 	if(tryPic) {
-		if(state?.videoHistoryEnabled == "Enabled") {
+		if(state?.videoHistoryEnabled == "Enabled" && state?.animation_url) {
 			takePicture(state?.animation_url)
 		} else {
 			takePicture(state?.snapshot_url)
@@ -881,7 +881,7 @@ private takePicture(String url) {
 					}
 				}
 			} else {
-				exceptionDataHandler("takePicture Error: non-standard url received ($url)")
+				exceptionDataHandler("Error: non-standard url received ($url)", "takePicture")
 				return
 			}
 		}

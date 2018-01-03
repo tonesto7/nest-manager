@@ -35,16 +35,16 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.4" }
-def appVerDate() { "12-31-2017" }
+def appVersion() { "5.2.5" }
+def appVerDate() { "01-02-2018" }
 def minVersions() {
 	return [
-		"automation":["val":521, "desc":"5.2.1"],
+		"automation":["val":522, "desc":"5.2.2"],
 		"thermostat":["val":520, "desc":"5.2.0"],
 		"protect":["val":520, "desc":"5.2.0"],
 		"presence":["val":520, "desc":"5.2.0"],
 		"weather":["val":520, "desc":"5.2.0"],
-		"camera":["val":520, "desc":"5.2.0"],
+		"camera":["val":521, "desc":"5.2.1"],
 		"stream":["val":101, "desc":"1.0.1"]
 	]
 }
@@ -244,10 +244,10 @@ def mainPage() {
 		if(isInstalled) {
 			if(settings?.structures && !atomicState?.structures) { atomicState.structures = settings?.structures }
 			section("Devices & Location:") {
-				paragraph "Home/Away Status: (${strCapitalize(getLocationPresence())})", title: "Location: ${atomicState?.structName}", state: "complete",  image: getAppImg("thermostat_icon.png")
+				paragraph "Home/Away Status: (${strCapitalize(getLocationPresence())})", title: "Location: ${atomicState?.structName}", state: "complete",  image: getAppImg("home_icon.png")
 				def t1 = getDevicesDesc(false)
 				def devDesc = t1 ? "${t1}\n\nTap to modify devices" : "Tap to configure"
-				href "deviceSelectPage", title: "Manage Devices", description: devDesc, state: "complete", image: "blank_icon.png"
+				href "deviceSelectPage", title: "Manage/View Devices", description: devDesc, state: "complete", image: "blank_icon.png"
 				def devSelected = (atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice))
 				if(devSelected) {
 					href "devPrefPage", title: "Device Customization", description: "Tap to configure", image: getAppImg("device_pref_icon.png")
@@ -2929,7 +2929,7 @@ def getInstAutoTypesDesc() {
 			type = "old"
 		}
 		if(ver) {
-			def updVer = sData.autoSaVer ?: ver
+			def updVer = sData?.autoSaVer ?: ver
 			if(versionStr2Int(ver) < versionStr2Int(updVer)) {
 				updVer = ver
 			}
@@ -3841,7 +3841,7 @@ def procNestResponse(resp, data) {
 			if(type == "str") {
 				def t0 = resp?.json
 				//LogTrace("API Structure Resp.Data: ${t0}")
-				if(atomicState?.structData == null) { atomicState?.structData = t0 }
+				//if(atomicState?.structData == null) { atomicState?.structData = t0 }
 				def chg = didChange(atomicState?.structData, t0, "str", "poll(async)")
 				if(chg) {
 					str = true
@@ -3891,7 +3891,7 @@ def procNestResponse(resp, data) {
 		}
 
 	} catch (ex) {
-		log.error "procNestResponse (type: $type) Exception:", ex
+		log.error "procNestResponse (type: $type) | Exception:", ex
 		def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 		tstr += " Poll async"
 		//LogAction("procNestResponse - Received $tstr: Resp (${resp?.status})", "error", true)
@@ -3991,9 +3991,6 @@ def didChange(old, newer, type, src) {
 		if(type == "str") {
 			atomicState?.lastStrucDataUpd = getDtNow()
 			atomicState.needStrPoll = false
-			if(atomicState?.structures) {
-				LogAction("NestAPI AWAY Debug | Current: (${newer[atomicState?.structures]?.away})${(newer[atomicState?.structures]?.away != old[atomicState?.structures]?.away) ? " | Previous: (${old[atomicState?.structures]?.away})" : ""}", "trace", false)
-			}
 		}
 		if(type == "dev") {
 			atomicState?.lastDevDataUpd = getDtNow()
@@ -4005,18 +4002,21 @@ def didChange(old, newer, type, src) {
 		}
 		if(old != newer) {
 			if(type == "str") {
-				def t0 = atomicState?.structData?.size() && atomicState?.structures ? atomicState?.structData[atomicState?.structures] : null
-				def t1 = newer && atomicState?.structures ? newer[atomicState?.structures] : null
+				def tt0 = atomicState?.structData?.size() ? atomicState?.structData : null
+// Null safe does not work on array references that miss
+				def t0 = tt0 && atomicState?.structures && tt0?."${atomicsState?.structures}" ?  tt0[atomicState?.structures] : null
+				def t1 = newer && atomicState?.structures && newer?."${atomicState?.structures}" ? newer[atomicState?.structures] : null
+
 				if(t1 && t0 != t1) {
 					result = true
 					atomicState?.forceChildUpd = true
 					LogTrace("structure old newer not the same ${atomicState?.structures}")
 					// whatChanged(t0, t1, "/structures", "structure")
-					if(atomicState?.enRemDiagLogging == true && settings?.showDataChgdLogs != true) {
-						LogAction("API Structure Data HAS Changed ($srcStr)", "info", true)
-					} else {
+					if(settings?.showDataChgdLogs == true && atomicState?.enRemDiagLogging != true) {
 						def chgs = getChanges(t0, t1, "/structures", "structure")
 						if(chgs) { LogAction("STRUCTURE Changed ($srcStr): ${chgs}", "info", true) }
+					} else {
+						LogAction("API Structure Data HAS Changed ($srcStr)", "info", true)
 					}
 				}
 				atomicState?.structData = newer
@@ -5554,7 +5554,8 @@ def deviceHealthNotify(child, Boolean isHealthy) {
 }
 
 def getLocationPresence() {
-	def away = atomicState?.structData && atomicState?.structures && atomicState?.structData[atomicState?.structures] && atomicState?.structData[atomicState?.structures]?.away ? atomicState?.structData[atomicState?.structures]?.away : null
+	def sData = atomicState?.structData
+	def away = sData && atomicState?.structures && sData?."${atomicState?.structures}" && sData[atomicState?.structures]?.away ? sData[atomicState?.structures]?.away : null
 	return (away != null) ? away as String : null
 }
 
@@ -6101,7 +6102,7 @@ def ver2IntArray(val) {
 	return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
 
-def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toInteger() : null }
+def versionStr2Int(str) { return str ? str?.toString()?.replaceAll("\\.", "")?.toInteger() : null }
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
 
@@ -6231,11 +6232,11 @@ def reqSchedInfoRprt(child, report=true) {
 				return ["scdNum":actSchedNum, "schedName":schedData?.lbl, "reqSenHeatSetPoint":reqSenHeatSetPoint, "reqSenCoolSetPoint":reqSenCoolSetPoint, "curZoneTemp":curZoneTemp, "tempSrc":tempSrc, "tempSrcDesc":tempSrcStr]
 			} else {
 				def tempScaleStr = " degrees"
-				def canHeat = tstat?.currentCanHeat.toString() == "true" ? true : false
-				def canCool = tstat?.currentCanCool.toString() == "true" ? true : false
-				def curMode = tstat?.currentnestThermostatMode.toString()
-				def curOper = tstat?.currentThermostatOperatingState.toString()
-				def curHum = tstat?.currentHumidity.toString()
+				def canHeat = tstat?.currentCanHeat?.toString() == "true" ? true : false
+				def canCool = tstat?.currentCanCool?.toString() == "true" ? true : false
+				def curMode = tstat?.currentnestThermostatMode?.toString()
+				def curOper = tstat?.currentThermostatOperatingState?.toString()
+				def curHum = tstat?.currentHumidity?.toString()
 				def schedDesc = schedVoiceDesc(actSchedNum, schedData, schedMotionActive)
 				str += schedDesc ?: " There are No Schedules currently Active. "
 
@@ -6633,7 +6634,7 @@ def getNestWeatherLabel() {
 
 def getChildDeviceLabel(dni) {
 	if(!dni) { return null }
-	return getChildDevice(dni.toString()).getLabel() ?: null
+	return getChildDevice(dni.toString())?.getLabel() ?: null
 }
 
 def getTstats() {
@@ -7169,7 +7170,7 @@ def revokeCleanState() {
 def success() {
 	def message = """
 	<p>Your SmartThings Account is now connected to Nest!</p>
-	<p>Click 'Done' to finish setup.</p>
+	<p>Click <b>Done</b> or <b>Next</b> to proceed with the rest of the setup.</p>
 	"""
 	connectionStatus(message)
 }
@@ -7177,7 +7178,7 @@ def success() {
 def fail() {
 	def message = """
 	<p>The connection could not be established!</p>
-	<p>Click 'Done' to return to the menu.</p>
+	<p>Click <b>Done</b> or <b>Next</b> to return to the menu.</p>
 	"""
 	connectionStatus(message)
 }
@@ -7265,7 +7266,7 @@ def toQueryString(Map m) {
 
 def clientId() {
 	if(appSettings?.clientId) {
-		return appSettings?.clientId
+		return appSettings?.clientId?.toString().trim()
 	} else {
 		LogAction("clientId is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true)
 		return null
@@ -7274,7 +7275,7 @@ def clientId() {
 
 def clientSecret() {
 	if(appSettings?.clientSecret) {
-		return appSettings?.clientSecret
+		return appSettings?.clientSecret?.toString().trim()
 	} else {
 		LogAction("clientSecret is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true)
 		return null
@@ -8302,7 +8303,7 @@ def renderDiagHome() {
 				<meta name="description" content="NST Diagnostics">
 				<meta name="author" content="Anthony S.">
 
-				<title>NST Diagnostics ${atomicState?.structName}</title>
+				<title>NST Diagnostics (${atomicState?.structName}) Location</title>
 
 				<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 				<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
@@ -9237,7 +9238,7 @@ def sendChildExceptionData(devType, devVer, ex, methodName) {
 	def exString = "${ex}"
 	LogAction("sendChildExceptionData(device: $deviceType, devVer: $devVer, method: $methodName, ex: ${ex}", "error", showErrLog)
 	def exCnt = atomicState?.childExceptionCnt ?: 1
-	atomicState?.childExceptionCnt = exCnt.toInteger() + 1
+	atomicState?.childExceptionCnt = exCnt?.toInteger() + 1
 	if(settings?.optInSendExceptions || settings?.optInSendExceptions == null) {
 		generateInstallId()
 		def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exString, "errorDt":getDtNow().toString()]
