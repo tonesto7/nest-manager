@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.2.1" }
+def devVer() { return "5.2.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -866,7 +866,7 @@ private getImageWidth() {
 
 private takePicture(String url) {
 	try {
-		if(state?.isOnline) {
+		if(state?.isOnline && state?.isStreaming) {
 			if(url?.startsWith("https://")) {
 				ByteArrayInputStream imageBytes
 				def params = [
@@ -881,9 +881,10 @@ private takePicture(String url) {
 					}
 				}
 			} else {
-				exceptionDataHandler("Error: non-standard url received ($url)", "takePicture")
-				return
+				Logger("takePicture: non-standard url received ($url), public share enabled: (${state?.publicShareEnabled})", "error")
 			}
+		} else {
+			Logger("takePicture: Camera is not online (${!state?.isOnline}) or not streaming (${!state?.isStreaming})", "error")
 		}
 	} catch (ex) {
 		log.error "takePicture Exception: $ex"

@@ -24,7 +24,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.2.5"
+                "ver": "5.2.6"
             },
             "autoapp": {
                 "ver": "5.2.2"
@@ -36,7 +36,7 @@
                 "ver": "5.2.0"
             },
             "camera": {
-                "ver": "5.2.1"
+                "ver": "5.2.2"
             },
             "presence": {
                 "ver": "5.2.0"

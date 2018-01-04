@@ -35,8 +35,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.5" }
-def appVerDate() { "01-02-2018" }
+def appVersion() { "5.2.6" }
+def appVerDate() { "01-03-2018" }
 def minVersions() {
 	return [
 		"automation":["val":522, "desc":"5.2.2"],
@@ -44,7 +44,7 @@ def minVersions() {
 		"protect":["val":520, "desc":"5.2.0"],
 		"presence":["val":520, "desc":"5.2.0"],
 		"weather":["val":520, "desc":"5.2.0"],
-		"camera":["val":521, "desc":"5.2.1"],
+		"camera":["val":522, "desc":"5.2.2"],
 		"stream":["val":101, "desc":"1.0.1"]
 	]
 }
