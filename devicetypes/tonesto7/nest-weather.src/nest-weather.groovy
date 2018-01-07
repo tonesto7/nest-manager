@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.2.0" }
+def devVer() { return "5.2.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -361,7 +361,7 @@ void processEvent() {
 		//return null
 	}
 	catch (ex) {
-		log.error "generateEvent Exception:", ex
+		log.error("generateEvent Exception:", ex)
 		exceptionDataHandler(ex.message, "generateEvent")
 	}
 }
@@ -660,8 +660,8 @@ def getWeatherConditions(Map weatData) {
 		}
 	}
 	catch (ex) {
-		log.error "getWeatherConditions Exception:", ex
-		exceptionDataHandler("${ex}", "getWeatherConditions")
+		log.error("getWeatherConditions Exception:", ex)
+		exceptionDataHandler(ex.message, "getWeatherConditions")
 	}
 }
 
@@ -686,8 +686,8 @@ def getWeatherForecast(Map weatData) {
 		}
 	}
 	catch (ex) {
-		log.error "getWeatherForecast Exception:", ex
-		exceptionDataHandler("${ex}", "getWeatherForecast")
+		log.error("getWeatherForecast Exception:", ex)
+		exceptionDataHandler(ex.message, "getWeatherForecast")
 	}
 }
 
@@ -708,8 +708,8 @@ def getWeatherAstronomy(weatData) {
 		}
 	}
 	catch (ex) {
-		log.error "getWeatherAstronomy Exception:", ex
-		exceptionDataHandler("${ex}", "getWeatherAstronomy")
+		log.error("getWeatherAstronomy Exception:", ex)
+		exceptionDataHandler(ex.message, "getWeatherAstronomy")
 	}
 }
 
@@ -834,8 +834,8 @@ def getWeatherAlerts(weatData) {
 		}
 	}
 	catch (ex) {
-		log.error "getWeatherAlerts Exception:", ex
-		exceptionDataHandler("${ex}", "getWeatherAlerts")
+		log.error("getWeatherAlerts Exception:", ex)
+		exceptionDataHandler(ex.message, "getWeatherAlerts")
 	}
 }
 
@@ -854,7 +854,7 @@ private pad(String s, size = 25) {
 		}
 	}
 	catch (ex) {
-		log.error "pad Exception:", ex
+		log.error("pad Exception:", ex)
 		exceptionDataHandler(ex.message, "pad")
 	}
 }
@@ -956,8 +956,10 @@ private estimateLux(weatherIcon) {
 		}
 	}
 	catch (ex) {
-		log.error "estimateLux Exception:", ex
-		exceptionDataHandler("${ex}", "estimateLux")
+		log.warn "state.sunriseDate: ${state?.sunriseDate}"
+		log.warn "state.sunsetDate: ${state?.sunsetDate}"
+		exceptionDataHandler(ex.message, "estimateLux")
+		log.error("estimateLux Exception:", ex)
 	}
 	return null
 }

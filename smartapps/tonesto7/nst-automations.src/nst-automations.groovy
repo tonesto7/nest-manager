@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.2" }
-def appVerDate() { "01-02-2018" }
+def appVersion() { "5.2.3" }
+def appVerDate() { "01-05-2018" }
 
 preferences {
 	//startPage
@@ -1638,7 +1638,7 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 	def remSenTstatMir = settings?.schMotTstatMir
 
 	try {
-		def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+		def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode?.toString() : null
 		def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
 		def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
 		def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
@@ -1678,7 +1678,7 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 	def remSenTstatMir = schMotTstatMir
 
 	try {
-		def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+		def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode?.toString() : null
 		def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
 		def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
 		def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
@@ -1984,7 +1984,8 @@ def getRemSenTempsToList() {
 }
 
 def getDeviceTemp(dev) {
-	def temp = dev?.currentValue("temperature") ? dev?.currentValue("temperature").toString()?.replaceAll("\\[|\\]", "") : 0
+	def t0 = dev?.currentValue("temperature")
+	def temp = t0 ? t0?.toString()?.replaceAll("\\[|\\]", "") : 0
   	return temp && "$temp"?.isNumber() ? temp?.toDouble() : 0
 }
 
@@ -2485,7 +2486,8 @@ def doFanOperation(tempDiff, curTstatTemp, curHeatSetpoint, curCoolSetpoint) {
 					}
 				}
 				if(swOn && atomicState?.haveRunFan && checkFanSpeedSupport(sw)) {
-					def speed = sw?.currentValue("currentState") ?: null
+					def t0 = sw?.currentValue("currentState")
+					def speed = t0 ?: null
 					if(settings?."${pName}FanSwitchSpeedCtrl" && settings?."${pName}FanSwitchHighSpeed" && settings?."${pName}FanSwitchMedSpeed" && settings?."${pName}FanSwitchLowSpeed") {
 						if(tempDiff < settings?."${pName}FanSwitchMedSpeed".toDouble()) {
 							if(speed != "LOW") {
@@ -2761,7 +2763,8 @@ def humCtrlHumidityDesc() {
 		str += "Sensor Humidity (average): (${getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")}%)"
 		settings?.humCtrlHumidity?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
-			def val = strCapitalize(dev?.currentHumidity) ?: "Not Set"
+			def t0 = strCapitalize(dev?.currentHumidity)
+			def val = t0 ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${val}%)"
 		}
 		return str
@@ -2945,7 +2948,8 @@ def getExtConditions( doEvent = false ) {
 
 				def dp = 0.0
 				if(weather) {  // Dewpoint is calculated in dth
-					dp = weather?.currentValue("dewpoint") ? weather?.currentValue("dewpoint")?.toString()?.replaceAll("\\[|\\]", "")?.toDouble() : 0.0
+					def t0 = weather?.currentValue("dewpoint")
+					dp = t0 ? t0?.toString()?.replaceAll("\\[|\\]", "")?.toDouble() : 0.0
 				}
 				def c_temp = 0.0
 				def f_temp = 0 as Integer
@@ -3454,7 +3458,8 @@ def conWatContactDesc() {
 		str += "Contact Status:"
 		settings?.conWatContacts?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
-			def val = strCapitalize(dev?.currentContact) ?: "Not Set"
+			def t0 = strCapitalize(dev?.currentContact)
+			def val = t0 ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
 		}
 		return str
@@ -3503,7 +3508,6 @@ def conWatCheck(cTimeOut = false) {
 			def modeEco = (curMode in ["eco"]) ? true : false
 			//def curNestPres = getTstatPresence(conWatTstat)
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
-			def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -3624,8 +3628,10 @@ def conWatCheck(cTimeOut = false) {
 					if((getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) && (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2))) {
 						atomicState."${pName}timeOutOn" = false
 						atomicState?.conWatRestoreMode = curMode
+						def t0 = getOpenContacts(conWatContacts)
+						def openCtDesc = t0 ? " '${t0?.join(", ")}' " : " a selected contact "
 						LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${strCapitalize(atomicState?.conWatRestoreMode)})", "info", true)
-						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
+						LogAction("conWatCheck: ${openCtDesc}${t0?.size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(conWatTstat, "eco", pName)) {
 							storeLastAction("Set $conWatTstat to 'ECO'", getDtNow(), pName, conWatTstat)
@@ -3724,7 +3730,8 @@ def leakWatSensorsDesc() {
 		str += "Leak Sensors:"
 		settings?.leakWatSensors?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
-			def val = strCapitalize(dev?.currentWater) ?: "Not Set"
+			def t0 = strCapitalize(dev?.currentWater)
+			def val = t0 ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
 		}
 		return str
@@ -3763,7 +3770,6 @@ def leakWatCheck() {
 			def curMode = leakWatTstat?.currentThermostatMode.toString()
 			//def curNestPres = getTstatPresence(leakWatTstat)
 			def modeOff = (curMode == "off") ? true : false
-			def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -3858,8 +3864,10 @@ def leakWatCheck() {
 				def rmsg = ""
 				if(!modeOff) {
 					atomicState?.leakWatRestoreMode = curMode
+					def t0 = getWetWaterSensors(leakWatSensors)
+					def wetCtDesc = t0 ? " '${t0?.join(", ")}' " : " a selected leak sensor "
 					LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${strCapitalize(atomicState?.leakWatRestoreMode)})", "info", true)
-					LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
+					LogAction("leakWatCheck: ${wetCtDesc}${t0?.size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
 					scheduleAutomationEval(60)
 					if(setTstatMode(leakWatTstat, "off", pName)) {
 						storeLastAction("Turned Off $leakWatTstat", getDtNow(), pName, leakWatTstat)
@@ -4028,7 +4036,8 @@ def nModePresenceDesc() {
 		str += "Presence Status:"
 		settings?.nModePresSensor?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
-			def presState = strCapitalize(dev?.currentPresence) ?: "No State"
+			t0 = strCapitalize(dev?.currentPresence)
+			def presState = t0 ?: "No State"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${presState})"
 		}
 		return str
@@ -7038,7 +7047,8 @@ def checkFanSpeedSupport(dev) {
 	devData.each { cmd ->
 		if(cmd.name in req) { devCnt = devCnt+1 }
 	}
-	def speed = dev?.currentValue("currentState") ?: null
+	def t0 = dev?.currentValue("currentState")
+	def speed = t0 ?: null
 	//log.debug "checkFanSpeedSupport (speed: $speed | devCnt: $devCnt)"
 	return (speed && devCnt == 3) ? true : false
 }
