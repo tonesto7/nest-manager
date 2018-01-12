@@ -35,11 +35,11 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.2.7" }
-def appVerDate() { "01-05-2018" }
+def appVersion() { "5.2.9" }
+def appVerDate() { "01-08-2018" }
 def minVersions() {
 	return [
-		"automation":["val":523, "desc":"5.2.3"],
+		"automation":["val":525, "desc":"5.2.5"],
 		"thermostat":["val":520, "desc":"5.2.0"],
 		"protect":["val":520, "desc":"5.2.0"],
 		"presence":["val":520, "desc":"5.2.0"],
@@ -6461,14 +6461,20 @@ def camState(val) {
 
 def getThermostatDisplayName(stat) {
 	if(stat?.name) { return stat.name.toString() }
+	else if(stat?.name_long) { return stat?.name_long.toString() }
+		else { return "Thermostatnamenotfound" }
 }
 
 def getProtectDisplayName(prot) {
 	if(prot?.name) { return prot.name.toString() }
+	else if(prot?.name_long) { return prot?.name_long.toString() }
+		else { return "Protectnamenotfound" }
 }
 
 def getCameraDisplayName(cam) {
 	if(cam?.name) { return cam.name.toString() }
+	else if(cam?.name_long) { return cam?.name_long.toString() }
+		else { return "Cameranamenotfound" }
 }
 
 def getNestDeviceDni(dni, type) {
