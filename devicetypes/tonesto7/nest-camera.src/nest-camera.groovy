@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.2.2" }
+def devVer() { return "5.3.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -121,9 +121,12 @@ metadata {
 		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
 			state "default", label: 'Test', action:"testBtn"
 		}
+		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
+		}
 		main "isStreamingStatus"
-		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
-		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails", "motion", "sound" ])
+		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails", "motion", "sound", "remind" ])
+
 	}
 	preferences {
 		input "enableEvtSnapShot", "bool", title: "Take Snapshot on Motion Events?", description: "", defaultValue: true, displayDuringSetup: false
@@ -335,6 +338,7 @@ def processEvent() {
 
 def getStateSize()      { return state?.toString().length() }
 def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) } //
+def getDevTypeId() { return device?.getTypeId() }
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -884,7 +888,7 @@ private takePicture(String url) {
 				Logger("takePicture: non-standard url received ($url), public share enabled: (${state?.publicShareEnabled})", "error")
 			}
 		} else {
-			Logger("takePicture: Camera is not online (${!state?.isOnline}) or not streaming (${!state?.isStreaming})", "error")
+      		Logger("takePicture: Camera is not online (${!state?.isOnline}) or not streaming (${!state?.isStreaming})", "error")
 		}
 	} catch (ex) {
 		log.error "takePicture Exception: $ex"
@@ -902,29 +906,30 @@ def lastN(String input, n) {
 
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
-	switch (logType) {
-		case "trace":
-			log.trace "${smsg}"
-			break
-		case "debug":
-			log.debug "${smsg}"
-			break
-		case "info":
-			log.info "${smsg}"
-			break
-		case "warn":
-			log.warn "${smsg}"
-			break
-		case "error":
-			log.error "${smsg}"
-			break
-		default:
-			log.debug "${smsg}"
-			break
-	}
 	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Camera-${theId}")
+	} else {
+		switch (logType) {
+			case "trace":
+				log.trace "${smsg}"
+				break
+			case "debug":
+				log.debug "${smsg}"
+				break
+			case "info":
+				log.info "${smsg}"
+				break
+			case "warn":
+				log.warn "${smsg}"
+				break
+			case "error":
+				log.error "${smsg}"
+				break
+			default:
+				log.debug "${smsg}"
+				break
+		}
 	}
 }
 
@@ -1212,6 +1217,17 @@ def getChgLogHtml() {
 	return chgStr
 }
 
+def hasHtml() { return true }
+
+def getCamIframHtml() {
+	def id = getPublicVidID() ? getPublicVidID() : null
+	return id ? """
+		<div class="embed-responsive embed-responsive-16by9">
+			<iframe type="text/html" frameborder="0" width="480" height="394" src="//video.nest.com/embedded/live/${id}?autoplay=0" allowfullscreen></iframe>
+		</div>
+	""" : ""
+}
+
 def getCamHtml() {
 	try {
 		// These are used to determine the URL for the nest cam stream
@@ -1219,7 +1235,7 @@ def getCamHtml() {
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 		def pubVidUrl = state?.public_share_url
-		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml() : hideCamHtml()
+		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml(false) : hideCamHtml()
 		def devBrdCastData = state?.devBannerData ?: null
 		def devBrdCastHtml = ""
 		if(devBrdCastData) {
@@ -1249,7 +1265,6 @@ def getCamHtml() {
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
-
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<style>
 				</style>
@@ -1260,7 +1275,7 @@ def getCamHtml() {
 				${devBrdCastHtml}
 				${clientBl}
 				${updateAvail}
-				<div class="swiper-container">
+				<div class="swiper-container" style="max-width: 100%; overflow: hidden;">
 					<div class="swiper-wrapper">
 						${camHtml}
 						<div class="swiper-slide">
@@ -1402,7 +1417,150 @@ def getCamHtml() {
 	}
 }
 
-def showCamHtml() {
+def getDeviceTile(devNum) {
+	try {
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
+		def pubVidUrl = state?.public_share_url
+		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml(true) : hideCamHtml()
+		def mainHtml = """
+			${clientBl}
+			${updateAvail}
+			${getCamIframHtml()}
+			<div class="device">
+				<div class="swiper-container-${devNum}" style="max-width: 100%; overflow: hidden;">
+					<div class="swiper-wrapper">
+						${camHtml}
+						<div class="swiper-slide">
+						  <section class="sectionBgTile">
+							<h3>Device Info</h3>
+							<table class="devInfoTile centerText">
+							  <col width="40%">
+							  <col width="40%">
+							  <thead>
+								<th>Network Status</th>
+								<th>API Status</th>
+							  </thead>
+							  <tbody>
+								<tr>
+								  <td${state?.onlineStatus != "Online" ? """ class="redText" """ : ""}>${state?.onlineStatus}</td>
+								  <td${state?.apiStatus != "Good" ? """ class="orangeText" """ : ""}>${state?.apiStatus}</td>
+								</tr>
+							  </tbody>
+							</table>
+						  </section>
+						  <section class="sectionBgTile">
+							<table class="devInfoTile centerText">
+							  <col width="50%">
+							  <col width="50%">
+								<thead>
+								  <th>Video History (Min.)</th>
+								  <th>Video History (Max.)</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
+									<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
+								  </tr>
+							  </tbody>
+							</table>
+						  </section>
+						  <section class="sectionBgTile">
+							<table class="devInfoTile centerText">
+							  <col width="33%">
+							  <col width="33%">
+							  <col width="33%">
+							  <thead>
+								<th>Public Video</th>
+								<th>Mic Status</th>
+							  </thead>
+							  <tbody>
+								<tr>
+								  <td>${state?.publicShareEnabled.toString()}</td>
+								  <td>${state?.audioInputEnabled.toString()}</td>
+								</tr>
+							  </tbody>
+							</table>
+						  </section>
+						  <section class="sectionBgTile">
+							<table class="devInfoTile centerText">
+							  <col width="40%">
+							  <col width="20%">
+							  <col width="40%">
+							  <thead>
+								<th>FW Version</th>
+								<th>Debug</th>
+								<th>Device Type</th>
+							  </thead>
+							  <tbody>
+								  <td>v${state?.softwareVer.toString()}</td>
+								  <td>${state?.debugStatus}</td>
+								  <td>${state?.devTypeVer.toString()}</td>
+							  </tbody>
+							</table>
+						  </section>
+						  <section class="sectionBgTile">
+							<table class="devInfoTile centerText">
+							   <thead>
+								 <th>Last Online Change</th>
+								 <th>Data Last Received</th>
+							   </thead>
+							   <tbody>
+								 <tr>
+								   <td class="dateTimeTextTile">${state?.lastConnection.toString()}</td>
+								   <td class="dateTimeTextTile">${state?.lastUpdatedDt.toString()}</td>
+								 </tr>
+							   </tbody>
+							 </table>
+						   </section>
+						</div>
+					</div>
+					<div class="swiper-pagination"></div>
+					<div style="text-align: center;">
+						<p class="slideFooterMsgTile">Swipe/Drag to Change Slide</p>
+					</div>
+				</div>
+			</div>
+			<script>
+				var mySwiper${devNum} = new Swiper ('.swiper-container-${devNum}', {
+					direction: 'horizontal',
+					lazyLoading: true,
+					loop: true,
+					slidesPerView: '1',
+					centeredSlides: true,
+					spaceBetween: 100,
+					autoHeight: true,
+					iOSEdgeSwipeDetection: true,
+					parallax: true,
+					slideToClickedSlide: true,
+					effect: 'coverflow',
+					// resistance: true,
+					coverflow: {
+					  rotate: 50,
+					  stretch: 0,
+					  depth: 100,
+					  modifier: 1,
+					  slideShadows : true
+					},
+					onTap: (swiper, event) => {
+						let element = event.target;
+						swiper.slideNext()
+					},
+					pagination: '.swiper-pagination',
+					paginationHide: false,
+					paginationClickable: true
+				})
+			</script>
+		"""
+		return mainHtml
+	}
+	catch (ex) {
+		log.error "getDeviceTile Exception:", ex
+		exceptionDataHandler(ex.message, "getDeviceTile")
+	}
+}
+
+def showCamHtml(tile=false) {
 	def pubVidUrl = state?.public_share_url
 	if(!state?.camUUID) { getCamUUID(getPublicVidID()) }
 	def camUUID = state?.camUUID
@@ -1415,7 +1573,7 @@ def showCamHtml() {
 	def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
 	def animationUrl = state?.animation_url ? getFileBase64(state?.animation_url, 'image', 'gif') : null
-	def pubSnapUrl = state?.snapshot_url ? getFileBase64(state?.snapshot_url, 'image', 'jpeg') : null
+	def pubSnapUrl = state?.snapshot_url ? (!tile ? getFileBase64(state?.snapshot_url, 'image', 'jpeg') : state?.snapshot_url ) : null
 
 	def vidBtn = (!state?.isStreaming || !liveStreamURL) ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
 	def imgBtn = (!state?.isStreaming || !pubSnapUrl) ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
@@ -1424,10 +1582,10 @@ def showCamHtml() {
 	def data = """
 		<div class="swiper-slide">
 			${androidDisclaimerMsg()}
-			<div style="padding: 5px;">
-				<section class="sectionBg">
+			<div>
+				<section class="${tile ? "sectionBgTile" : "sectionBg"} centerText">
 					<h3>Last Camera Event</h3>
-					<table class="devInfo">
+					<table class="${tile ? "devInfoTile" : "devInfo"}">
 					  <col width="45%">
 					  <col width="55%">
 					  <tbody>
@@ -1439,8 +1597,8 @@ def showCamHtml() {
 					</table>
 				</section>
 				<img src="${animationUrl}" width="100%"/>
-				<section class="sectionBg">
-					<table class="devInfo">
+				<section class="${tile ? "sectionBgTile" : "sectionBg"} centerText">
+					<table class="${tile ? "devInfoTile" : "devInfo"}">
 					  <col width="45%">
 					  <col width="55%">
 					  <thead>
@@ -1458,9 +1616,9 @@ def showCamHtml() {
 			</div>
 		</div>
 		<div class="swiper-slide">
-			<section class="sectionBg">
+			<section class="${tile ? "sectionBgTile" : "sectionBg"}">
 				<h3>Still Image</h3>
-				<table class="devInfo">
+				<table class="${tile ? "devInfoTile" : "devInfo"} centerText">
 				  <tbody>
 					<tr>
 					  <td>

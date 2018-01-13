@@ -1016,12 +1016,22 @@ pre {
     font-size: 12px;
 }
 
+.hamburger-box {
+    width: 27px;
+    height: 24px;
+}
+
+.hamburger-inner, .hamburger-inner:after, .hamburger-inner:before {
+    width: 27px;
+    height: 4px;
+}
+
 @media only screen and (max-width: 600px) {
     h1 {
         padding: 20px 0 !important;
     }
     .hamburger-inner, .hamburger-inner:after, .hamburger-inner:before {
-        width: 25px;
+        width: 27px;
         height: 4px;
     }
     #rfrshBtn:after {

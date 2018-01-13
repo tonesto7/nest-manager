@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.2.1" }
+def devVer() { return "5.3.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -108,10 +108,15 @@ metadata {
 		valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
+		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
+		}
 		htmlTile(name:"weatherHTML", action: "getWeatherHTML", width: 6, height: 16, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
-
+		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
+		}
 		main ("temp2")
-		details ("weatherHTML", "refresh")
+		details ("weatherHTML", "remind", "refresh")
 	}
 	preferences {
 		input "resetHistoryOnly", "bool", title: "Reset History Data", description: "", displayDuringSetup: false
@@ -170,6 +175,7 @@ def initialize() {
 		state.updatedLastRanAt = now()
 		verifyHC()
 		getWAlertFilters()
+		if(state?.shortcutAppId) { parent?.updShortcutAppId(atomicState?.shortcutAppId) }
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
 	}
@@ -368,6 +374,7 @@ void processEvent() {
 
 def getStateSize()	{ return state?.toString().length() }
 def getStateSizePerc()	{ return (int) ((stateSize/100000)*100).toDouble().round(0) } //
+def getDevTypeId() { return device?.getTypeId() }
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -881,10 +888,10 @@ def luxUpdate() {
 private estimateLux(weatherIcon) {
 	//LogAction("estimateLux ( ${weatherIcon} )", "trace")
 	try {
-		if(!weatherIcon || !state?.sunriseDate || !state?.sunsetDate || !state?.sunriseDate?.time || !state?.sunsetDate?.time) {
+		if(!weatherIcon || !state?.sunriseDate || !state?.sunsetDate || ! (long) state?.sunriseDate?.time || ! (long) state?.sunsetDate?.time) {
 			Logger("estimateLux: Weather Data missing...", "warn")
-			Logger("state.sunriseDate: ${state?.sunriseDate} state.sunriseDate.time: ${state?.sunriseDate?.time}")
-			Logger("state.sunsetDate: ${state?.sunsetDate} state.sunsetDate.time: ${state?.sunsetDate?.time}")
+			Logger("state.sunriseDate: ${state?.sunriseDate} state.sunsetDate: ${state?.sunsetDate}")
+			Logger("state.sunriseDate.time: ${ (long) state?.sunriseDate?.time} state.sunsetDate.time: ${ (long) state?.sunsetDate?.time}")
 			return null
 		} else {
 			def lux = 0
@@ -999,28 +1006,29 @@ def convertRfc822toDt(dt) {
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
-	switch (logType) {
-		case "trace":
-			log.trace "${smsg}"
-			break
-		case "debug":
-			log.debug "${smsg}"
-			break
-		case "info":
-			log.info "${smsg}"
-			break
-		case "warn":
-			log.warn "${smsg}"
-			break
-		case "error":
-			log.error "${smsg}"
-			break
-		default:
-			log.debug "${smsg}"
-			break
-	}
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Weather")
+	} else {
+		switch (logType) {
+			case "trace":
+				log.trace "${smsg}"
+				break
+			case "debug":
+				log.debug "${smsg}"
+				break
+			case "info":
+				log.info "${smsg}"
+				break
+			case "warn":
+				log.warn "${smsg}"
+				break
+			case "error":
+				log.error "${smsg}"
+				break
+			default:
+				log.debug "${smsg}"
+				break
+		}
 	}
 }
 
@@ -1090,33 +1098,9 @@ def getCssData() {
 	return cssData
 }
 
-def getChartJsData() {
-	def chartJsData = null
-	//def htmlInfo = state?.htmlInfo
-	def htmlInfo
-	state.chartJsData = null
-	if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
-		if(state?.chartJsData) {
-			if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
-				//LogAction("getChartJsData: Chart Javascript Data is Current | Loading Data from State...")
-				chartJsData = state?.chartJsData
-			} else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
-				//LogAction("getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source...")
-				chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
-				state.chartJsData = chartJsData
-				state?.chartJsVer = htmlInfo?.chartJsVer
-			}
-		} else {
-			//LogAction("getChartJsData: Chart Javascript Data is Missing | Loading Data from Source...")
-			chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
-			state?.chartJsData = chartJsData
-			state?.chartJsVer = htmlInfo?.chartJsVer
-		}
-	} else {
-		//LogAction("getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL...")
-		chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
-	}
-	return chartJsData
+def getChartJsData(b64=true) {
+	//LogAction("getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL...")
+	return b64 ? getFileBase64(chartJsUrl(), "text", "javascript") : chartJsUrl()
 }
 
 def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
@@ -1148,9 +1132,9 @@ def gitBranch()		{ return state?.isBeta ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def devVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog_weath.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
 
-def getWeatherIcon() {
+def getWeatherIcon(b64=true) {
 	try {
-		return getFileBase64(state?.curWeather?.current_observation?.icon_url, "image", "gif")
+		return b64 ? getFileBase64(state?.curWeather?.current_observation?.icon_url, "image", "gif") : state?.curWeather?.current_observation?.icon_url
 	}
 	catch (ex) {
 		log.error "getWeatherIcon Exception:", ex
@@ -1164,11 +1148,11 @@ def getWeatCondFromUrl(url) {
 	return splList?.last()
 }
 
-def getWeatherImg(cond) {
+def getWeatherImg(cond, b64=true) {
 	try {
 		def newCond = getWeatCondFromUrl(cond)
 		def url = "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/icons/black/${getWeatCondFromUrl(cond) ?: "unknown"}.svg"
-		return getFileBase64(url, "image", "svg+xml")
+		return b64 ? getFileBase64(url, "image", "svg+xml") : url
 	}
 	catch (ex) {
 		log.error "getWeatherImg Exception:", ex
@@ -1176,9 +1160,9 @@ def getWeatherImg(cond) {
 	}
 }
 
-def getFavIcon() {
+def getFavIcon(b64=true) {
 	try {
-		return getFileBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "image", "ico")
+		return b64 ? getFileBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "image", "ico") : "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico"
 	}
 	catch (ex) {
 		log.error "getFavIcon Exception:", ex
@@ -1239,12 +1223,12 @@ def getSunriseSunset() {
 	// Sunrise / sunset
 	try {
 		def a = state?.curAstronomy?.moon_phase
-		if(state.curWeather?.current_observation?.local_tz_offset == null || a == null) { Logger("observation issue") ; return }
-		def today = localDate("GMT${state.curWeather?.current_observation?.local_tz_offset}")
+		if(state?.curWeather?.current_observation?.local_tz_offset == null || a == null) { Logger("observation issue") ; return }
+		def today = localDate("GMT${state?.curWeather?.current_observation?.local_tz_offset}")
 
 		def ltf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
 
-		ltf.setTimeZone(TimeZone.getTimeZone("GMT${state.curWeather?.current_observation?.local_tz_offset}"))
+		ltf.setTimeZone(TimeZone.getTimeZone("GMT${state?.curWeather?.current_observation?.local_tz_offset}"))
 
 		def utf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 		utf.setTimeZone(TimeZone.getTimeZone("GMT"))
@@ -1255,7 +1239,7 @@ def getSunriseSunset() {
 		state.sunsetDate = sunsetDate
 
 		def tf = new java.text.SimpleDateFormat("h:mm a")
-		tf.setTimeZone(TimeZone.getTimeZone("GMT${state.curWeather?.current_observation?.local_tz_offset}"))
+		tf.setTimeZone(TimeZone.getTimeZone("GMT${state?.curWeather?.current_observation?.local_tz_offset}"))
 		def localSunrise = "${tf.format(sunriseDate)}"
 		def localSunset = "${tf.format(sunsetDate)}"
 		state.localSunrise = localSunrise
@@ -1577,10 +1561,10 @@ def getWeatherAlertHtml() {
 	return wAlertHtml
 }
 
-def forecastDay(day) {
+def forecastDay(day, b64=true) {
 	if(!state?.curForecast) { return }
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)
+	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, b64)
 	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${foreImgB64}" style="width:64px;height:64px;"></a><br>"""
 	def forecastTxt = ""
 
@@ -1623,6 +1607,8 @@ def getChgLogHtml() {
 	}
 	return chgStr
 }
+
+def hasHtml() { return true }
 
 def getWeatherHTML() {
 	try {
@@ -1681,7 +1667,7 @@ def getWeatherHTML() {
 					${clientBl}
 					${updateAvail}
 					${getWeatherAlertHtml()}
-					<div class="container">
+					<div class="container" style="max-width: 100%; overflow: hidden;">
 						<h4>Current Weather Conditions</h4>
 						<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
 						<div class="row">
@@ -1724,8 +1710,8 @@ def getWeatherHTML() {
 
 						<div class="row topBorder">
 							<div class="centerText offset-by-three six columns">
-								<b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-								<b>${state?.curWeather?.current_observation?.observation_time}</b>
+								<b class="wStation">Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
+								<b class="wStation">${state?.curWeather?.current_observation?.observation_time}</b>
 							</div>
 						</div>
 					</div>
@@ -1754,7 +1740,81 @@ def getWeatherHTML() {
 	}
 }
 
-def historyGraphHtml() {
+def getDeviceTile(devNum="") {
+	try {
+		if(!state?.curWeather || !state?.curForecast) {
+			return hideWeatherHtml()
+		}
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
+		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
+		def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
+
+		def mainHtml = """
+			${clientBl}
+			${updateAvail}
+			${getWeatherAlertHtml()}
+			<div class="device">
+				<div class="container">
+					<h4>Current Weather Conditions</h4>
+					<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
+					<div class="row">
+						<div class="six columns">
+							<b>Feels Like:</b> ${getFeelslike()} <br>
+							<b>Precip %: </b> ${device.currentState("percentPrecip")?.value}% <br>
+							<b>Precip: </b> ${getPrecip()} <br>
+							<b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+							<b>Dew Point: </b>${getDewpoint()}<br>
+							<b>Pressure: </b> ${getPressure()} <br>
+							<b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+							<b>Visibility:</b> ${getVisibility()} <br>
+							<b>Lux:</b> ${getLux()}<br>
+							<b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+							<b>Wind:</b> ${state?.windStr} <br>
+						</div>
+						<div class="six columns">
+							<img class="offset-by-two eight columns" src="${getWeatherImg(state?.curWeather?.current_observation?.icon_url)}"> <br>
+							<h2>${getTemp()}</h2>
+							<h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
+						</div>
+					</div>
+					<div class="row topBorder">
+						<div class="centerText four columns">${forecastDay(0)}</div>
+						<div class="centerText four columns">${forecastDay(1)}</div>
+						<div class="centerText four columns">${forecastDay(2)}</div>
+					</div>
+					<div class="row">
+						<div class="centerText four columns">${forecastDay(3)}</div>
+						<div class="centerText four columns">${forecastDay(4)}</div>
+						<div class="centerText four columns">${forecastDay(5)}</div>
+					</div>
+					<div class="row">
+						<div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+						<div class="centerText four columns">${forecastDay(7)}</div>
+					</div>
+					<p style="font-size: 12px; font-weight: normal; text-align: center;">Tap Icon to View Forecast</p>
+
+					${historyGraphHtml()}
+
+					<div class="row topBorder">
+						<div class="centerText offset-by-three six columns">
+							<b class="wStation">Station Id: ${state?.curWeather?.current_observation?.station_id}</b><br/>
+							<b class="wStation">${state?.curWeather?.current_observation?.observation_time}</b>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		"""
+		render contentType: "text/html", data: mainHtml, status: 200
+	}
+	catch (ex) {
+		log.error "getDeviceTile Exception:", ex
+		exceptionDataHandler(ex.message, "getDeviceTile")
+	}
+}
+
+def historyGraphHtml(devNum="") {
 	def html = ""
 	if(state?.showGraphs) {
 		if (state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0) {
@@ -1773,8 +1833,8 @@ def historyGraphHtml() {
 			html = """
 			  <script type="text/javascript">
 				google.charts.load('current', {packages: ['corechart']});
-				google.charts.setOnLoadCallback(drawGraph);
-				function drawGraph() {
+				google.charts.setOnLoadCallback(drawWeatherGraph);
+				function drawWeatherGraph() {
 					var data = new google.visualization.DataTable();
 					data.addColumn('timeofday', 'time');
 					data.addColumn('number', 'Temp (Yesterday)');
@@ -1844,7 +1904,7 @@ def historyGraphHtml() {
 							width: '100%'
 						}
 					};
-					var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+					var chart = new google.visualization.AreaChart(document.getElementById('chart_div${devNum}'));
 					chart.draw(data, options);
 				}
 			</script>
