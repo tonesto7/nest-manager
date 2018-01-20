@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.2.0" }
+def devVer() { return "5.3.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -136,10 +136,13 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
+		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
+		}
 		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 8)
 
 		main "main2"
-		details(["alarmState", "devInfoHtml", "refresh"])
+		details(["alarmState", "devInfoHtml","remind", "refresh"])
    }
 }
 
@@ -410,6 +413,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 
 def getStateSize()      { return state?.toString().length() }
 def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getDevTypeId() { return device?.getTypeId() }
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -526,16 +530,16 @@ def addCheckinTime(val) {
 def determinePwrSrc() {
 	if(!state?.checkinTimeList) { state?.checkinTimeList = [] }
 	def checkins = state?.checkinTimeList
-	def checkinAvg = checkins?.size() ? (checkins?.sum()/checkins?.size()).toDouble().round(0).toInteger() : null //
+	def checkinAvg = checkins?.size() ? ( checkins?.sum()?.div(checkins?.size()))?.toDouble()?.round(0).toInteger() : null //
 	if(checkins?.size() > 7) {
 		if(checkinAvg && checkinAvg < 10000) {
 			powerTypeEvent(true)
-		} else { powerTypeEvent(false) }
+		} else { powerTypeEvent() }
 	}
 	//log.debug "checkins: $checkins | Avg: $checkinAvg"
 }
 
-def powerTypeEvent(wired) {
+def powerTypeEvent(wired=false) {
 	def curVal = device.currentState("powerSourceNest")?.value
 	def newValSt = wired == true ? "wired" : "battery"
 	def newVal = wired == true ? "mains" : "battery"
@@ -706,29 +710,30 @@ def lastN(String input, n) {
 
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
-	switch (logType) {
-		case "trace":
-			log.trace "${smsg}"
-			break
-		case "debug":
-			log.debug "${smsg}"
-			break
-		case "info":
-			log.info "${smsg}"
-			break
-		case "warn":
-			log.warn "${smsg}"
-			break
-		case "error":
-			log.error "${smsg}"
-			break
-		default:
-			log.debug "${smsg}"
-			break
-	}
 	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Protect-${theId}")
+	} else {
+		switch (logType) {
+			case "trace":
+				log.trace "${smsg}"
+				break
+			case "debug":
+				log.debug "${smsg}"
+				break
+			case "info":
+				log.info "${smsg}"
+				break
+			case "warn":
+				log.warn "${smsg}"
+				break
+			case "error":
+				log.error "${smsg}"
+				break
+			default:
+				log.debug "${smsg}"
+				break
+		}
 	}
 }
 
@@ -759,48 +764,48 @@ def getMetricCntData() {
 	return [protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]//, protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
 }
 
-def getCarbonImg() {
+def getCarbonImg(b64=true) {
 	def carbonVal = device.currentState("nestCarbonMonoxide")?.value
 	//values in ST are tested, clear, detected
 	//values from nest are ok, warning, emergency
 	def img = ""
-	def caption = "${carbonVal?.toString().toUpperCase()}"
+	def caption = "${carbonVal ? carbonVal?.toString().toUpperCase() : ""}"
 	def captionClass = ""
 	switch(carbonVal) {
 		case "warning":
-			img = getFileBase64(getImg("co2_warn_status.png"), "image", "png")
+			img = b64 ? getFileBase64(getImg("co2_warn_status.png"), "image", "png") : getImg("co2_warn_status.png")
 			captionClass = "alarmWarnCap"
 			break
 		case "emergency":
-			img = getFileBase64(getImg("co2_emergency_status.png"), "image", "png")
+			img = b64 ? getFileBase64(getImg("co2_emergency_status.png"), "image", "png") : getImg("co2_emergency_status.png")
 			captionClass = "alarmEmerCap"
 			break
 		default:
-			img = getFileBase64(getImg("co2_clear_status.png"), "image", "png")
+			img = b64 ? getFileBase64(getImg("co2_clear_status.png"), "image", "png") : getImg("co2_clear_status.png")
 			captionClass = "alarmClearCap"
 			break
 	}
 	return ["img":img, "caption": caption, "captionClass":captionClass]
 }
 
-def getSmokeImg() {
+def getSmokeImg(b64=true) {
 	def smokeVal = device.currentState("nestSmoke")?.value
 	//values in ST are tested, clear, detected
 	//values from nest are ok, warning, emergency
 	def img = ""
-	def caption = "${smokeVal?.toString().toUpperCase()}"
+	def caption = "${smokeVal ? smokeVal?.toString().toUpperCase() : ""}"
 	def captionClass = ""
 	switch(smokeVal) {
 		case "warning":
-			img = getFileBase64(getImg("smoke_warn_status.png"), "image", "png")
+			img = b64 ? getFileBase64(getImg("smoke_warn_status.png"), "image", "png") : getImg("smoke_warn_status.png")
 			captionClass = "alarmWarnCap"
 			break
 		case "emergency":
-			img = getFileBase64(getImg("smoke_emergency_status.png"), "image", "png")
+			img = b64 ? getFileBase64(getImg("smoke_emergency_status.png"), "image", "png") : getImg("smoke_emergency_status.png")
 			captionClass = "alarmEmerCap"
 			break
 		default:
-			img = getFileBase64(getImg("smoke_clear_status.png"), "image", "png")
+			img = b64 ? getFileBase64(getImg("smoke_clear_status.png"), "image", "png") : getImg("smoke_clear_status.png")
 			captionClass = "alarmClearCap"
 			break
 	}
@@ -919,6 +924,8 @@ def getChgLogHtml() {
 	}
 	return chgStr
 }
+
+def hasHtml() { return true }
 
 def getInfoHtml() {
 	try {
@@ -1075,6 +1082,111 @@ def getInfoHtml() {
 		exceptionDataHandler(ex.message, "getInfoHtml")
 	}
 }
+
+def getDeviceTile(devNum) {
+	try {
+		def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImg("battery_low_h.png")}\">" :
+				"<img class='battImg' src=\"${getImg("battery_ok_h.png")}\">"
+
+		def testVal = device.currentState("isTesting")?.value
+		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
+
+		def smokeImg = getSmokeImg(false)
+		def carbonImg = getCarbonImg(false)
+		def html = """
+		  ${testModeHTML}
+		  ${clientBl}
+		  ${updateAvail}
+		  <div class="device">
+			  <section class="sectionBgTile">
+				  <h3>Alarm Status</h3>
+				  <table class="devInfoTile">
+				    <col width="48%">
+				    <col width="48%">
+				    <thead>
+					  <th>Smoke Detector</th>
+					  <th>Carbon Monoxide</th>
+				    </thead>
+				    <tbody>
+					  <tr>
+					    <td>
+							<img class='alarmImg' src="${smokeImg?.img}">
+							<span class="${smokeImg?.captionClass}">${smokeImg?.caption}</span>
+						</td>
+					    <td>
+							<img class='alarmImg' src="${carbonImg?.img}">
+							<span class="${carbonImg?.captionClass}">${carbonImg?.caption}</span>
+						</td>
+					  </tr>
+				    </tbody>
+				  </table>
+			  </section>
+			  <br>
+			  <section class="sectionBgTile">
+			  	<h3>Device Info</h3>
+				<table class="devInfoTile">
+					<col width="33%">
+					<col width="33%">
+					<col width="33%">
+					<thead>
+					  <th>Network Status</th>
+					  <th>Power Type</th>
+					  <th>API Status</th>
+					</thead>
+					<tbody>
+					  <tr>
+					  <td${state?.onlineStatus != "online" ? """ class="redText" """ : ""}>${state?.onlineStatus.toString().capitalize()}</td>
+					  <td>${state?.powerSource != null ? state?.powerSource.toString().capitalize() : "Not Available Yet"}</td>
+					  <td${state?.apiStatus != "Good" ? """ class="orangeText" """ : ""}>${state?.apiStatus}</td>
+					  </tr>
+					</tbody>
+				</table>
+			</section>
+			<section class="sectionBgTile">
+				<table class="devInfoTile">
+					<col width="40%">
+					<col width="20%">
+					<col width="40%">
+					<thead>
+					  <th>Firmware Version</th>
+					  <th>Debug</th>
+					  <th>Device Type</th>
+					</thead>
+					<tbody>
+					  <tr>
+						<td>v${state?.softwareVer.toString()}</td>
+						<td>${state?.debugStatus}</td>
+						<td>${state?.devTypeVer.toString()}</td>
+					  </tr>
+					</tbody>
+			  	</table>
+			  </section>
+			  <section class="sectionBgTile">
+  				<table class="devInfoTile">
+				  <thead>
+					<th>Last Check-In</th>
+					<th>Data Last Received</th>
+				  </thead>
+				  <tbody>
+					<tr>
+					  <td class="dateTimeTextTile">${state?.lastConnection.toString()}</td>
+					  <td class="dateTimeTextTile">${state?.lastUpdatedDt.toString()}</td>
+					</tr>
+				  </tbody>
+				</table>
+			  </section>
+			</div>
+		"""
+		return html
+	}
+	catch (ex) {
+		log.error "getDeviceTile Exception:", ex
+		exceptionDataHandler(ex.message, "getInfoHtml")
+	}
+}
+
 
 private def textDevName()   { return "Nest Protect${appDevName()}" }
 private def appDevType()    { return false }

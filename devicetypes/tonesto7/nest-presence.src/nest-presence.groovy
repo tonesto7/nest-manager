@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.2.0" }
+def devVer() { return "5.3.1" }
 
 // for the UI
 metadata {
@@ -245,6 +245,8 @@ def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
 }
 
+def getDevTypeId() { return device?.getTypeId() }
+
 def getDeviceStateData() {
 	return getState()
 }
@@ -426,28 +428,29 @@ void setHome() {
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
-	switch (logType) {
-		case "trace":
-			log.trace "${smsg}"
-			break
-		case "debug":
-			log.debug "${smsg}"
-			break
-		case "info":
-			log.info "${smsg}"
-			break
-		case "warn":
-			log.warn "${smsg}"
-			break
-		case "error":
-			log.error "${smsg}"
-			break
-		default:
-			log.debug "${smsg}"
-			break
-	}
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Presence")
+	} else {
+		switch (logType) {
+			case "trace":
+				log.trace "${smsg}"
+				break
+			case "debug":
+				log.debug "${smsg}"
+				break
+			case "info":
+				log.info "${smsg}"
+				break
+			case "warn":
+				log.warn "${smsg}"
+				break
+			case "error":
+				log.error "${smsg}"
+				break
+			default:
+				log.debug "${smsg}"
+				break
+		}
 	}
 }
 
@@ -551,6 +554,8 @@ def getCssData() {
 }
 
 def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
+
+def hasHtml() { return false }
 
 def getHtml() {
 	try {
