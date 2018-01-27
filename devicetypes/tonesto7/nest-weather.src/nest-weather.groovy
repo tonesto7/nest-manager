@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.1" }
+def devVer() { return "5.3.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -368,7 +368,7 @@ void processEvent() {
 	}
 	catch (ex) {
 		log.error("generateEvent Exception:", ex)
-		exceptionDataHandler(ex.message, "generateEvent")
+		exceptionDataHandler(ex?.message, "generateEvent")
 	}
 }
 
@@ -668,7 +668,7 @@ def getWeatherConditions(Map weatData) {
 	}
 	catch (ex) {
 		log.error("getWeatherConditions Exception:", ex)
-		exceptionDataHandler(ex.message, "getWeatherConditions")
+		exceptionDataHandler(ex?.message, "getWeatherConditions")
 	}
 }
 
@@ -694,7 +694,7 @@ def getWeatherForecast(Map weatData) {
 	}
 	catch (ex) {
 		log.error("getWeatherForecast Exception:", ex)
-		exceptionDataHandler(ex.message, "getWeatherForecast")
+		exceptionDataHandler(ex?.message, "getWeatherForecast")
 	}
 }
 
@@ -716,7 +716,7 @@ def getWeatherAstronomy(weatData) {
 	}
 	catch (ex) {
 		log.error("getWeatherAstronomy Exception:", ex)
-		exceptionDataHandler(ex.message, "getWeatherAstronomy")
+		exceptionDataHandler(ex?.message, "getWeatherAstronomy")
 	}
 }
 
@@ -842,7 +842,7 @@ def getWeatherAlerts(weatData) {
 	}
 	catch (ex) {
 		log.error("getWeatherAlerts Exception:", ex)
-		exceptionDataHandler(ex.message, "getWeatherAlerts")
+		exceptionDataHandler(ex?.message, "getWeatherAlerts")
 	}
 }
 
@@ -862,7 +862,7 @@ private pad(String s, size = 25) {
 	}
 	catch (ex) {
 		log.error("pad Exception:", ex)
-		exceptionDataHandler(ex.message, "pad")
+		exceptionDataHandler(ex?.message, "pad")
 	}
 }
 
@@ -965,7 +965,7 @@ private estimateLux(weatherIcon) {
 	catch (ex) {
 		log.warn "state.sunriseDate: ${state?.sunriseDate}"
 		log.warn "state.sunsetDate: ${state?.sunsetDate}"
-		exceptionDataHandler(ex.message, "estimateLux")
+		exceptionDataHandler(ex?.message, "estimateLux")
 		log.error("estimateLux Exception:", ex)
 	}
 	return null
@@ -1082,7 +1082,7 @@ def getFileBase64(url, preType, fileType) {
 	}
 	catch (ex) {
 		log.error "getFileBase64 Exception:", ex
-		exceptionDataHandler(ex.message, "getFileBase64")
+		exceptionDataHandler(ex?.message, "getFileBase64")
 	}
 }
 
@@ -1138,7 +1138,7 @@ def getWeatherIcon(b64=true) {
 	}
 	catch (ex) {
 		log.error "getWeatherIcon Exception:", ex
-		exceptionDataHandler(ex.message, "getWeatherIcon")
+		exceptionDataHandler(ex?.message, "getWeatherIcon")
 	}
 }
 
@@ -1156,7 +1156,7 @@ def getWeatherImg(cond, b64=true) {
 	}
 	catch (ex) {
 		log.error "getWeatherImg Exception:", ex
-		exceptionDataHandler(ex.message, "getWeatherImg")
+		exceptionDataHandler(ex?.message, "getWeatherImg")
 	}
 }
 
@@ -1166,7 +1166,7 @@ def getFavIcon(b64=true) {
 	}
 	catch (ex) {
 		log.error "getFavIcon Exception:", ex
-		exceptionDataHandler(ex.message, "getFavIcon")
+		exceptionDataHandler(ex?.message, "getFavIcon")
 	}
 }
 
@@ -1215,7 +1215,7 @@ private localDate(timeZone) {
 	}
 	catch (ex) {
 		log.error "localDate Exception:"
-		exceptionDataHandler(ex.message, "localDate")
+		exceptionDataHandler(ex?.message, "localDate")
 	}
 }
 
@@ -1246,7 +1246,7 @@ def getSunriseSunset() {
 		state.localSunset = localSunset
 	} catch (ex) {
 		log.error "getSunriseSunset Exception:", ex
-		exceptionDataHandler(ex.message, "getSunriseSunset")
+		exceptionDataHandler(ex?.message, "getSunriseSunset")
 	}
 }
 
@@ -1731,12 +1731,13 @@ def getWeatherHTML() {
 				</body>
 			</html>
 		"""
+/* """ */
 		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
 		log.error "getWeatherHTML Exception:", ex
-		exceptionDataHandler(ex.message, "getWeatherHTML")
+		exceptionDataHandler(ex?.message, "getWeatherHTML")
 	}
 }
 
@@ -1806,11 +1807,12 @@ def getDeviceTile(devNum="") {
 			</div>
 
 		"""
+/* """ */
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
 		log.error "getDeviceTile Exception:", ex
-		exceptionDataHandler(ex.message, "getDeviceTile")
+		exceptionDataHandler(ex?.message, "getDeviceTile")
 	}
 }
 
@@ -1920,6 +1922,7 @@ def historyGraphHtml(devNum="") {
 				<p>This may take at a couple hours</p>
 				</div>
 			"""
+/* """ */
 		}
 	}
 }
