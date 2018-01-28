@@ -35,11 +35,11 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.2" }
-def appVerDate() { "01-11-2018" }
+def appVersion() { "5.3.3" }
+def appVerDate() { "01-28-2018" }
 def minVersions() {
 	return [
-		"automation":["val":531, "desc":"5.3.1"],
+		"automation":["val":532, "desc":"5.3.2"],
 		"thermostat":["val":531, "desc":"5.3.1"],
 		"protect":["val":531, "desc":"5.3.1"],
 		"presence":["val":531, "desc":"5.3.1"],
@@ -131,6 +131,7 @@ mappings {
 def startPage() {
 	if(parent) {
 		atomicState?.isParent = false
+		uninstallPage()
 	} else {
 		atomicState?.isParent = true
 		authPage()
@@ -1784,7 +1785,7 @@ void diagLogProcChange(setOn) {
 			}
 		}
 		atomicState.forceChildUpd = true
-		atomicState?.lastAnalyticUpdDt = null		// will force def autoDesc = getInstAutoTypesDesc()	// This is a hack to get installedAutomations data updated without waiting for user to hit done
+		updTimestampMap("lastAnalyticUpdDt", null)
 	}
 }
 
@@ -1815,10 +1816,14 @@ def uninstallPage() {
 				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
 			}
 		}
-		section("Did You Get an Error?") {
-			href "forceUninstallPage", title: "Perform Some Cleanup Steps", description: ""
+		if(!parent) {
+			section("Did You Get an Error?") {
+				href "forceUninstallPage", title: "Perform Some Cleanup Steps", description: ""
+			}
+			remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
+		} else {
+			remove("Remove ${app?.label}", "WARNING!!!", "BAD Automation SHOULD be removed")
 		}
-		remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
 	}
 }
 
@@ -1841,7 +1846,7 @@ def getDevOpt() {
 def devPageFooter(var, eTime) {
 	def res = []
 	def data = atomicState?.usageMetricsStore ?: [:]
-	data[var] = (data[var] == null) ? 1 : data[var].toInteger()+1
+	data[var] = data[var] != null ? data[var.toString()].toInteger() + 1 : 1
 	atomicState?.usageMetricsStore = data
 	// if(getDevOpt()) {
 	// 	res += 	section() {
@@ -2068,6 +2073,7 @@ def nestTokenResetPage() {
 def installed() {
 	if(parent) {
 		LogAction("${app.label} BAD CHILD AUTOMATION FILE installed()...with settings: ${settings}", "error", true)
+		uninstAutomationApp()
 		return
 	} else {
 		LogAction("Installed with settings: ${settings}", "debug", true)
@@ -2081,6 +2087,7 @@ def installed() {
 def updated() {
 	if(parent) {
 		LogAction("${app.label} BAD CHILD AUTOMATION FILE Updated...with settings: ${settings}", "error", true)
+		uninstAutomationApp()
 		return
 	} else {
 		LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
@@ -2160,6 +2167,7 @@ def initBuiltin(btype) {
 		def mynestApp = getChildApps()?.findAll { it?.getAutomationType() == autoStr }
 		if(keepApp && mynestApp?.size() < 1 && btype != "initNestModeApp") {
 			LogAction("Installing ${autoStr}", "info", true)
+			updTimestampMap("lastAnalyticUpdDt", null)
 			try {
 				if(btype == "initRemDiagApp") {
 					addChildApp(appNamespace(), autoAppName(), getRemDiagAppChildName(), [settings:[remDiagFlag:["type":"bool", "value":true]]])
@@ -2180,6 +2188,7 @@ def initBuiltin(btype) {
 					def slbl = keepApp ? "warn" : "info"
 					LogAction("initBuiltin: Deleting ${keepApp ? "Extra " : ""}${autoStr} (${chld?.id})", slbl, true)
 					deleteChildApp(chld)
+					updTimestampMap("lastAnalyticUpdDt", null)
 				}
 				cnt = cnt+1
 			}
@@ -2252,8 +2261,9 @@ def finishInitManagerApp() {
 		if(autoId) { updAppCodeId("auto", autoId) }
 
 		def tstatAutoApp = getChildApps()?.find {
+			def aa = null
 			try {
-				def aa = it?.getAutomationType()
+				aa = it?.getAutomationType()
 				def bb = it?.getCurrentSchedule()
 				def ai = it?.getAutomationsInstalled()
 			} catch (Exception e) {
@@ -2261,6 +2271,7 @@ def finishInitManagerApp() {
 				badAutomation = true
 				appUpdateNotify(true)
 			}
+			if( !badAutomation && !(aa in ["nMode", "watchDog", "remDiag", "schMot"]) ) { badAutomation = true }
 		}
 		if(!isAppLiteMode()) {
 			runIn(5, "reInitBuiltins", [overwrite: true])  // need to have watchdog/nestmode check if we created devices
@@ -2273,16 +2284,18 @@ def finishInitManagerApp() {
 }
 
 def removeBadAutomations() {
-	bad = false
 	def tstatAutoApp = getChildApps()?.find {
+		def bad = false
+		def aa = null
 		try {
-			def aa = it?.getAutomationType()
+			aa = it?.getAutomationType()
 			def bb = it?.getCurrentSchedule()
 			def ai = it?.getAutomationsInstalled()
 		} catch (Exception e) {
 			LogAction("BAD Automation (${it?.id}) found", "warn", true)
 			bad = true
 		}
+		if( !bad && !(aa in ["nMode", "watchDog", "remDiag", "schMot"]) ) { bad = true }
 		if(bad || isAppLiteMode()) {
 			try {
 				LogAction("Calling uninstall on Automation (${it?.id})", "warn", true)
@@ -2290,10 +2303,10 @@ def removeBadAutomations() {
 			} catch (Exception e) {
 				;
 			}
-			LogAction("Deleting bad Automation (${it?.id})", "warn", true)
- 			deleteChildApp(it)
+			LogAction("Deleting Automation (${it?.id})", "warn", true)
+			deleteChildApp(it)
+			updTimestampMap("lastAnalyticUpdDt", null)
 		}
-		bad = false
 	}
 }
 
@@ -2873,7 +2886,7 @@ def receiveStreamStatus() {
 			//LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", false)
 			restStreamHandler(true)
 		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {		// suppose to be on
-			runIn(21, "startStopStream", [overwrite: true])
+			runIn(31, "startStopStream", [overwrite: true])
 		}
 		if(settings?.restStreaming && t0) {		// All good
 			updTimestampMap("lastHeardFromNestDt", getDtNow())
@@ -2978,6 +2991,7 @@ def getInstAutoTypesDesc() {
  						dat.nestMode = dat.nestMode - 1
  						LogAction("Deleting Extra Nest Mode (${a?.id})", "warn", true)
  						deleteChildApp(a)
+						updTimestampMap("lastAnalyticUpdDt", null)
  					}
 					break
 				case "schMot":
@@ -3009,6 +3023,7 @@ def getInstAutoTypesDesc() {
  						dat.watchDog = dat.watchDog - 1
  						LogAction("Deleting Extra Watchdog (${a?.id})", "warn", true)
  						deleteChildApp(a)
+						updTimestampMap("lastAnalyticUpdDt", null)
  					}
  					break
 				case "remDiag":
@@ -3017,11 +3032,13 @@ def getInstAutoTypesDesc() {
  						dat.remDiag = dat.remDiag - 1
  						LogAction("Deleting Extra Remote Diagnostic (${a?.id})", "warn", true)
  						deleteChildApp(a)
+						updTimestampMap("lastAnalyticUpdDt", null)
  					}
  					break
  				default:
  					LogAction("Deleting Unknown Automation (${a?.id})", "warn", true)
  					deleteChildApp(a)
+					updTimestampMap("lastAnalyticUpdDt", null)
 					break
 			}
 		}
@@ -3163,6 +3180,7 @@ def checkIfSwupdated() {
 		def sData = atomicState?.swVer ?: [:]
 		sData["mgrVer"] = appVersion()
 		atomicState?.swVer = sData
+		updTimestampMap("lastAnalyticUpdDt", null)
 		LogAction("checkIfSwupdated: new version ${appVersion()}", "info", true)
 		def iData = atomicState?.installData
 		iData["updatedDt"] = getDtNow().toString()
@@ -5273,7 +5291,7 @@ def loggingRemindNotify(msgOn) {
 	if(dbgAlert) {
 		def msg = "Your debug logging has remained enabled for more than 24 hours please disable them to reduce resource usage on ST platform."
 		if(sendMsg(("${app?.name} Debug Logging Reminder"), msg, true)) {
-			atomicState?.lastLogRemindMsgDt = getDtNow()
+			updTimestampMap("lastLogRemindMsgDt", getDtNow())
 		}
 	}
 }
@@ -6483,6 +6501,7 @@ def addRemoveDevices(uninst = null) {
 			if(devsCrt > 0) {
 				noCreates = false
 				LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), (${nVstats?.size() ?: 0}) Virtual Thermostat(s), (${nProtects?.size() ?: 0}) Protect(s), (${nCameras?.size() ?: 0}) Cameras(s), ${presCnt} Presence Device and ${weathCnt} Weather Device", "debug", true)
+				updTimestampMap("lastAnalyticUpdDt", null)
 			}
 		}
 
@@ -6510,6 +6529,7 @@ def addRemoveDevices(uninst = null) {
 		if(delete?.size() > 0) {
 			noDeletes = false
 			noDeleteErr = false
+			updTimestampMap("lastAnalyticUpdDt", null)
 			LogAction("Removing ${delete.size()} devices: ${delete}", "debug", true)
 			delete.each { deleteChildDevice(it.deviceNetworkId) }
 			noDeleteErr = true
@@ -6624,6 +6644,7 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 			LogAction("addRemoveVthermostat() unexpected operation state ${myID} ${atomicState?."vThermostat${devId}"} ${atomicState?."vThermostatChildAppId${devId}"}", "warn", true)
 			return false
 		}
+		updTimestampMap("lastAnalyticUpdDt", null)
 		return true
 	}
 }
@@ -7102,7 +7123,7 @@ void settingUpdate(name, value, type=null) {
 }
 
 void settingRemove(name) {
-	LogAction("settingRemoce($name)...", "trace", false)
+	LogAction("settingRemove($name)...", "trace", false)
 	if(name) { app?.deleteSetting("$name") }
 }
 
@@ -7503,13 +7524,12 @@ def minDevVer2Str(val) {
 /******************************************************************************
 *					 	DIAGNOSTIC & NEST API INFO PAGES		  	  		  *
 *******************************************************************************/
-def alarmTestPage () {
+def alarmTestPage() {
 	def execTime = now()
 	dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
 		if(atomicState?.protects) {
 			section("Select Carbon/Smoke Device to Test:") {
-				input(name: "alarmCoTestDevice", title:"Select the Protect to Test", type: "enum", required: false, multiple: false, submitOnChange: true,
-						metadata: [values:atomicState?.protects], image: getAppImg("protect_icon.png"))
+				input name: "alarmCoTestDevice", title:"Select the Protect to Test", type: "enum", required: false, multiple: false, submitOnChange: true, metadata: [values:atomicState?.protects], image: getAppImg("protect_icon.png")
 			}
 			if(settings?.alarmCoTestDevice) {
 				section("Select the Event to Generate:") {
@@ -7548,8 +7568,8 @@ def alarmTestPage () {
 				}
 			}
 		}
+		devPageFooter("protTestLoadCnt", execTime)
 	}
-	devPageFooter("protTestLoadCnt", execTime)
 }
 
 void resetAlarmTest() {
@@ -8913,6 +8933,7 @@ def renderDeviceTiles(type=null) {
 			  	</script>
 			</body>
 		"""
+/* """ */
 		render contentType: "text/html", data: html
 	} catch (ex) { log.error "renderDeviceData Exception:", ex }
 }
@@ -9108,7 +9129,8 @@ def sendFeedbackData(msg) {
 }
 
 def sendFirebaseData(data, pathVal, cmdType=null, type=null, noAsync=false) {
-	LogTrace("sendFirebaseData(${data}, ${pathVal}, $cmdType, $type")
+	LogAction("sendFirebaseData(${data}, ${pathVal}, $cmdType, $type, $noAsync", "info", true)
+	LogTrace("sendFirebaseData(${data}, ${pathVal}, $cmdType, $type, $noAsync")
 
 	def allowAsync = false
 	def metstr = "sync"
@@ -9155,7 +9177,7 @@ def processFirebaseSlackResponse(resp, data) {
 			if(typeDesc?.toString() == "Remote Diag Logs") {
 
 			} else {
-				if(typeDesc?.toString() == "heartbeat") { atomicState?.lastAnalyticUpdDt = getDtNow() }
+				if(typeDesc?.toString() == "heartbeat") { updTimestampMap("lastAnalyticUpdDt", getDtNow()) }
 			}
 			result = true
 		}
@@ -9198,7 +9220,7 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 				if(typeDesc.toString() == "Remote Diag Logs") {
 
 				} else {
-					if(typeDesc?.toString() == "heartbeat") { atomicState?.lastAnalyticUpdDt = getDtNow() }
+					if(typeDesc?.toString() == "heartbeat") { updTimestampMap("lastAnalyticUpdDt", getDtNow()) }
 				}
 				result = true
 			}

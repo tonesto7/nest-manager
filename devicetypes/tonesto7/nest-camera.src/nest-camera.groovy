@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.3.1" }
+def devVer() { return "5.3.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -331,8 +331,8 @@ def processEvent() {
 		return null
 	}
 	catch (ex) {
-		log.error "generateEvent Exception:", ex
-		exceptionDataHandler(ex.message, "generateEvent")
+		log.error "generateEvent Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "generateEvent")
 	}
 }
 
@@ -820,8 +820,8 @@ void streamingOn(manChg=false) {
 		}
 
 	} catch (ex) {
-		log.error "streamingOn Exception:", ex
-		exceptionDataHandler(ex.message, "streamingOn")
+		log.error "streamingOn Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "streamingOn")
 	}
 }
 
@@ -834,8 +834,8 @@ void streamingOff(manChg=false) {
 			else { incProgStreamChgCnt() }
 		}
 	} catch (ex) {
-		log.error "streamingOff Exception:", ex
-		exceptionDataHandler(ex.message, "streamingOff")
+		log.error "streamingOff Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "streamingOff")
 	}
 }
 
@@ -891,8 +891,8 @@ private takePicture(String url) {
       		Logger("takePicture: Camera is not online (${!state?.isOnline}) or not streaming (${!state?.isStreaming})", "error")
 		}
 	} catch (ex) {
-		log.error "takePicture Exception: $ex"
-		exceptionDataHandler(ex.message, "takePicture")
+		log.error "takePicture Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "takePicture")
 	}
 	return false
 }
@@ -947,7 +947,7 @@ def log(message, level = "trace") {
 	return null // always child interface call with a return value
 }
 
-def exceptionDataHandler(msg, methodName) {
+def exceptionDataHandler(String msg, String methodName) {
 	if(state?.allowDbException == false) {
 		return
 	} else {
@@ -1128,8 +1128,8 @@ def getCamUUID(pubVidId) {
 			}
 		} else { Logger("getCamUUID: Your Camera's PublicVideoId was not found!!! Please make sure you have public video sharing enabled under your Cameras settings in the Nest Mobile App...", "warn") }
 	} catch (ex) {
-		log.error "getCamUUID Exception: $ex"
-		exceptionDataHandler(ex.message, "getCamUUID")
+		log.error "getCamUUID Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "getCamUUID")
 	}
 }
 
@@ -1160,9 +1160,10 @@ def getCamApiServerData(camUUID) {
 		} else { Logger("getCamApiServerData camUUID is missing....", "warn") }
 	}
 	catch (ex) {
-		log.error "getCamApiServerData Exception:", ex
-		exceptionDataHandler(ex.message, "getCamApiServerData")
+		log.error "getCamApiServerData Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "getCamApiServerData")
 	}
+	return null
 }
 
 def getStreamHostUrl() {
@@ -1412,8 +1413,8 @@ def getCamHtml() {
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
-		log.error "getCamHtml Exception:", ex
-		exceptionDataHandler(ex.message, "getCamHtml")
+		log.error "getCamHtml Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "getCamHtml")
 	}
 }
 
@@ -1552,11 +1553,12 @@ def getDeviceTile(devNum) {
 				})
 			</script>
 		"""
+/* """ */
 		return mainHtml
 	}
 	catch (ex) {
-		log.error "getDeviceTile Exception:", ex
-		exceptionDataHandler(ex.message, "getDeviceTile")
+		log.error "getDeviceTile Exception: ${ex?.message}", ex
+		exceptionDataHandler(ex?.message, "getDeviceTile")
 	}
 }
 

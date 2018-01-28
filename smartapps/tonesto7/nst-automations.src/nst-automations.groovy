@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.1" }
-def appVerDate() { "01-11-2018" }
+def appVersion() { "5.3.2" }
+def appVerDate() { "01-21-2018" }
 
 preferences {
 	//startPage
@@ -70,6 +70,8 @@ def startPage() {
 			atomicState?.isParent = false
 			selectAutoPage()
 		}
+	} else {
+		notAllowedPage()
 	}
 }
 
@@ -79,6 +81,7 @@ def notAllowedPage () {
 			paragraph "HOUSTON WE HAVE A PROBLEM!\n\nNST Automations can't be directly installed from the Marketplace.\n\nPlease use the NST Manager SmartApp to configure them.", required: true,
 			state: null, image: getAppImg("disable_icon2.png")
 		}
+		remove("Remove this bad Automation", "WARNING!!!", "BAD Automation SHOULD be removed")
 	}
 }
 
@@ -100,7 +103,7 @@ def uninstallPage() {
 				paragraph "This will uninstall the ${app?.label} Automation!"
 			}
 		}
-		remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
+		remove("Remove ${appName()}", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis Automation will be removed")
 	}
 }
 
