@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.2.0" }
+def devVer() { return "5.3.1" }
 
 // for the UI
 metadata {
@@ -23,12 +23,12 @@ metadata {
 		capability "Refresh"
 		capability "Sensor"
 		capability "Thermostat"
-		capability "Thermostat Cooling Setpoint"
-		capability "Thermostat Fan Mode"
-		capability "Thermostat Heating Setpoint"
-		capability "Thermostat Mode"
-		capability "Thermostat Operating State"
-		capability "Thermostat Setpoint"
+		//capability "Thermostat Cooling Setpoint"
+		//capability "Thermostat Fan Mode"
+		//capability "Thermostat Heating Setpoint"
+		//capability "Thermostat Mode"
+		//capability "Thermostat Operating State"
+		//capability "Thermostat Setpoint"
 		capability "Temperature Measurement"
 		capability "Health Check"
 
@@ -233,11 +233,13 @@ metadata {
 			state "default", label: ''
 		}
 		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 13, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
-
+		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
+		}
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
 				"heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
-				"heatSliderControl", "coolSliderControl", "graphHTML", "offBtn", "ecoBtn", "heatBtn", "coolBtn", "autoBtn", "blank", "refresh"] )
+				"heatSliderControl", "coolSliderControl", "graphHTML", "offBtn", "ecoBtn", "heatBtn", "coolBtn", "autoBtn", "blank", "remind", "refresh"] )
 	}
 	preferences {
 		input "resetHistoryOnly", "bool", title: "Reset History Data", description: "", displayDuringSetup: false
@@ -1348,9 +1350,11 @@ def getTempWaitVal() {
 
 def wantMetric() { return (state?.tempUnit == "C") }
 
-def getHealthStatus(lower=false) {
+def getDevTypeId() { return device?.getTypeId() }
+
+def getHealthStatus(lowerCase=false) {
 	def res = device?.getStatus()
-	if(lower) { return res.toString().toLowerCase() }
+	if(lowerCase) { return res.toString().toLowerCase() }
 	return res.toString()
 }
 
@@ -2126,29 +2130,30 @@ def lastN(String input, n) {
 
 void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
-	switch (logType) {
-		case "trace":
-			log.trace "|| ${smsg}"
-			break
-		case "debug":
-			log.debug "${smsg}"
-			break
-		case "info":
-			log.info "||| ${smsg}"
-			break
-		case "warn":
-			log.warn "|| ${smsg}"
-			break
-		case "error":
-			log.error "| ${smsg}"
-			break
-		default:
-			log.debug "${smsg}"
-			break
-	}
 	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Thermostat-${theId}")
+	} else {
+		switch (logType) {
+			case "trace":
+				log.trace "|| ${smsg}"
+				break
+			case "debug":
+				log.debug "${smsg}"
+				break
+			case "info":
+				log.info "||| ${smsg}"
+				break
+			case "warn":
+				log.warn "|| ${smsg}"
+				break
+			case "error":
+				log.error "| ${smsg}"
+				break
+			default:
+				log.debug "${smsg}"
+				break
+		}
 	}
 }
 
@@ -3400,7 +3405,7 @@ def getGraphHTML() {
 				${devBrdCastHtml}
 				${clientBl}
 		  		${updateAvail}
-				<div class="swiper-container">
+				<div class="swiper-container" style="max-width: 100%; overflow: hidden;">
 					<!-- Additional required wrapper -->
 					<div class="swiper-wrapper">
 						<!-- Slides -->
@@ -3534,7 +3539,255 @@ def getGraphHTML() {
 	}
 }
 
-def showChartHtml() {
+def hasHtml() { return true }
+
+def getDeviceTile(devNum) {
+	try {
+		def tempStr = "°F"
+		if( wantMetric() ) {
+			tempStr = "°C"
+		}
+		checkVirtualStatus()
+		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
+		def canHeat = state?.can_heat == true ? true : false
+		def canCool = state?.can_cool == true ? true : false
+		def hasFan = state?.has_fan == true ? true : false
+		def leafImg = state?.hasLeaf ? getImg("nest_leaf_on.gif") : getImg("nest_leaf_off.gif")
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
+
+		def timeToTarget = device.currentState("timeToTarget").stringValue
+		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
+		def refreshBtnHtml = state.mobileClientType == "ios" ?
+				"""<div class="pageFooterBtn"><button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTstatPage()"><span>&#10227;</span> Refresh</button></div>""" : ""
+		def chartHtml = (
+				state?.showGraphs &&
+				state?.temperatureTable?.size() > 0 &&
+				state?.operatingStateTable?.size() > 0 &&
+				state?.temperatureTableYesterday?.size() > 0 &&
+				state?.humidityTable?.size() > 0 &&
+				state?.coolSetpointTable?.size() > 0 &&
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : "")
+
+		def whoSetEco = device?.currentValue("whoSetEcoMode")
+		def whoSetEcoDt = state?.ecoDescDt
+		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set", "Set Outside of this DTH", "A ST Automation", "User Changed (ST)"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "${whoSetEco}"
+
+		def ecoDescDt = whoSetEcoDt != null ? """<tr><td class="dateTimeTextSmall">${whoSetEcoDt ?: ""}</td></tr>""" : ""
+		def schedData = state?.curAutoSchedData
+		def schedHtml = ""
+		if(schedData) {
+			schedHtml = """
+				<section class="sectionBgTile">
+					<h3>Automation Schedule</h3>
+					<table class="sched">
+						<col width="90%">
+						<thead class="devInfoTile">
+							<th>Active Schedule</th>
+						</thead>
+						<tbody>
+							<tr><td>#${schedData?.scdNum} - ${schedData?.schedName}</td></tr>
+						</tbody>
+					</table>
+					<h3>Zone Status</h3>
+
+					<table class="sched">
+						<col width="50%">
+						<col width="50%">
+						<thead class="devInfoTile">
+							<th>Temp Source:</th>
+							<th>Zone Temp:</th>
+						</thead>
+						<tbody class="sched">
+							<tr>
+								<td>${schedData?.tempSrcDesc}</td>
+								<td>${schedData?.curZoneTemp}&deg;${state?.tempUnit}</td>
+							</tr>
+						</tbody>
+					</table>
+					<table class="sched">
+						<col width="45%">
+						<col width="45%">
+						<thead class="devInfoTile">
+							<th>Desired Heat Temp</th>
+							<th>Desired Cool Temp</th>
+						</thead>
+						<tbody>
+							<tr>
+								<td>${schedData?.reqSenHeatSetPoint ? "${schedData?.reqSenHeatSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
+								<td>${schedData?.reqSenCoolSetPoint ? "${schedData?.reqSenCoolSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
+							</tr>
+						</tbody>
+					</table>
+				</section>
+				<br>
+			"""
+		}
+
+		def chgDescHtml = """
+			${schedHtml == "" ? "" : """<div class="swiper-slide">"""}
+				<section class="sectionBgTile">
+					<h3>Last Automation Event</h3>
+					<table class="devInfoTile">
+						<col width="90%">
+						<thead>
+							<th>${getAutoChgType(device?.currentValue("whoMadeChanges"))}</th>
+						</thead>
+						<tbody>
+							<tr><td>${device?.currentValue("whoMadeChangesDesc") ?: "Unknown"}</td></tr>
+							<tr><td class="dateTimeTextSmall">${device?.currentValue("whoMadeChangesDescDt") ?: ""}</td></tr>
+						</tbody>
+					</table>
+				</section>
+				<br>
+				<section class="sectionBgTile">
+					<h3>Eco Set By</h3>
+					<table class="devInfoTile">
+						<tbody>
+							<tr><td>${ecoDesc}</td></tr>
+							${ecoDescDt}
+						</tbody>
+					</table>
+				</section>
+			${schedHtml == "" ? "" : """</div>"""}
+		"""
+
+		def html = """
+			${clientBl}
+	  		${updateAvail}
+			<div class="device">
+				<div class="swiper-container-${devNum}" style="max-width: 100%; overflow: hidden;">
+					<!-- Additional required wrapper -->
+					<div class="swiper-wrapper">
+						<!-- Slides -->
+						<div class="swiper-slide">
+							${schedHtml == "" ? "" : "${schedHtml}"}
+							<section class="sectionBgTile">
+								<h3>Device Info</h3>
+								<table class="devInfoTile">
+								  <col width="50%">
+								  <col width="50%">
+								  <thead>
+									<th>Time to Target</th>
+									<th>Sun Correction</th>
+								  </thead>
+								  <tbody>
+									<tr>
+									  <td>${timeToTarget}</td>
+									  <td>${sunCorrectStr}</td>
+									</tr>
+								  </tbody>
+								</table>
+								<table class="devInfoTile">
+								<col width="40%">
+								<col width="20%">
+								<col width="40%">
+								<thead>
+								  <th>Network Status</th>
+								  <th>Leaf</th>
+								  <th>API Status</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td${state?.onlineStatus != "online" ? """ class="redText" """ : ""}>${state?.onlineStatus.toString().capitalize()}</td>
+									<td><img src="${leafImg}" class="leafImg"></img></td>
+								  	<td${state?.apiStatus != "Good" ? """ class="orangeText" """ : ""}>${state?.apiStatus}</td>
+								  </tr>
+								</tbody>
+							  </table>
+							  <table class="devInfoTile">
+								<col width="40%">
+								<col width="20%">
+								<col width="40%">
+								  <thead>
+								    <th>Firmware Version</th>
+								    <th>Debug</th>
+								    <th>Device Type</th>
+								  </thead>
+								<tbody>
+								  <tr>
+									<td>${state?.softwareVer.toString()}</td>
+									<td>${state?.debugStatus}</td>
+									<td>${state?.devTypeVer.toString()}</td>
+								  </tr>
+								</tbody>
+							  </table>
+							  <table class="devInfoTile">
+								<thead>
+								  <th>Nest Checked-In</th>
+								  <th>Data Last Received</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td class="dateTimeTextTile">${state?.lastConnection.toString()}</td>
+									<td class="dateTimeTextTile">${state?.lastUpdatedDt.toString()}</td>
+								  </tr>
+								</tbody>
+							  </table>
+						   </section>
+						   ${schedHtml == "" ? """<br>${chgDescHtml}""" : ""}
+						</div>
+						${schedHtml == "" ? "" : """${chgDescHtml}"""}
+						${chartHtml}
+					</div>
+					<!-- If we need pagination -->
+					<div class="swiper-pagination"></div>
+
+					<div style="text-align: center;">
+						<p class="slideFooterMsg">Swipe/Drag to Change Slide</p>
+					</div>
+				</div>
+			</div>
+			<script>
+				var mySwiper${devNum} = new Swiper ('.swiper-container-${devNum}', {
+					direction: 'horizontal',
+					initialSlide: 0,
+					lazyLoading: true,
+					loop: false,
+					slidesPerView: '1',
+					centeredSlides: true,
+					spaceBetween: 200,
+					autoHeight: true,
+					keyboardControl: true,
+        			mousewheelControl: true,
+					iOSEdgeSwipeDetection: true,
+					iOSEdgeSwipeThreshold: 20,
+					parallax: true,
+					slideToClickedSlide: true,
+
+					effect: 'coverflow',
+					coverflow: {
+					  rotate: 50,
+					  stretch: 0,
+					  depth: 100,
+					  modifier: 1,
+					  slideShadows : true
+					},
+					onTap: function(s, e) {
+						s.slideNext(false);
+						if(s.clickedIndex >= s.slides.length) {
+							s.slideTo(0, 400, false)
+						}
+					},
+					pagination: '.swiper-pagination',
+					paginationHide: false,
+					paginationClickable: true
+				})
+				function reloadTstatPage() {
+					// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML"
+					// window.location = url;
+					window.location.reload();
+				}
+			</script>
+		"""
+		render contentType: "text/html", data: html, status: 200
+	} catch (ex) {
+		log.error "getDeviceTile Exception:", ex
+		exceptionDataHandler(ex.message, "getDeviceTile")
+	}
+}
+
+def showChartHtml(devNum="") {
 	def tempStr = "°F"
 	if( wantMetric() ) {
 		tempStr = "°C"
@@ -3687,10 +3940,10 @@ def showChartHtml() {
 	def data = """
 		<script type="text/javascript">
 			google.charts.load('current', {packages: ['corechart']});
-			google.charts.setOnLoadCallback(drawHistoryGraph);
-			google.charts.setOnLoadCallback(drawUseGraph);
+			google.charts.setOnLoadCallback(drawHistoryGraph${devNum});
+			google.charts.setOnLoadCallback(drawUseGraph${devNum});
 
-			function drawHistoryGraph() {
+			function drawHistoryGraph${devNum}() {
 				var data = new google.visualization.DataTable();
 				data.addColumn('timeofday', 'time');
 				data.addColumn('number', 'Temp (Y)');
@@ -3763,11 +4016,11 @@ def showChartHtml() {
 						width: '100%'
 					}
 				};
-				var chart = new google.visualization.ComboChart(document.getElementById('main_graph'));
+				var chart = new google.visualization.ComboChart(document.getElementById('main_graph${devNum}'));
 				chart.draw(data, options);
 			}
 
-			function drawUseGraph() {
+			function drawUseGraph${devNum}() {
 				var data = google.visualization.arrayToDataTable([
 				  ${mUseHeadStr},
 				  ${tdData?.size() ? "${tdData}," : ""}
@@ -3801,7 +4054,7 @@ def showChartHtml() {
 
 				var columnWrapper = new google.visualization.ChartWrapper({
 					chartType: 'ComboChart',
-					containerId: 'use_graph',
+					containerId: 'use_graph${devNum}',
 					dataTable: view,
 					options: options
 				});
