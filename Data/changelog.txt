@@ -1,29 +1,11 @@
-V5.2.3 (November 8th, 2017):
+V5.3.2 (January 11th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
- • FIXED: Empty Locations on New Installs
- • FIXED: Tweaked the way app updates messages are determined
- • ADDED: Workaround step added to stop the issues preventing users from uninstalling the App
- • UPDATED: Minor Device Health Tweaks
+ • FIXED: Lot's of bug fixes and optimizations
+ • FIXED: Remote diag logging
+ • UPDATED: Will remove un-needed or broken automations
+ • ADDED: New Lite Install Mode (No Watchdog or Automations)
+ • ADDED: Add Web UI for all of the Devices
 
-Automation App 5.1.8:
-• FIXED: Tweaks to the Uninstall Process
-• FIXED: More Cleanups
-
-V5.2.2 (November 7th, 2017):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • FIXED: Minor Bug Fixes and Code Cleanups.
-
-V5.2.1 (October 14th, 2017):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • UPDATED: I have changed the app to no longer use our tokens and it will tell you when you are missing the required id and secret.
-
-V5.2.0 (July 22nd, 2017):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • FIXED: NP issues
-
-Automation App 5.1.7:
-• FIXED: NP issues
+Automation App 5.3.1:
+• FIXED: More Cleanups and Bug fixes
