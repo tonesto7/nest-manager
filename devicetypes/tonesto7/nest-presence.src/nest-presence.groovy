@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.1" }
+def devVer() { return "5.3.4" }
 
 // for the UI
 metadata {
@@ -66,10 +66,10 @@ metadata {
 		valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
-		htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		// htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main ("presence")
-		details ("presence", "nestPresence", "refresh", "html")
+		details ("presence", "nestPresence", "lastUpdateDt", "apiStatus", "devTypeVer", "refresh")
 	}
 }
 
@@ -79,8 +79,7 @@ mappings {
 
 void installed() {
 	Logger("installed...")
-	initialize()
-	state?.isInstalled = true
+	runIn(5, "initialize", [overwrite: true])
 }
 
 def initialize() {
@@ -89,6 +88,7 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
+		state?.isInstalled = true
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
 	}
@@ -96,7 +96,7 @@ def initialize() {
 
 void updated() {
 	Logger("updated...")
-	initialize()
+	runIn(5, "initialize", [overwrite: true])
 }
 
 def useTrackedHealth() { return state?.useTrackedHealth ?: false }

@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.3.2" }
+def devVer() { return "5.3.4" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -57,6 +57,7 @@ metadata {
 		attribute "debugOn", "string"
 		attribute "devTypeVer", "string"
 		attribute "onlineStatus", "string"
+		attribute "securityState", "string"
 	}
 
 	simulator { }
@@ -113,19 +114,34 @@ metadata {
 			state "detected", label:'Noise', icon:"st.sound.sound.detected", backgroundColor:"#00a0dc"
 			state "not detected", label:'Quiet', icon:"st.sound.sound.notdetected", backgroundColor:"#ffffff"
 		}
+		valueTile("softwareVer", "device.softwareVer", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Firmware:\nv${currentValue}')
+		}
+		valueTile("lastConnection", "device.lastConnection", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Protect Last Checked-In:\n${currentValue}')
+		}
+		valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
+			state("default", label: 'Network Status:\n${currentValue}')
+		}
+		valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state("default", label: 'Data Last Received:\n${currentValue}')
+		}
+		valueTile("devTypeVer", "device.devTypeVer",  width: 3, height: 1, decoration: "flat") {
+			state("default", label: 'Device Type:\nv${currentValue}')
+		}
+		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
+			state "ok", label: "API Status:\nOK"
+			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
 		}
 		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
-
-		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
-			state "default", label: 'Test', action:"testBtn"
-		}
 		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
 		}
 		main "isStreamingStatus"
-		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails", "motion", "sound", "remind" ])
+		details(["videoPlayer", "isStreaming", "take", "refresh", "cameraDetails", "motion", "sound","onlineStatus","debugOn",  "apiStatus",  "lastConnection", "lastUpdatedDt", "lastTested","devTypeVer",  "softwareVer", "devCamHtml", "remind" ])
 
 	}
 	preferences {
@@ -149,6 +165,7 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
+		state?.isInstalled = true
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
 	}
@@ -156,15 +173,14 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-	initialize()
-	state?.isInstalled = true
+	runIn(5, "initialize", [overwrite: true] )
 	state?.shownChgLog = true
-	runIn(15, "refresh")
+	runIn(15, "refresh", [overwrite: true])
 }
 
 void updated() {
 	Logger("updated...")
-	initialize()
+	runIn(5, "initialize", [overwrite: true] )
 }
 
 def useTrackedHealth() { return state?.useTrackedHealth ?: false }
@@ -300,6 +316,7 @@ def processEvent() {
 			publicShareUrlEvent(results?.public_share_url)
 			onlineStatusEvent(results?.is_online?.toString())
 			isStreamingEvent(results?.is_streaming)
+			securityStateEvent(eventData?.secState)
 			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
 			if(results?.last_is_online_change) { lastOnlineEvent(results?.last_is_online_change?.toString()) }
@@ -320,7 +337,7 @@ def processEvent() {
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
-			lastUpdatedEvent()
+			lastUpdatedEvent(true)
 			checkHealth()
 			if(state?.ok2Checkin == true) {
 				lastCheckinEvent(dtNow)
@@ -451,6 +468,16 @@ def onlineStatusEvent(isOnline) {
 		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
 		addCheckinReason("onlineStatusChange")
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
+}
+
+def securityStateEvent(sec) {
+	def val = ""
+	def oldState = device.currentState("securityState")?.value
+	if(sec) { val = sec }
+	if(isStateChange(device, "securityState", val.toString())) {
+		Logger("UPDATED | Security State is (${val}) | Original State: (${oldState})")
+		sendEvent(name: "securityState", value: val, descriptionText: "Location Security State is: ${val}", displayed: true, isStateChange: true, state: val)
+	} else { LogAction("Location Security State is: (${val}) | Original State: (${oldState})") }
 }
 
 def isStreamingEvent(isStreaming, override=false) {
