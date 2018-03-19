@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.3.1" }
+def devVer() { return "5.3.4" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -110,7 +110,7 @@ metadata {
 		valueTile("uiColor", "device.uiColor", inactiveLabel: false, width: 2, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'UI Color:\n${currentValue}')
 		}
-		valueTile("softwareVer", "device.softwareVer", inactiveLabel: false, width: 2, height: 1, decoration: "flat", wordWrap: true) {
+		valueTile("softwareVer", "device.softwareVer", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Firmware:\nv${currentValue}')
 		}
 		valueTile("lastConnection", "device.lastConnection", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
@@ -122,10 +122,10 @@ metadata {
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
 		}
-		valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
+		valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 		}
-		valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
+		valueTile("devTypeVer", "device.devTypeVer",  width: 3, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
 		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
@@ -142,7 +142,8 @@ metadata {
 		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 8)
 
 		main "main2"
-		details(["alarmState", "devInfoHtml","remind", "refresh"])
+		// details(["alarmState", "devInfoHtml","remind", "refresh"])
+		details(["alarmState", "smoke", "batteryState", "carbonMonoxide", "onlineStatus","debugOn",  "apiStatus",  "lastConnection", "lastUpdatedDt", "lastTested","devTypeVer",  "softwareVer","remind", "refresh"])
    }
 }
 
@@ -156,7 +157,7 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
-		//poll()
+		state?.isInstalled = true
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
 	}
@@ -164,13 +165,12 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-	initialize()
-	state?.isInstalled = true
+	runIn(5, "initialize", [overwrite: true])
 }
 
 void updated() {
 	Logger("updated...")
-	initialize()
+	runIn(5, "initialize", [overwrite: true])
 }
 
 def useTrackedHealth() { return state?.useTrackedHealth ?: false }
@@ -368,7 +368,7 @@ def processEvent(data) {
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			determinePwrSrc()
 
-			lastUpdatedEvent()
+			lastUpdatedEvent(true)
 			checkHealth()
 		}
 		return null
