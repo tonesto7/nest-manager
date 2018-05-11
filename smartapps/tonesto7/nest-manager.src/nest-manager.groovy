@@ -35,8 +35,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.5" }
-def appVerDate() { "02-11-2018" }
+def appVersion() { "5.3.6" }
+def appVerDate() { "05-08-2018" }
 def minVersions() {
 	return [
 		"automation":["val":533, "desc":"5.3.3"],
@@ -3664,10 +3664,38 @@ def didChange(old, newer, type, src) {
 			// if(atomicState?.structures) {
 			// 	LogAction("NestAPI AWAY Debug | Current: (${newer[atomicState?.structures]?.away})${(newer[atomicState?.structures]?.away != old[atomicState?.structures]?.away) ? " | Previous: (${old[atomicState?.structures]?.away})" : ""}", "trace", false)
 			// }
+			newer.each {
+				if(it?.value) {
+					def myId = it?.value?.structure_id
+					if(myId) {
+						newer[myId].wheres = [:]
+					}
+				}
+			}
 		}
 		if(type == "dev") {
 			updTimestampMap("lastDevDataUpd", getDtNow())
 			atomicState?.needDevPoll = false
+			newer.each { t ->
+				def dtyp = t.key
+				t.value.each {
+					if(it?.value) {
+						def myId = it?.value?.device_id
+						if(myId) {
+							newer."${dtyp}"[myId].where_id = ""
+							if(newer."${dtyp}"[myId]?.app_url) {
+								newer."${dtyp}"[myId].app_url = ""
+							}
+							if(newer."${dtyp}"[myId]?.last_event?.app_url) {
+								newer."${dtyp}"[myId].last_event.app_url = ""
+							}
+							if(newer."${dtyp}"[myId]?.last_event?.image_url) {
+								newer."${dtyp}"[myId].last_event.image_url = ""
+							}
+						}
+					}
+				}
+			}
 		}
 		if(type == "meta") {
 			updTimestampMap("lastMetaDataUpd", getDtNow())
@@ -4894,7 +4922,7 @@ def storeLastCmdData(cmd, qnum) {
 		def newVal = ["qnum":qnum, "obj":cmd[2], "value":cmd[3], "date":getDtNow()]
 
 		def list = atomicState?.cmdDetailHistory ?: []
-		def listSize = 30
+		def listSize = 20
 		if(list?.size() < listSize) {
 			list.push(newVal)
 		}
@@ -9043,8 +9071,6 @@ def renderAppData() {
 def renderInstData() {
 	renderHtmlMapDesc("Install Data", "Installation Data", getMapDescStr(createInstallDataJson(true)))
 }
-
-
 
 def renderHtmlMapDesc(title, heading, datamap) {
 	try {
