@@ -114,7 +114,7 @@ metadata {
 	tiles(scale: 2) {
 		multiAttributeTile(name:"temperature", type:"thermostat", width:6, height:4, canChangeIcon: true) {
 			tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
-				attributeState("default", label:'${currentValue}°')
+				attributeState("default", label:'${currentValue}\u00b0')
 			}
 			tileAttribute("device.temperature", key: "VALUE_CONTROL") {
 				attributeState("default", action: "levelUpDown")
@@ -149,7 +149,7 @@ metadata {
 			}
 		}
 		valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-			state("default", label:'${currentValue}°', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png",
+			state("default", label:'${currentValue}\u00b0', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png",
 					backgroundColors: getTempColors())
 		}
 		standardTile("thermostatMode", "device.nestThermostatMode", width:2, height:2, decoration: "flat") {
@@ -687,7 +687,7 @@ def getTimeZone() {
 }
 
 def tUnitStr() {
-	return "°${state?.tempUnit}"
+	return "\u00b0${state?.tempUnit}"
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
@@ -3306,9 +3306,9 @@ def androidDisclaimerMsg() {
 
 def getGraphHTML() {
 	try {
-		def tempStr = "°F"
+		def tempStr = "\u00b0F"
 		if( wantMetric() ) {
-			tempStr = "°C"
+			tempStr = "\u00b0C"
 		}
 		checkVirtualStatus()
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
@@ -3596,9 +3596,9 @@ def hasHtml() { return true }
 
 def getDeviceTile(devNum) {
 	try {
-		def tempStr = "°F"
+		def tempStr = "\u00b0F"
 		if( wantMetric() ) {
-			tempStr = "°C"
+			tempStr = "\u00b0C"
 		}
 		checkVirtualStatus()
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
@@ -3841,9 +3841,9 @@ def getDeviceTile(devNum) {
 }
 
 def showChartHtml(devNum="") {
-	def tempStr = "°F"
+	def tempStr = "\u00b0F"
 	if( wantMetric() ) {
-		tempStr = "°C"
+		tempStr = "\u00b0C"
 	}
 	def canHeat = state?.can_heat == true ? true : false
 	def canCool = state?.can_cool == true ? true : false

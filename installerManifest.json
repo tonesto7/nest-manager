@@ -1,96 +1,93 @@
 {
-  "namespace": "tonesto7",
-  "repoOwner": "tonesto7",
-  "repoName": "nest-manager",
-  "repoBranch": "master",
-  "name": "Nest Manager",
-  "author": "Anthony S.",
-  "description": "The Best Solution to integrate your Nest Products into the SmartThings Enviroment.",
-  "category": "My Apps",
-  "bannerUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5_banner.png",
-  "forumUrl": "https://community.smartthings.com/t/release-nst-manager-v5-0/",
-  "docUrl": "http://thingsthataresmart.wiki/index.php?title=NST_Manager",
-  "releaseType": "production",
-  "keywords": [
-    "nest",
-    "thermostat",
-    "nst",
-    "camera",
-    "protect",
-    "smoke",
-    "carbon",
-    "monoxide"
-  ],
-  "notes": "Nothing to show here (yet)",
-  "smartApps": {
-    "parent": {
-      "name": "Nest Manager",
-      "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5.png",
-      "published": true,
-      "oAuth": true,
-      "version": "5.3.5",
-      "appSettings": {
-          "clientId":"",
-          "clientSecret": "",
-          "devOpt": ""
-      },
-      "appUrl": "smartapps/tonesto7/nest-manager.src/nest-manager.groovy"
-    },
-    "children": [
-      {
-        "name": "NST Automations",
-        "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_automations_5.png",
-        "published": true,
-        "oAuth": false,
-        "version": "5.3.3",
-        "appSettings": {
-            "devOpt": ""
+    "namespace": "tonesto7",
+    "repoOwner": "tonesto7",
+    "repoName": "nest-manager",
+    "repoBranch": "master",
+    "name": "NST Manager",
+    "author": "Anthony S.",
+    "description": "The Best Solution to integrate your Nest Products into the SmartThings Enviroment.",
+    "category": "My Apps",
+    "bannerUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5_banner.png",
+    "forumUrl": "https://community.smartthings.com/t/release-nst-manager-v5-0/",
+    "docUrl": "http://thingsthataresmart.wiki/index.php?title=NST_Manager",
+    "releaseType": "production",
+    "keywords": [
+        "nest",
+        "thermostat",
+        "nst",
+        "camera",
+        "protect",
+        "smoke",
+        "carbon",
+        "monoxide"
+    ],
+    "notes": "Nothing to show here (yet)",
+    "smartApps": {
+        "parent": {
+            "name": "Nest Manager",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5.png",
+            "published": true,
+            "oAuth": true,
+            "version": "5.3.6",
+            "appSettings": {
+                "clientId": "",
+                "clientSecret": "",
+                "devOpt": ""
+            },
+            "appUrl": "smartapps/tonesto7/nest-manager.src/nest-manager.groovy"
         },
-        "appUrl": "smartapps/tonesto7/nst-automations.src/nst-automations.groovy",
-        "optional": false
-      }
+        "children": [{
+            "name": "NST Automations",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_automations_5.png",
+            "published": true,
+            "oAuth": false,
+            "version": "5.3.3",
+            "appSettings": {
+                "devOpt": ""
+            },
+            "appUrl": "smartapps/tonesto7/nst-automations.src/nst-automations.groovy",
+            "optional": false
+        }]
+    },
+    "deviceHandlers": [{
+            "name": "Nest Thermostat",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_icon.png",
+            "published": true,
+            "version": "5.3.4",
+            "appUrl": "deviceTypes/tonesto7/nest-thermostat.src/nest-thermostat.groovy",
+            "optional": false
+        },
+        {
+            "name": "Nest Protect",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png",
+            "published": true,
+            "version": "5.3.4",
+            "appUrl": "deviceTypes/tonesto7/nest-protect.src/nest-protect.groovy",
+            "optional": false
+        },
+        {
+            "name": "Nest Camera",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_icon.png",
+            "published": true,
+            "version": "5.3.4",
+            "appUrl": "deviceTypes/tonesto7/nest-camera.src/nest-camera.groovy",
+            "optional": false
+        },
+        {
+            "name": "Nest Presence",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/presence_icon.png",
+            "published": true,
+            "version": "5.3.4",
+            "appUrl": "deviceTypes/tonesto7/nest-presence.src/nest-presence.groovy",
+            "optional": true
+        },
+        {
+            "name": "Nest Weather",
+            "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
+            "published": true,
+            "version": "5.3.4",
+            "appUrl": "deviceTypes/tonesto7/nest-weather.src/nest-weather.groovy",
+            "optional": true
+        }
     ]
-  },
-  "deviceHandlers": [
-    {
-      "name": "Nest Thermostat",
-      "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_icon.png",
-      "published": true,
-      "version": "5.3.4",
-      "appUrl": "deviceTypes/tonesto7/nest-thermostat.src/nest-thermostat.groovy",
-      "optional": false
-    },
-    {
-      "name": "Nest Protect",
-      "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png",
-      "published": true,
-      "version": "5.3.4",
-      "appUrl": "deviceTypes/tonesto7/nest-protect.src/nest-protect.groovy",
-      "optional": false
-    },
-    {
-      "name": "Nest Camera",
-      "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_icon.png",
-      "published": true,
-      "version": "5.3.4",
-      "appUrl": "deviceTypes/tonesto7/nest-camera.src/nest-camera.groovy",
-      "optional": false
-    },
-    {
-      "name": "Nest Presence",
-      "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/presence_icon.png",
-      "published": true,
-      "version": "5.3.4",
-      "appUrl": "deviceTypes/tonesto7/nest-presence.src/nest-presence.groovy",
-      "optional": true
-    },
-    {
-      "name": "Nest Weather",
-      "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
-      "published": true,
-      "version": "5.3.4",
-      "appUrl": "deviceTypes/tonesto7/nest-weather.src/nest-weather.groovy",
-      "optional": true
-    }
-  ]
 }
