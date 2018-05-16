@@ -24,25 +24,28 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.3.3"
+                "ver": "5.3.6"
             },
             "autoapp": {
-                "ver": "5.3.1"
+                "ver": "5.3.3"
+            },
+            "storapp": {
+                "ver": "5.4.0"
             },
             "thermostat": {
-                "ver": "5.3.1"
+                "ver": "5.3.4"
             },
             "protect": {
-                "ver": "5.3.1"
+                "ver": "5.3.4"
             },
             "camera": {
-                "ver": "5.3.1"
+                "ver": "5.3.4"
             },
             "presence": {
-                "ver": "5.3.1"
+                "ver": "5.3.4"
             },
             "weather": {
-                "ver": "5.3.1"
+                "ver": "5.3.4"
             }
         },
         "allowInApp": false
@@ -61,7 +64,7 @@
         "remoteDiagPath": "remoteDiagLogs"
     },
     "appSettings": {
-        "pullFromFB": false
+        "pullFromFB": true
     },
     "aaPrefs": {
         "enAaMsgQueue": true,

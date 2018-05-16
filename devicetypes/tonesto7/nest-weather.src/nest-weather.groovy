@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.2" }
+def devVer() { return "5.3.4" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -174,6 +174,7 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
+		state.isInstalled = true
 		getWAlertFilters()
 		if(state?.shortcutAppId) { parent?.updShortcutAppId(atomicState?.shortcutAppId) }
 	} else {
@@ -183,13 +184,12 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-	initialize()
-	state.isInstalled = true
+	runIn(5, "initialize", [overwrite: true] )
 }
 
 void updated() {
 	Logger("updated...")
-	initialize()
+	runIn(5, "initialize", [overwrite: true] )
 }
 
 def useTrackedHealth() { return state?.useTrackedHealth ?: false }
@@ -367,7 +367,7 @@ void processEvent() {
 		//return null
 	}
 	catch (ex) {
-		log.error("generateEvent Exception:", ex)
+		log.error "generateEvent Exception:", ex
 		exceptionDataHandler(ex?.message, "generateEvent")
 	}
 }
@@ -567,9 +567,9 @@ def checkHealth() {
 |									Weather Info for Tiles										|
 *************************************************************************************************/
 
-def getWeatherConditions(Map weatData) {
+def getWeatherConditions(weatData) {
 	try {
-		if(!weatData?.current_observation) {
+		if(!weatData || !weatData?.current_observation) {
 			Logger("There is an Issue getting the weather condition data", "warn")
 			return
 		} else {
@@ -965,8 +965,8 @@ private estimateLux(weatherIcon) {
 	catch (ex) {
 		log.warn "state.sunriseDate: ${state?.sunriseDate}"
 		log.warn "state.sunsetDate: ${state?.sunsetDate}"
+		log.error "estimateLux Exception:", ex
 		exceptionDataHandler(ex?.message, "estimateLux")
-		log.error("estimateLux Exception:", ex)
 	}
 	return null
 }
