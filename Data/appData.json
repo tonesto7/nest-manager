@@ -29,6 +29,9 @@
             "autoapp": {
                 "ver": "5.3.3"
             },
+            "storapp": {
+                "ver": "5.4.0"
+            },
             "thermostat": {
                 "ver": "5.3.4"
             },
