@@ -6,14 +6,14 @@
  *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
  * Modeled after the EcoBee thermostat under Templates in the IDE
- * Copyright (C) 2017 Anthony S.
+ * Copyright (C) 2017, 2018 Anthony S.
  * Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.3.4" }
+def devVer() { return "5.3.5" }
 
 // for the UI
 metadata {
@@ -2182,7 +2182,7 @@ def lastN(String input, n) {
 }
 
 void Logger(msg, logType = "debug") {
-	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName} (v${devVer()}) | ${msg}" : "${msg}"
 	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Thermostat-${theId}")

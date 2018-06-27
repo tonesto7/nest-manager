@@ -4,7 +4,7 @@
  *  Co-Authors: Ben W. (@desertBlade)  Eric S. (@E_sch)
  *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
- *	Copyright (C) 2017 Anthony S., Ben W.
+ *	Copyright (C) 2017, 2018 Anthony S., Ben W.
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.4" }
+def devVer() { return "5.3.5" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -888,18 +888,17 @@ def luxUpdate() {
 private estimateLux(weatherIcon) {
 	//LogAction("estimateLux ( ${weatherIcon} )", "trace")
 	try {
-		if(!weatherIcon || !state?.sunriseDate || !state?.sunsetDate || ! (long) state?.sunriseDate?.time || ! (long) state?.sunsetDate?.time) {
+		if(!weatherIcon || !state?.sunriseDate || !state?.sunsetDate ) {
 			Logger("estimateLux: Weather Data missing...", "warn")
 			Logger("state.sunriseDate: ${state?.sunriseDate} state.sunsetDate: ${state?.sunsetDate}")
-			Logger("state.sunriseDate.time: ${ (long) state?.sunriseDate?.time} state.sunsetDate.time: ${ (long) state?.sunsetDate?.time}")
 			return null
 		} else {
 			def lux = 0
 			def twilight = 20 * 60 * 1000 // 20 minutes
 			def now = new Date().time
 			if(now == null) { Logger("got null for new Date()") }
-			def sunriseDate = (long) state?.sunriseDate?.time
-			def sunsetDate = (long) state?.sunsetDate?.time
+			def sunriseDate = (long) state?.sunriseDate
+			def sunsetDate = (long) state?.sunsetDate
 			if(sunriseDate == null || sunsetDate == null) { Logger("got null for sunriseDate or sunsetDate") }
 			sunriseDate -= twilight
 			sunsetDate += twilight
@@ -1005,7 +1004,7 @@ def convertRfc822toDt(dt) {
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
-	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName} (${devVer()}) | ${msg}" : "${msg}"
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Weather")
 	} else {
@@ -1233,8 +1232,8 @@ def getSunriseSunset() {
 		def utf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 		utf.setTimeZone(TimeZone.getTimeZone("GMT"))
 
-		def sunriseDate = ltf.parse("${today} ${a.sunrise.hour}:${a.sunrise.minute}")
-		def sunsetDate = ltf.parse("${today} ${a.sunset.hour}:${a.sunset.minute}")
+		def sunriseDate = ltf.parse("${today} ${a.sunrise.hour}:${a.sunrise.minute}").getTime()
+		def sunsetDate = ltf.parse("${today} ${a.sunset.hour}:${a.sunset.minute}").getTime()
 		state.sunriseDate = sunriseDate
 		state.sunsetDate = sunsetDate
 

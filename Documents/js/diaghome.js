@@ -87,6 +87,22 @@ $('#updateMethodBtn').click(function(e) {
         });
 });
 
+$('#sendInstallDataBtn').click(function(e) {
+    var data = JSON.stringify({
+        cmd: "sendFirebaseData",
+        value: null
+    });
+    makeRequest(cmdUrl, 'POST', data, null, null)
+        .catch(function(err) {
+            console.log(err, 'Diag Command Results!');
+        })
+        .then(function(resp) {
+            if (JSON.parse(resp).gotData) {
+                console.log("diagCmd: Sent Successfully!");
+            }
+        });
+});
+
 $(window).scroll(function() {
     if ($("body").scrollTop() > 20 || document.documentElement.scrollTop > 20) {
         $("#scrollTopBtn").css({
