@@ -3,7 +3,7 @@
  *	Author: Anthony S. (@tonesto7)
  *	Co-Authors: Ben W. (@desertblade), Eric S. (@E_Sch)
  *
- *	Copyright (C) 2017 Anthony S.
+ *	Copyright (C) 2017, 2018 Anthony S.
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.3.4" }
+def devVer() { return "5.3.5" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -709,7 +709,7 @@ def lastN(String input, n) {
 }
 
 void Logger(msg, logType = "debug") {
-	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName} (v${devVer()}) | ${msg}" : "${msg}"
 	def theId = lastN(device.getId().toString(),5)
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Protect-${theId}")

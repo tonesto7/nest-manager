@@ -1,3 +1,20 @@
+V5.3.7 (May 31st, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: New Storage App to help eliminate State Size issues (It's not storing any data yet)
+ • ADDED: Maintenance Commands can now be run from the Diagnostics Web Interface (More Commands to Come)
+ • FIXED: Converted degree symbols to unicode
+ • FIXED: Bug fixes and Code Cleanups
+
+Automation App 5.3.4:
+• FIXED: Converted degree symbols to unicode
+• FIXED: Code Cleanups and State Usage Reductions
+
+V5.3.6 (May 8th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: State Cleanup optimizations to help prevent Max State Size errors
+
 V5.3.2 (January 11th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
