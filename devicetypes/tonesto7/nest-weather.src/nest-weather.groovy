@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.5" }
+def devVer() { return "5.3.6" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -33,6 +33,7 @@ metadata {
 		attribute "debugOn", "string"
 		attribute "devTypeVer", "string"
 		attribute "lastUpdatedDt", "string"
+		attribute "onlineStatus", "string"
 
 // from original smartweather tile
 		attribute "localSunrise", "string"
@@ -101,6 +102,9 @@ metadata {
 		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
 			state "ok", label: "API Status:\nOK"
 			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+		}
+		valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
+			state("default", label: 'Network Status:\n${currentValue}')
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
@@ -219,6 +223,14 @@ def modifyDeviceStatus(status) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
 		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
+
+	def prevOnlineStat = device.currentState("onlineStatus")?.value
+	def onlineStat = val
+	state?.onlineStatus = onlineStat
+	if(isStateChange(device, "onlineStatus", onlineStat?.toString())) {
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
+		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
 
 def ping() {
@@ -373,7 +385,7 @@ void processEvent() {
 }
 
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()	{ return (int) ((stateSize/100000)*100).toDouble().round(0) } //
+def getStateSizePerc()	{ return (int) ((stateSize/100000)*100).toDouble().round(0) }
 def getDevTypeId() { return device?.getTypeId() }
 
 def getDataByName(String name) {
@@ -594,7 +606,7 @@ def getWeatherConditions(weatData) {
 				def Tc = Math.round(cur?.current_observation?.feelslike_c as Double) as Double
 				state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
 				if (state.curWeatherTemp_c < state.curWeatherDewPoint_c) { state.curWeatherDewPoint_c = state.curWeatherTemp_c }
-				state.curWeatherDewPoint_f = Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0) //
+				state.curWeatherDewPoint_f = Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
 				dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
 
 				getSomeData(true)
@@ -651,15 +663,19 @@ def getWeatherConditions(weatData) {
 				def obsrDt = cur?.current_observation?.observation_time_rfc822
 				if(obsrDt) {
 					def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", obsrDt?.toString()))
+					if(isStateChange(device, "weatherObservedDt", newDt.toString())) {
+						sendEvent(name: "weatherObservedDt", value: newDt)
+					}
 					//log.debug "newDt: $newDt"
 					def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 					def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
 					if((lastDt + 60*60*1000) < curDt) {
 						modifyDeviceStatus("offline")
-					} else if(isStateChange(device, "weatherObservedDt", newDt.toString())) {
-						sendEvent(name: "weatherObservedDt", value: newDt)
+					} else {
 						modifyDeviceStatus("online")
 					}
+				} else {
+					modifyDeviceStatus("offline")
 				}
 
 				LogAction("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
@@ -848,7 +864,7 @@ def getWeatherAlerts(weatData) {
 
 private pad(String s, size = 25) {
 	try {
-		def n = (size - s.size()) / 2 //
+		def n = (size - s.size()) / 2
 		if (n > 0) {
 			def sb = ""
 			n.times {sb += " "}
@@ -867,14 +883,14 @@ private pad(String s, size = 25) {
 }
 
 private estimateDewPoint(double rh,double t) {
-	def L = Math.log(rh/100) //
+	def L = Math.log(rh/100)
 	def M = 17.27 * t
 	def N = 237.3 + t
-	def B = (L + (M/N)) / 17.27 //
-	def dp = (237.3 * B) / (1 - B) //
+	def B = (L + (M/N)) / 17.27
+	def dp = (237.3 * B) / (1 - B)
 
-	def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) ) //
-	def ave = (dp + dp1)/2 //
+	def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) )
+	def ave = (dp + dp1)/2
 	//LogAction("dp: ${dp.round(1)} dp1: ${dp1.round(1)} ave: ${ave.round(1)}")
 	ave = dp1
 	return ave.round(1)
@@ -933,23 +949,23 @@ private estimateLux(weatherIcon) {
 				//LogAction("now: $now afterSunrise: $afterSunrise beforeSunset: $beforeSunset oneHour: $oneHour")
 				if(afterSunrise < oneHour) {
 					//dawn
-					lux = (long)(lux * (afterSunrise/oneHour)) //
+					lux = (long)(lux * (afterSunrise/oneHour))
 					runIn(5*60, "luxUpdate", [overwrite: true])
 				} else if (beforeSunset < oneHour) {
 					//dusk
 					//LogAction("dusk", "trace")
-					lux = (long)(lux * (beforeSunset/oneHour)) //
+					lux = (long)(lux * (beforeSunset/oneHour))
 					runIn(5*60, "luxUpdate", [overwrite: true])
 				} else if (beforeSunset < (oneHour*2)) {
 					//LogAction("before dusk", "trace")
-					def newTim = (beforeSunset - oneHour)/1000 // seconds
+					def newTim = (beforeSunset - oneHour)/1000 /// seconds
 					if(newTim > 0 && newTim < 3600) {
 						runIn(newTim, "luxUpdate", [overwrite: true])
 					}
 				}
 			} else {
 				if( (now > (sunriseDate-oneHour)) && now < sunsetDate) {
-					def newTim = (sunriseDate - now)/1000 // seconds
+					def newTim = (sunriseDate - now)/1000 /// seconds
 					if(newTim > 0 && newTim < 3600) {
 						runIn(newTim, "luxUpdate", [overwrite: true])
 					}
@@ -1058,53 +1074,39 @@ def exceptionDataHandler(msg, methodName) {
 
 def getFileBase64(url, preType, fileType) {
 	try {
-		def params = [
-			uri: url,
-			contentType: '$preType/$fileType'
-		]
+		def params = [uri: url, contentType: "$preType/$fileType"]
 		httpGet(params) { resp ->
-			if(resp.data) {
-				def respData = resp?.data
-				ByteArrayOutputStream bos = new ByteArrayOutputStream()
-				int len
-				int size = 4096
-				byte[] buf = new byte[size]
-				while ((len = respData.read(buf, 0, size)) != -1)
-					bos.write(buf, 0, len)
-				buf = bos.toByteArray()
-				//LogAction("buf: $buf")
-				String s = buf?.encodeBase64()
-				//LogAction("resp: ${s}")
-				return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+			if(resp?.status == 200) {
+				if(resp.data) {
+					def respData = resp?.data
+					byte[] byteData = resp?.data?.getBytes()
+					String enc = byteData?.encodeBase64()
+					// log.debug "enc: ${enc}"
+					return enc ? "data:${preType}/${fileType};base64,${enc?.toString()}" : null
+				}
+			} else {
+				LogAction("getFileBase64 Resp: ${resp?.status} ${url}", "error")
+				exceptionDataHandler("resp ${ex?.response?.status} ${url}", "getFileBase64")
+				return null
 			}
 		}
-	}
-	catch (ex) {
-		log.error "getFileBase64 Exception:", ex
-		exceptionDataHandler(ex?.message, "getFileBase64")
-	}
-}
-
-def getCssData() {
-	def cssData = null
-	def htmlInfo = state?.htmlInfo
-	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssVer = htmlInfo?.cssVer
-	} else {
-		cssData = getFileBase64(cssUrl(), "text", "css")
-	}
-	return cssData
-}
-
-def getChartJsData(b64=true) {
-	//LogAction("getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL...")
-	return b64 ? getFileBase64(chartJsUrl(), "text", "javascript") : chartJsUrl()
-}
-
-def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
-def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
-
+	} catch (ex) {
+		if(ex instanceof groovyx.net.http.ResponseParseException) {
+			if(ex?.statusCode != 200) {
+				LogAction("getFileBase64 Resp: ${ex?.statusCode} ${url}", "error")
+				log.error "getFileBase64 Exception:", ex
+			}
+		} else if(ex instanceof groovyx.net.http.HttpResponseException && ex?.response) {
+			LogAction("getFileBase64 Resp: ${ex?.response?.status} ${url}", "error")
+			exceptionDataHandler("${ex?.response?.status} ${url}", "getFileBase64")
+		} else {
+			log.error "getFileBase64 Exception:", ex
+			exceptionDataHandler(ex, "getFileBase64")
+		}
+		return null
+    }
+}					
+					
 def getWebData(params, desc, text=true) {
 	try {
 		Logger("getWebData: ${desc} data", "info")
@@ -1147,11 +1149,11 @@ def getWeatCondFromUrl(url) {
 	return splList?.last()
 }
 
-def getWeatherImg(cond, b64=true) {
+def getWeatherImg(cond) {
 	try {
 		def newCond = getWeatCondFromUrl(cond)
-		def url = "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/icons/black/${getWeatCondFromUrl(cond) ?: "unknown"}.svg"
-		return b64 ? getFileBase64(url, "image", "svg+xml") : url
+		def url = "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Weather/icons/black/${getWeatCondFromUrl(cond) ?: "unknown"}.svg"
+		return url
 	}
 	catch (ex) {
 		log.error "getWeatherImg Exception:", ex
@@ -1159,9 +1161,9 @@ def getWeatherImg(cond, b64=true) {
 	}
 }
 
-def getFavIcon(b64=true) {
+def getFavIcon() {
 	try {
-		return b64 ? getFileBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "image", "ico") : "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico"
+		return "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico"
 	}
 	catch (ex) {
 		log.error "getFavIcon Exception:", ex
@@ -1560,10 +1562,10 @@ def getWeatherAlertHtml() {
 	return wAlertHtml
 }
 
-def forecastDay(day, b64=true) {
+def forecastDay(day) {
 	if(!state?.curForecast) { return }
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, b64)
+	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)
 	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${foreImgB64}" style="width:64px;height:64px;"></a><br>"""
 	def forecastTxt = ""
 
@@ -1611,14 +1613,10 @@ def hasHtml() { return true }
 
 def getWeatherHTML() {
 	try {
-		if(!state?.curWeather || !state?.curForecast) {
-			return hideWeatherHtml()
-		}
+		if(!state?.curWeather || !state?.curForecast) { return hideWeatherHtml() }
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
-		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 		def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
-
 		def devBrdCastData = state?.devBannerData ?: null
 		def devBrdCastHtml = ""
 		if(devBrdCastData) {
@@ -1644,17 +1642,16 @@ def getWeatherHTML() {
 					<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 					<meta http-equiv="pragma" content="no-cache"/>
 					<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-				 	<link rel="stylesheet prefetch" href="${getCssData()}"/>
-					<script type="text/javascript" src="${getChartJsData()}"></script>
-					<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
-					<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js", "text", "javascript")}"></script>
-					<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 
-					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
-					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-default.min.css", "text", "css")}" />
-					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
-
-					<script>vex.defaultOptions.className = 'vex-theme-default'</script>
+				 	<link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css"/>
+					<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" async/>
+					<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-top.min.css" async />
+					<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-default.min.css" async/>
+					
+					<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+					<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
+					<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+					<script>vex.defaultOptions.className = 'vex-theme-default';</script>
 					<style>
 						.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
 					</style>
