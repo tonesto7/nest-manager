@@ -26,8 +26,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.4" }
-def appVerDate() { "05-20-2018" }
+def appVersion() { "5.3.5" }
+def appVerDate() { "06-27-2018" }
 
 preferences {
 	//startPage
@@ -47,6 +47,7 @@ preferences {
 	page(name: "schMotModePage")
 	page(name: "setDayModeTimePage")
 	page(name: "watchDogPage")
+	page(name: "storagePage")
 	page(name: "diagnosticsPage")
 	page(name: "schMotSchedulePage")
 	page(name: "scheduleConfigPage")
@@ -114,6 +115,10 @@ def installed() {
 	log.debug "${app.label} Installed with settings: ${settings}"		// MUST BE log.debug
 	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()]
 	initialize()
+	if(settings["storageFlag"]) {
+		atomicState?.automationType = "storage"
+		parent?.storageAppInst(true)
+	}
 	sendNotificationEvent("${appName()} installed")
 }
 
@@ -146,7 +151,7 @@ def subscriber() {
 
 private adj_temp(tempF) {
 	if(getTemperatureScale() == "C") {
-		return ((tempF - 32) * ( 5/9 )) as Double //
+		return ((tempF - 32) * ( 5/9 )) as Double
 	} else {
 		return tempF
 	}
@@ -305,8 +310,9 @@ def mainAutoPage(params) {
 	// If the selected automation has not been configured take directly to the config page.  Else show main page
 	if(autoType == "nMode" && !isNestModesConfigured())		{ return nestModePresPage() }
 	else if(autoType == "watchDog" && !isWatchdogConfigured())	{ return watchDogPage() }
-	else if(autoType == "remDiag" && !isDiagnosticsConfigured())	{ return diagnosticsPage() }
-	else if(autoType == "schMot" && !isSchMotConfigured())		{ return schMotModePage() }
+	else if(autoType == "storage")	{ return storagePage() }
+	else if(autoType == "remDiag" && !isDiagnosticsConfigured()) { return diagnosticsPage() }
+	else if(autoType == "schMot" && !isSchMotConfigured()) { return schMotModePage() }
 
 	else {
 		// Main Page Entries
@@ -361,10 +367,14 @@ def mainAutoPage(params) {
 						href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
 					}
 					if(autoType == "remDiag") {
-						//paragraph title:"Watch your Nest Location for Events:", ""
 						def diagDesc = ""
 						def remDiagDesc = isDiagnosticsConfigured() ? "${diagDesc}" : null
 						href "diagnosticsPage", title: "NST Diagnostics", description: remDiagDesc ?: "Tap to configure", state: (remDiagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
+					}
+					if(autoType == "storage") {
+						def storDesc = ""
+						def storageDesc = isStorageConfigured() ? "${storDesc}" : null
+						href "storagePage", title: "NST Storage", description: storageDesc ?: "Tap to configure", state: (storageDesc ? "complete" : null), image: getAppImg("storage_icon.png")
 					}
 				}
 			}
@@ -382,15 +392,11 @@ def mainAutoPage(params) {
 				}
 			}
 			section("Automation Name:") {
-//				if(autoType == "watchDog") {
-//					paragraph "${app?.label}"
-//				} else {
-					def newName = getAutoTypeLabel()
-					label title: "Label this Automation:", description: "Suggested Name: ${newName}", defaultValue: newName, required: true, wordWrap: true, image: getAppImg("name_tag_icon.png")
-					if(!atomicState?.isInstalled) {
-						paragraph "Make sure to name it something that you can easily recgonize."
-					}
-//				}
+				def newName = getAutoTypeLabel()
+				label title: "Label this Automation:", description: "Suggested Name: ${newName}", defaultValue: newName, required: true, wordWrap: true, image: getAppImg("name_tag_icon.png")
+				if(!atomicState?.isInstalled) {
+					paragraph "Make sure to name it something that you can easily recgonize."
+				}
 			}
 			remove("Remove this Automation!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not reversible\n\nThis Automation will be removed completely")
 		}
@@ -496,20 +502,19 @@ def backupConfigToFirebase() {
 void settingUpdate(name, value, type=null) {
 	LogTrace("settingUpdate($name, $value, $type)...")
 	try {
-		//if(name && value && type) {
-		if(name && type) {
-			app?.updateSetting("$name", [type: "$type", value: value])
-		}
-		//else if (name && value && type == null) { app?.updateSetting(name.toString(), value) }
+		if(name && type) { app?.updateSetting("$name", [type: "$type", value: value]) }
 		else if (name && type == null) { app?.updateSetting(name.toString(), value) }
-	} catch(e) {
-		log.error "settingUpdate Exception:", ex
-	}
+	} catch(e) { log.error "settingUpdate Exception:", ex }
 }
 
 def stateUpdate(key, value) {
-	if(key) { atomicState?."${key}" = value }
-	else { LogAction("stateUpdate: null key $key $value", "error", true) }
+	if(key) { atomicState?."${key}" = value; return true }
+	else { LogAction("stateUpdate: null key $key $value", "error", true); return false }
+}
+
+def stateRemove(key) {
+	if(state?.containsKey(key)) { state.remove(key?.toString()) }
+	return true
 }
 
 def initAutoApp() {
@@ -518,6 +523,9 @@ def initAutoApp() {
 	//def restoreComplete = settings["restoreCompleted"] == true ? true : false
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
+	} else if(settings["storageFlag"]) {
+		atomicState?.automationType = "storage"
+		parent?.storageAppInst(true)
 	} else if(settings["remDiagFlag"]) {
 		atomicState?.automationType = "remDiag"
 		parent?.remDiagAppAvail(true)
@@ -691,6 +699,7 @@ def getAutoTypeLabel() {
 
 	if(type == "nMode")		{ typeLabel = "${newName} (NestMode)" }
 	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
+	else if(type == "storage")	{ typeLabel = "NST Storage"}
 	else if(type == "remDiag")	{ typeLabel = "NST Diagnostics"}
 	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
@@ -727,9 +736,10 @@ def getStateVal(var) {
 }
 
 def automationsInst() {
-	atomicState.isNestModesConfigured = 	isNestModesConfigured() ? true : false
+	atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
 	atomicState.isWatchdogConfigured = 	isWatchdogConfigured() ? true : false
-	atomicState.isDiagnosticsConfigured = 	isDiagnosticsConfigured() ? true : false
+	atomicState.isDiagnosticsConfigured = isDiagnosticsConfigured() ? true : false
+	atomicState.isStorageConfigured = isStorageConfigured() ? true : false
 	atomicState.isSchMotConfigured = 	isSchMotConfigured() ? true : false
 
 	atomicState.isLeakWatConfigured = 	isLeakWatConfigured() ? true : false
@@ -767,6 +777,9 @@ def getAutomationsInstalled() {
 			list.push(aType)
 			break
 		case "remDiag":
+			list.push(aType)
+			break
+		case "storage":
 			list.push(aType)
 			break
 	}
@@ -1075,6 +1088,11 @@ def subscribeToEvents() {
 	if(autoType == "remDiag") {
 
 	}
+
+	//storage Subscriptions
+	if(autoType == "storage") {
+
+	}
 }
 
 def scheduler() {
@@ -1086,7 +1104,7 @@ def scheduler() {
 	if(autoType == "schMot" && atomicState?.scheduleSchedActiveCount && atomicState?.scheduleTimersActive) {
 		LogAction("${autoType} scheduled (${random_int} ${random_dint}/5 * * * ?)", "info", true)
 		schedule("${random_int} ${random_dint}/5 * * * ?", heartbeatAutomation)
-	} else if(autoType != "remDiag") {
+	} else if(autoType != "remDiag" || autoType != "storage") {
 		LogAction("${autoType} scheduled (${random_int} ${random_dint}/30 * * * ?)", "info", true)
 		schedule("${random_int} ${random_dint}/30 * * * ?", heartbeatAutomation)
 	}
@@ -1187,7 +1205,12 @@ def runAutomationEval() {
 			break
 		case "remDiag":
 			if(isDiagnosticsConfigured()) {
-				//remDiagCheck()
+				// remDiagCheck()
+			}
+			break
+		case "storage":
+			if(isStorageConfigured()) {
+				// storageCheck()
 			}
 			break
 		default:
@@ -1412,6 +1435,27 @@ def diagnosticsPage() {
 	}
 }
 
+def storagePrefix() { return "storage" }
+def storagePage() {
+	def pName = storagePrefix()
+	dynamicPage(name: "storagePage", title: "NST Storage", uninstall: false, install: true) {
+		storageInfoSect()
+	}
+}
+
+def storageInfoSect() {
+	section("Storage App Info:") {
+		def str = ""
+		str += "Version: V${appVersion()}"
+		str += "\nUsage: ${getStateSizePerc()}%"
+		paragraph str, state: "complete"
+	}
+}
+
+def isStorageConfigured() {
+	return (atomicState?.automationType == "storage") ? true : false
+}
+
 def isDiagnosticsConfigured() {
 	return (atomicState?.automationType == "remDiag") ? true : false
 }
@@ -1553,7 +1597,7 @@ def getDeviceTempAvg(items) {
 	if(!items) { return tempVal }
 	else if(items?.size() > 1) {
 		tmpAvg = items*.currentTemperature
-		if(tmpAvg && tmpAvg?.size() > 1) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) } //
+		if(tmpAvg && tmpAvg?.size() > 1) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) }
 	}
 	else { tempVal = getDeviceTemp(items) }
 	return tempVal.toDouble()
@@ -1823,7 +1867,7 @@ private remSenCheck() {
 						}
 						def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
 						LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1} tempChangeVal: ${tempChangeVal}", "trace", false)
-						if(coolDiff1 < (tempChangeVal / 2)) { //
+						if(coolDiff1 < (tempChangeVal / 2)) {
 							chg = true
 							LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
 						}
@@ -2006,11 +2050,11 @@ def fixTempSetting(Double temp) {
 	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( ((newtemp - 32.0) * (5 / 9)) as Double) //
+				newtemp = roundTemp( ((newtemp - 32.0) * (5 / 9)) as Double)
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( (((newtemp * (9 / 5)) as Double) + 32.0) ).toInteger() //
+				newtemp = roundTemp( (((newtemp * (9 / 5)) as Double) + 32.0) ).toInteger()
 			}
 		}
 	}
@@ -2675,7 +2719,7 @@ def getDeviceVarAvg(items, var) {
 	if(!items) { return tempVal }
 	else {
 		tmpAvg = items*."${var}"
-		if(tmpAvg && tmpAvg?.size() > 0) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) } //
+		if(tmpAvg && tmpAvg?.size() > 0) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) }
 	}
 	return tempVal.toDouble()
 }
@@ -2903,12 +2947,12 @@ def getExtConditions( doEvent = false ) {
 				def f_temp = 0 as Integer
 				if(getTemperatureScale() == "C") {
 					c_temp = dp as Double
-					f_temp = ((c_temp * (9 / 5)) + 32) as Integer //
+					f_temp = ((c_temp * (9 / 5)) + 32) as Integer
 				} else {
 					f_temp = dp as Integer
-					c_temp = ((f_temp - 32) * (5 / 9)) as Double //
+					c_temp = ((f_temp - 32) * (5 / 9)) as Double
 				}
-				atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f //
+				atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f
 				atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
 
 				atomicState.needWeathUpd = false
@@ -2976,7 +3020,7 @@ def getDesiredTemp() {
 		if(desiredHeatTemp && modeHeat)		{ desiredTemp = desiredHeatTemp }
 		else if(desiredCoolTemp && modeCool)	{ desiredTemp = desiredCoolTemp }
 		else if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto ) {
-			desiredTemp = (desiredCoolTemp + desiredHeatTemp) / 2.0 //
+			desiredTemp = (desiredCoolTemp + desiredHeatTemp) / 2.0
 		}
 		//else if(desiredHeatTemp && modeEco)	{ desiredTemp = desiredHeatTemp }
 		//else if(desiredCoolTemp && modeEco)	{ desiredTemp = desiredCoolTemp }
@@ -5217,7 +5261,7 @@ def tstatConfigAutoPage(params) {
 		def tstat = settings?.schMotTstat
 		if (tstat) {
 			def tempScale = getTemperatureScale()
-			def tempScaleStr = "${tUnitStr}"
+			def tempScaleStr = "${tUnitStr()}"
 			def tStatName = tstat?.displayName.toString()
 			def tStatHeatSp = getTstatSetpoint(tstat, "heat")
 			def tStatCoolSp = getTstatSetpoint(tstat, "cool")
@@ -5245,7 +5289,7 @@ def tstatConfigAutoPage(params) {
 				section {
 					def str = ""
 					str += "• Temperature: (${tStatTemp})"
-					str += "\n• Setpoints: (H: ${canHeat ? "${tStatHeatSp}${tempScaleStr}" : "NA"}/C: ${canCool ? "${tStatCoolSp}${tempScaleStr}" : "NA"})" //
+					str += "\n• Setpoints: (H: ${canHeat ? "${tStatHeatSp}${tempScaleStr}" : "NA"}/C: ${canCool ? "${tStatCoolSp}${tempScaleStr}" : "NA"})"
 					paragraph title: "${tStatName}\nSchedules and Setpoints:", "${str}", state: "complete", image: getAppImg("info_icon2.png")
 				}
 				showUpdateSchedule(null, hidestr)
@@ -5655,7 +5699,7 @@ def scheduleConfigPage(params) {
 			def reqSenCoolSetPoint = getRemSenCoolSetTemp()
 			def curZoneTemp = getRemoteSenTemp()
 			def tempSrcStr = atomicState?.remoteTempSourceStr
-			def tempScaleStr = "${tUnitStr}"
+			def tempScaleStr = "${tUnitStr()}"
 			section {
 				str += "Zone Status:\n• Temp Source: (${tempSrcStr})\n• Temperature: (${curZoneTemp}${tempScaleStr})"
 
@@ -6035,7 +6079,7 @@ def roundTemp(Double temp) {
 	if(temp == null) { return null }
 	def newtemp
 	if( getTemperatureScale() == "C") {
-		newtemp = Math.round(temp.round(1) * 2) / 2.0f //
+		newtemp = Math.round(temp.round(1) * 2) / 2.0f
 	} else {
 		if(temp instanceof Integer) {
 			//log.debug "roundTemp: ($temp) is Integer"
@@ -7770,9 +7814,8 @@ def getUse24Time()			{ return useMilitaryTime ? true : false }
 def getStateSize() {
 	def resultJson = new groovy.json.JsonOutput().toJson(state)
 	return resultJson?.toString().length()
-        //return state?.toString().length()
 }
-def getStateSizePerc()		{ return (int) ((stateSize / 100000)*100).toDouble().round(0) } //
+def getStateSizePerc()		{ return (int) ((stateSize / 100000)*100).toDouble().round(0) }
 
 def getLocationModes() {
 	def result = []
@@ -7865,7 +7908,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 */
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000 //
+		def diff = (int) (long) (stop - start) / 1000
 		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }

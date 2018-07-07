@@ -1,8 +1,20 @@
+V5.3.8 (July 4th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: Storage App file no longer required
+ • FIXED: Bug fixes and Code Cleanups
+
+Automation App 5.3.5:
+• FIXED: Converted degree symbols to unicode
+• ADDED: Storage codebase is now part of Automations file
+• FIXED: Code Cleanups and State Usage Reductions
+
 V5.3.7 (May 31st, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
  • ADDED: New Storage App to help eliminate State Size issues (It's not storing any data yet)
  • ADDED: Maintenance Commands can now be run from the Diagnostics Web Interface (More Commands to Come)
+ • UPDATED: Will remove un-needed or broken automations
  • FIXED: Converted degree symbols to unicode
  • FIXED: Bug fixes and Code Cleanups
 
@@ -15,14 +27,3 @@ V5.3.6 (May 8th, 2018):
 Manager App:
  • FIXED: State Cleanup optimizations to help prevent Max State Size errors
 
-V5.3.2 (January 11th, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • FIXED: Lot's of bug fixes and optimizations
- • FIXED: Remote diag logging
- • UPDATED: Will remove un-needed or broken automations
- • ADDED: New Lite Install Mode (No Watchdog or Automations)
- • ADDED: Add Web UI for all of the Devices
-
-Automation App 5.3.1:
-• FIXED: More Cleanups and Bug fixes
