@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.3.5" }
+def devVer() { return "5.3.6" }
 
 // for the UI
 metadata {
@@ -285,30 +285,24 @@ def compileForC() {
 
 def getTempColors() {
 	def colorMap
-//getTemperatureScale() == "C"   wantMetric()
-	if(compileForC()) {
 		colorMap = [
 			// Celsius Color Range
 			[value: 0, color: "#153591"],
 			[value: 7, color: "#1e9cbb"],
 			[value: 15, color: "#90d2a7"],
 			[value: 23, color: "#44b621"],
-			[value: 29, color: "#f1d801"],
-			[value: 33, color: "#d04e00"],
-			[value: 36, color: "#bc2323"]
-			]
-	} else {
-		colorMap = [
+			[value: 28, color: "#f1d801"],
+			[value: 35, color: "#d04e00"],
+			[value: 37, color: "#bc2323"],
 			// Fahrenheit Color Range
 			[value: 40, color: "#153591"],
 			[value: 44, color: "#1e9cbb"],
 			[value: 59, color: "#90d2a7"],
 			[value: 74, color: "#44b621"],
 			[value: 84, color: "#f1d801"],
-			[value: 92, color: "#d04e00"],
+			[value: 95, color: "#d04e00"],
 			[value: 96, color: "#bc2323"]
 		]
-	}
 }
 
 def lowRange() { return compileForC() ? 9 : 50 }
@@ -395,7 +389,7 @@ def useTrackedHealth() { return state?.useTrackedHealth ?: false }
 
 def getHcTimeout() {
 	def to = state?.hcTimeout
-	return ((to instanceof Integer) ? to.toInteger() : 35)*60
+	return ((to instanceof Integer) ? to.toInteger() : 45)*60
 }
 
 void verifyHC() {
@@ -663,12 +657,12 @@ void processEvent(data) {
 	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
-		exceptionDataHandler(ex.message, "generateEvent")
+		exceptionDataHandler(ex?.message, "generateEvent")
 	}
 }
 
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) } //
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -1058,7 +1052,8 @@ void whoMadeChanges(autoType, desc, dt) {
 def ecoDescEvent(val, updChk=false) {
 	//log.debug "ecoDescEvent($val)"
 	def curMode = device?.currentState("nestThermostatMode")?.stringValue
-	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
+	def t0 = device?.currentState("whoSetEcoMode")?.value
+	def curEcoDesc = t0 ?: null
 
 	def newVal = updChk ? curEcoDesc : val
 	def newEcoDesc = (curMode == "eco") ? (newVal == null ? "Set Outside of this DTH" : newVal) : "Not in Eco Mode"
@@ -1077,15 +1072,17 @@ def ecoDescEvent(val, updChk=false) {
 def hvacModeEvent(mode) {
 	def hvacMode = !state?.hvac_mode ? device.currentState("thermostatMode")?.stringValue : state.hvac_mode
 	def newMode = (mode == "heat-cool") ? "auto" : mode
+/*
 	if(mode == "eco") {
 		if(state?.can_cool && state?.can_heat) { newMode = "auto" }
 		else if(state?.can_heat) { newMode = "heat" }
 		else if(state?.can_cool) { newMode = "cool" }
 	}
+*/
 	state?.hvac_mode = newMode
 	if(!hvacMode.equals(newMode)) {
 		Logger("UPDATED | Hvac Mode is (${newMode.toString().capitalize()}) | Original State: (${hvacMode.toString().capitalize()})")
-		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
+		sendEvent(name: "thermostatMode", value: newMode, data:[supportedThermostatModes: device.currentValue("supportedThermostatModes")], descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
 	}
 
 	def oldnestmode = state?.nestHvac_mode
@@ -1281,7 +1278,7 @@ def autoSchedDataEvent(schedData) {
 }
 
 def canHeatCool(canHeat, canCool) {
-	def supportedThermostatModes = ["off"]
+	def supportedThermostatModes = ["off", "eco"]
 	state?.can_heat = !canHeat ? false : true
 	if(state.can_heat) { supportedThermostatModes << "heat" }
 	state?.can_cool = !canCool ? false : true
@@ -1303,7 +1300,7 @@ def canHeatCool(canHeat, canCool) {
 	}
 
 	def nestSupportedThermostatModes = supportedThermostatModes.collect()
-	nestSupportedThermostatModes << "eco"
+	//nestSupportedThermostatModes << "eco"
 	if(state?.supportedNestThermostatModes != nestSupportedThermostatModes) {
 		sendEvent(name: "supportedNestThermostatModes", value: nestSupportedThermostatModes)
 		state.supportedNestThermostatModes = nestSupportedThermostatModes.collect()
@@ -1623,7 +1620,7 @@ def GetTimeDiffSeconds(lastDate) {
 	def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
 	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()
 	def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(now)).getTime()
-	def diff = (int) (long) (stop - start) / 1000 //
+	def diff = (int) (long) (stop - start) / 1000
 	return diff
 }
 
@@ -1637,7 +1634,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000 //
+		def diff = (int) (long) (stop - start) / 1000
 		//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
@@ -1733,11 +1730,14 @@ void changeSetpoint() {
 
 // Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
 void setHeatingSetpoint(temp, manChg=false) {
-	setHeatingSetpoint(temp.toDouble(), manChg)
+	if(temp != null) {
+		setHeatingSetpoint(temp.toDouble(), manChg)
+	}
 }
 
 void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	LogAction("setHeatingSetpoint()... ($reqtemp)", "trace")
+	if(reqtemp == null) { return }
 	def hvacMode = getHvacMode()
 	def tempUnit = state?.tempUnit
 	def temp = 0.0
@@ -1755,7 +1755,7 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	if(canHeat && state?.nestHvac_mode != "eco") {
 		switch (tempUnit) {
 			case "C":
-				temp = Math.round(reqtemp.round(1) * 2) / 2.0f //
+				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
 				if(curMinTemp < 9.0) { curMinTemp = 9.0 }
 				if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
 				if(temp) {
@@ -1808,11 +1808,14 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 }
 
 void setCoolingSetpoint(temp, manChg=false) {
-	setCoolingSetpoint( temp.toDouble(), manChg)
+	if(temp != null) {
+		setCoolingSetpoint( temp.toDouble(), manChg)
+	}
 }
 
 void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	LogAction("setCoolingSetpoint()... ($reqtemp)", "trace")
+	if(reqtemp == null) { return }
 	def hvacMode = getHvacMode()
 	def temp = 0.0
 	def tempUnit = state?.tempUnit
@@ -1830,7 +1833,7 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	if(canCool && state?.nestHvac_mode != "eco") {
 		switch (tempUnit) {
 			case "C":
-				temp = Math.round(reqtemp.round(1) * 2) / 2.0f //
+				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
 				if(curMinTemp < 9.0) { curMinTemp = 9.0 }
 				if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
 				if(temp) {
@@ -2122,7 +2125,7 @@ void fanOn() {
 	}
 	catch (ex) {
 		log.error "fanOn Exception:", ex
-		exceptionDataHandler(ex.message, "fanOn")
+		exceptionDataHandler(ex?.message, "fanOn")
 	}
 }
 
@@ -2146,7 +2149,7 @@ void fanAuto() {
 	}
 	catch (ex) {
 		log.error "fanAuto Exception:", ex
-		exceptionDataHandler(ex.message, "fanAuto")
+		exceptionDataHandler(ex?.message, "fanAuto")
 	}
 }
 
@@ -2243,77 +2246,38 @@ def exceptionDataHandler(msg, methodName) {
 
 def getFileBase64(url, preType, fileType) {
 	try {
-		def params = [
-			uri: url,
-			contentType: '$preType/$fileType'
-		]
+		def params = [uri: url, contentType: "$preType/$fileType"]
 		httpGet(params) { resp ->
-			if(resp.data) {
-				def respData = resp?.data
-				ByteArrayOutputStream bos = new ByteArrayOutputStream()
-				int len
-				int size = 4096
-				byte[] buf = new byte[size]
-				while ((len = respData.read(buf, 0, size)) != -1)
-					bos.write(buf, 0, len)
-				buf = bos.toByteArray()
-				//LogAction("buf: $buf")
-				String s = buf?.encodeBase64()
-				//LogAction("resp: ${s}")
-				return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+			if(resp?.status == 200) {
+				if(resp.data) {
+					def respData = resp?.data
+					byte[] byteData = resp?.data?.getBytes()
+					String enc = byteData?.encodeBase64()
+					// log.debug "enc: ${enc}"
+					return enc ? "data:${preType}/${fileType};base64,${enc?.toString()}" : null
+				}
+			} else {
+				LogAction("getFileBase64 Resp: ${resp?.status} ${url}", "error")
+				exceptionDataHandler("resp ${ex?.response?.status} ${url}", "getFileBase64")
+				return null
 			}
 		}
-	}
-	catch (ex) {
-		log.error "getFileBase64 Exception:", ex
-		exceptionDataHandler(ex.message, "getFileBase64")
-	}
-}
-
-def getCssData() {
-	def cssData = null
-	def htmlInfo = state?.htmlInfo
-	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssVer = htmlInfo?.cssVer
-	} else {
-		cssData = getFileBase64(cssUrl(), "text", "css")
-	}
-	return cssData
-}
-
-def getChartJsData() {
-	def chartJsData = null
-	//def htmlInfo = state?.htmlInfo
-	def htmlInfo
-	state.chartJsData = null
-
-	if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
-		if(state?.chartJsData) {
-			if(state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
-				//LogAction("getChartJsData: Chart Javascript Data is Current | Loading Data from State...")
-				chartJsData = state?.chartJsData
-			} else if(state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
-				//LogAction("getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source...")
-				//chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
-				state.chartJsData = chartJsData
-				state?.chartJsVer = htmlInfo?.chartJsVer
+	} catch (ex) {
+		if(ex instanceof groovyx.net.http.ResponseParseException) {
+			if(ex?.statusCode != 200) {
+				LogAction("getFileBase64 Resp: ${ex?.statusCode} ${url}", "error")
+				log.error "getFileBase64 Exception:", ex
 			}
+		} else if(ex instanceof groovyx.net.http.HttpResponseException && ex?.response) {
+			LogAction("getFileBase64 Resp: ${ex?.response?.status} ${url}", "error")
+			exceptionDataHandler("${ex?.response?.status} ${url}", "getFileBase64")
 		} else {
-			//LogAction("getChartJsData: Chart Javascript Data is Missing | Loading Data from Source...")
-			chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
-			state?.chartJsData = chartJsData
-			state?.chartJsVer = htmlInfo?.chartJsVer
+			log.error "getFileBase64 Exception:", ex
+			exceptionDataHandler(ex, "getFileBase64")
 		}
-	} else {
-		//LogAction("getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL...")
-		chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
-	}
-	return chartJsData
+		return null
+    }
 }
-
-def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
-def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
@@ -3188,7 +3152,7 @@ def getIntListAvg(itemList) {
 	def iCnt = itemList?.size()
 	if(iCnt >= 1) {
 		if(iCnt > 1) {
-			avgRes = (itemList?.sum().toDouble() / iCnt.toDouble()).round(0) //
+			avgRes = (itemList?.sum().toDouble() / iCnt.toDouble()).round(0)
 		} else { itemList?.each { avgRes = avgRes + it.toInteger() } }
 	}
 	//log.debug "[getIntListAvg] avgRes: $avgRes"
@@ -3197,10 +3161,10 @@ def getIntListAvg(itemList) {
 
 def secToTimeMap(long seconds) {
 	long sec = (seconds % 60) ?: 0L
-	long minutes = ((seconds % 3600) / 60) ?: 0L //
-	long hours = ((seconds % 86400) / 3600) ?: 0L //
-	long days = (seconds / 86400) ?: 0L //
-	long years = (days / 365) ?: 0L //
+	long minutes = ((seconds % 3600) / 60) ?: 0L
+	long hours = ((seconds % 86400) / 3600) ?: 0L
+	long days = (seconds / 86400) ?: 0L
+	long years = (days / 365) ?: 0L
 	def res = ["m":minutes, "h":hours, "d":days, "y":years]
 	return res
 }
@@ -3280,7 +3244,7 @@ def getChgLogHtml() {
 	if(!state?.shownChgLog == true) {
 		chgStr = """
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-			<script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js"></script>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
 			<script>
 				\$(document).ready(function() {
 				    vex.dialog.alert({
@@ -3315,7 +3279,7 @@ def getGraphHTML() {
 		def canHeat = state?.can_heat == true ? true : false
 		def canCool = state?.can_cool == true ? true : false
 		def hasFan = state?.has_fan == true ? true : false
-		def leafImg = state?.hasLeaf ? getFileBase64(getImg("nest_leaf_on.gif"), "image", "gif") : getFileBase64(getImg("nest_leaf_off.gif"), "image","gif")
+		def leafImg = state?.hasLeaf ? getImg("nest_leaf_on.gif") : getImg("nest_leaf_off.gif")
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 
@@ -3441,16 +3405,13 @@ def getGraphHTML() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
 
-				<link rel="stylesheet prefetch" href="${getCssData()}"/>
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
-
-				<script type="text/javascript" src="${getChartJsData()}"></script>
-				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
-				<style>
-				</style>
+				<link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css"/>
+				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.2/css/swiper.min.css" />
+				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" async/>
+				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-top.min.css" async />
+				<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.2/js/swiper.min.js"></script>
 			</head>
 			<body>
 				${getChgLogHtml()}
@@ -3584,11 +3545,12 @@ def getGraphHTML() {
 			</body>
 		</html>
 		"""
+/* """ */
 		incHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
 		log.error "graphHTML Exception:", ex
-		exceptionDataHandler(ex.message, "graphHTML")
+		exceptionDataHandler(ex?.message, "graphHTML")
 	}
 }
 
@@ -3833,10 +3795,11 @@ def getDeviceTile(devNum) {
 				}
 			</script>
 		"""
+/* """ */
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
 		log.error "getDeviceTile Exception:", ex
-		exceptionDataHandler(ex.message, "getDeviceTile")
+		exceptionDataHandler(ex?.message, "getDeviceTile")
 	}
 }
 
@@ -3942,12 +3905,12 @@ def showChartHtml(devNum="") {
 //TODO fix for fanonly
 	grpUseData?.each { mon ->
 		def data = mon?.value
-		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0 //
-		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0 //
-		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0 //
-		def fanonly = data?.fanonly ? (data?.fanonly?.tSec.toLong()/3600).toDouble().round(0) : 0 //
-		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0 //
-		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0 //
+		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def fanonly = data?.fanonly ? (data?.fanonly?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def mName = getMonthNumToStr(mon?.key)
 		lStr += "\n$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool) | Fanonly: (${fanonly}) FanOn: ($fanOn) | FanAuto: ($fanAuto)"
 		def iNum = 1
@@ -4184,7 +4147,7 @@ def getDayTimePerc(val,data) {
 	//log.debug "getDayTimePerc($val, $data)"
 	//log.debug "getDayElapSec: ${getDayElapSec()}"
 	if(!data) { return null }
-	return (int) ((val.toInteger()/getDayElapSec())*100).toDouble().round(0) //
+	return (int) ((val.toInteger()/getDayElapSec())*100).toDouble().round(0)
 }
 
 def getDayElapSec() {
@@ -4195,7 +4158,7 @@ def getDayElapSec() {
 	c.set(Calendar.SECOND, 0);
 	c.set(Calendar.MILLISECOND, 0);
 	long passed = now - c.getTimeInMillis();
-	return (long) passed / 1000; //
+	return (long) passed / 1000
 }
 
 def getTimeMapString(data) {
@@ -4302,7 +4265,7 @@ def getExtTempVoiceDesc() {
 
 private adj_temp(tempF) {
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * 5/9 as Double //
+		return (tempF - 32) * 5/9 as Double
 	} else {
 		return tempF
 	}

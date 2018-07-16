@@ -1,4 +1,14 @@
-<p style="font-size: 15px;"><strong>V5.3.5 (January 31st, 2018):</strong><p>
+<p style="font-size: 15px;"><strong>V5.3.6 (July 4th, 2018):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>ADDED:</strong> Eco is now a supported ST capability mode for thermostatMode.</li>
+    <li><strong>FIXED:</strong> Updated Web calls</li>
+    <li><strong>FIXED:</strong> HTML Optimizations</li>
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks.</li>
+</ul>
+<br>
+
+<p style="font-size: 15px;"><strong>V5.3.5 (May 31st, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>FIXED:</strong> State use reductions and cleanups</li>
@@ -13,10 +23,4 @@
     <li><strong>ADDED:</strong> You can now view the web tiles in browser (link is in the SmartApp > Manage Devices).</li>
     <li><strong>FIXED:</strong> Some Bug Fixes / Tweaks.</li>
     <li><strong>FIXED:</strong> Removed Capabilities to help work with Google Home bugs</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
 </ul>

@@ -1,3 +1,12 @@
+<p style="font-size: 15px;"><strong>V5.3.7 (July 4th, 2018):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>FIXED:</strong> Performance optimizations</li>
+    <li><strong>FIXED:</strong> HTML Optimizations</li>
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks.</li>
+</ul>
+<br>
+
 <p style="font-size: 15px;"><strong>V5.3.6 (May 31st, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
@@ -13,12 +22,4 @@
     <li><strong>ADDED:</strong> You can now view the web tiles in browser (link is in the SmartApp > Manage Devices).</li>
     <li><strong>FIXED:</strong> Some Bug Fixes / Tweaks.</li>
 </ul>
-<br>
 
-<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>ADDED:</strong> Preference now available to only modify motion events when person detected (Requires Nest Aware Subscription!).</li>
-    <li><strong>ADDED:</strong> Added New Attribute called 'motionPerson' for WebCoRE to Monitor for changes.</li>
-    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
-</ul>
