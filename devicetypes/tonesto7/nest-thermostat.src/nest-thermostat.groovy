@@ -23,12 +23,6 @@ metadata {
 		capability "Refresh"
 		capability "Sensor"
 		capability "Thermostat"
-		//capability "Thermostat Cooling Setpoint"
-		//capability "Thermostat Fan Mode"
-		//capability "Thermostat Heating Setpoint"
-		//capability "Thermostat Mode"
-		//capability "Thermostat Operating State"
-		//capability "Thermostat Setpoint"
 		capability "Temperature Measurement"
 		capability "Health Check"
 
@@ -114,20 +108,20 @@ metadata {
 	tiles(scale: 2) {
 		multiAttributeTile(name:"temperature", type:"thermostat", width:6, height:4, canChangeIcon: true) {
 			tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
-				attributeState("default", label:'${currentValue}\u00b0')
+				attributeState("temperature", label:'${currentValue}\u00b0')
 			}
 			tileAttribute("device.temperature", key: "VALUE_CONTROL") {
-				attributeState("default", action: "levelUpDown")
+				// attributeState("default", action: "levelUpDown")
 				attributeState("VALUE_UP", action: "levelUp")
 				attributeState("VALUE_DOWN", action: "levelDown")
 			}
 			tileAttribute("device.humidity", key: "SECONDARY_CONTROL") {
-				attributeState("default", label:'${currentValue}%', unit:"%")
+				attributeState("humidity", label:'${currentValue}%', unit:"%", defaultState: true)
 			}
 			tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
 				attributeState("idle",			backgroundColor:"#44B621")
-				attributeState("heating",		 backgroundColor:"#FFA81E")
-				attributeState("cooling",		 backgroundColor:"#2ABBF0")
+				attributeState("heating",		 backgroundColor:"#e86d13")
+				attributeState("cooling",		 backgroundColor:"#00a0dc")
 				attributeState("fan only",		  backgroundColor:"#145D78")
 				attributeState("pending heat",	  backgroundColor:"#B27515")
 				attributeState("pending cool",	  backgroundColor:"#197090")
@@ -3300,8 +3294,7 @@ def getGraphHTML() {
 
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
-		def refreshBtnHtml = state.mobileClientType == "ios" ?
-				"""<div class="pageFooterBtn"><button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTstatPage()"><span>&#10227;</span> Refresh</button></div>""" : ""
+		def refreshBtnHtml = state.mobileClientType == "ios" ? """<div class="pageFooterCls"><p class="slideFooterText">Swipe/Tap to Change Slide</p><button type="button" class="btn btn-info slideFooterBtn" onclick="reloadPage()"><span>&#10227;</span> Refresh</button></div>""" : ""
 		def chartHtml = (
 				state?.showGraphs &&
 				state?.temperatureTable?.size() > 0 &&
@@ -3412,6 +3405,9 @@ def getGraphHTML() {
 				<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.2/js/swiper.min.js"></script>
+				<style>
+					
+				</style>
 			</head>
 			<body>
 				${getChgLogHtml()}
@@ -3495,10 +3491,7 @@ def getGraphHTML() {
 					</div>
 					<!-- If we need pagination -->
 					<div class="swiper-pagination"></div>
-
-					<div style="text-align: center;">
-						<p class="slideFooterMsg">Swipe-Tap to Change Slide</p>
-					</div>
+					<div style="text-align: center; padding: 25px 0;"></div>
 				</div>
 				<script>
 					var mySwiper = new Swiper ('.swiper-container', {
@@ -3534,10 +3527,8 @@ def getGraphHTML() {
 						pagination: '.swiper-pagination',
 						paginationHide: false,
 						paginationClickable: true
-					})
-					function reloadTstatPage() {
-						// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML"
-						// window.location = url;
+					});
+					function reloadPage() {
 						window.location.reload();
 					}
 				</script>
@@ -3545,7 +3536,6 @@ def getGraphHTML() {
 			</body>
 		</html>
 		"""
-/* """ */
 		incHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
@@ -3746,11 +3736,10 @@ def getDeviceTile(devNum) {
 						${chartHtml}
 					</div>
 					<!-- If we need pagination -->
-					<div class="swiper-pagination"></div>
-
-					<div style="text-align: center;">
-						<p class="slideFooterMsg">Swipe/Drag to Change Slide</p>
+					<div style="text-align: center; padding: 20px;">
+						<p class="slideFooterTextTile">Swipe/Drag to Change Slide</p>
 					</div>
+					<div class="swiper-pagination"></div>
 				</div>
 			</div>
 			<script>
@@ -3761,10 +3750,10 @@ def getDeviceTile(devNum) {
 					loop: false,
 					slidesPerView: '1',
 					centeredSlides: true,
-					spaceBetween: 200,
+					spaceBetween: 100,
 					autoHeight: true,
 					keyboardControl: true,
-        			mousewheelControl: true,
+					mousewheelControl: true,
 					iOSEdgeSwipeDetection: true,
 					iOSEdgeSwipeThreshold: 20,
 					parallax: true,
@@ -3772,11 +3761,11 @@ def getDeviceTile(devNum) {
 
 					effect: 'coverflow',
 					coverflow: {
-					  rotate: 50,
-					  stretch: 0,
-					  depth: 100,
-					  modifier: 1,
-					  slideShadows : true
+						rotate: 50,
+						stretch: 0,
+						depth: 100,
+						modifier: 1,
+						slideShadows : true
 					},
 					onTap: function(s, e) {
 						s.slideNext(false);
@@ -3787,15 +3776,12 @@ def getDeviceTile(devNum) {
 					pagination: '.swiper-pagination',
 					paginationHide: false,
 					paginationClickable: true
-				})
+				});
 				function reloadTstatPage() {
-					// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML"
-					// window.location = url;
 					window.location.reload();
 				}
 			</script>
 		"""
-/* """ */
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
 		log.error "getDeviceTile Exception:", ex
@@ -4059,12 +4045,16 @@ def showChartHtml(devNum="") {
 					seriesType: 'bars',
 					colors: ['#FF9900', '#0066FF', '#884ae5'],
 					chartArea: {
-					  left: '15%',
-					  right: '23%',
+					  left: '10%',
+					  right: '5%',
 					  top: '7%',
 					  bottom: '10%',
-					  height: '100%',
-					  width: '90%'
+					  height: '95%',
+					  width: '100%'
+					},
+					legend: {
+						position: 'bottom',
+						maxLines: 4
 					}
 				};
 
@@ -4090,7 +4080,6 @@ def showChartHtml(devNum="") {
 			</section>
   		  </div>
 	  """
-/* */
 	return data
 }
 

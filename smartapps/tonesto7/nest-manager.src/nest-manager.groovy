@@ -8,8 +8,8 @@
 |    License Info: https://github.com/tonesto7/nest-manager/blob/master/app_license.txt     |
 |                                                                                           |
 |    NOTE: I really hope that we don't have a ton of forks being released to the community, |
-|    and that we can collaborate to make the smartapp and devices that will accommodate     |
-|    every use case                                                                         |
+|    and that we can collaborate to make smartapps and devices that will accommodate to     |
+|    all use cases                                                                          |
 *********************************************************************************************/
 
 import groovy.json.*
@@ -34,17 +34,17 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.8" }
-def appVerDate() { "07-04-2018" }
+def appVersion() { "5.3.9" }
+def appVerDate() { "08-02-2018" }
 def minVersions() {
 	return [
-		"automation":["val":535, "desc":"5.3.5"],
+		"automation":["val":536, "desc":"5.3.6"],
 		"thermostat":["val":536, "desc":"5.3.6"],
 		"protect":["val":536, "desc":"5.3.6"],
 		"presence":["val":536, "desc":"5.3.6"],
 		"weather":["val":536, "desc":"5.3.6"],
-		"camera":["val":537, "desc":"5.3.7"],
-		"stream":["val":105, "desc":"1.0.5"]
+		"camera":["val":538, "desc":"5.3.8"],
+		"stream":["val":106, "desc":"1.0.6"]
 	]
 }
 
@@ -119,7 +119,6 @@ mappings {
 			path("/getDeviceData")	{action: [GET: "renderDeviceData"]}
 			path("/getInstData")	{action: [GET: "renderInstData"]}
 			path("/getAppData")		{action: [GET: "renderAppData"]}
-
 		}
 	}
 }
@@ -327,6 +326,7 @@ def mainPage() {
 
 // NEW STORAGE SmartApp
 def storageInfoSect() {
+	if(!atomicState?.isInstalled || isAppLiteMode()) { return "" }
 	def storApp = getStorageApp()
 	section("Storage App Info:") {
 		if(storApp) {
@@ -379,37 +379,26 @@ def storageAppInst(available) {
 }
 
 private getStorageApp() {
-	def storApp = null
-	def cApps = getChildApps()
-	cApps?.each { ca ->
-		if(ca?.getAutomationType() == "storage") {
-			storApp = ca
-		}
+	if(isAppLiteMode()) { return null }
+	def storApp = getChildApps()?.find{ it?.getAutomationType() == "storage" && it?.name == autoAppName() }
+	if(storApp) { 
+		if(storApp?.label != storageAppName()) { storApp?.updateLabel(storageAppName()) }
+		storageAppInst(true)
+		return storApp 
+	} else { 
+		//runIn(5, "initStorageApp", [overwrite: true])
+		storageAppInst(false)
+		return null 
 	}
-	return storApp
-/*
-	def storApp = getChildApps()?.find{ it?.getAutomationType() == "storage" && it?.name == storageAppName() }
-	if(storApp) { return storApp }
-	else { return null }
-*/
 }
 
 private checkStorageApp() {
-	def storApp = getStorageApp()
-	if(storApp) {
-		def name = storageAppName()
-		if(storApp?.label != name) {
-			LogAction("checkStorageApp name did not match - deleting old Storage App", "warn", false)
-			deleteChildApp(storApp)
-			updTimestampMap("lastAnalyticUpdDt", null)
-			//storApp.updateLabel(name)
-		} else {
-			storageAppInst(true)
-			return storApp
-		}
+	def oldStorApp = getChildApps()?.find{ it?.getAutomationType() == "storage" && it?.name != autoAppName() }
+	if(oldStorApp) {
+		LogAction("checkStorageApp | Removing Old Storage App", "warn", false)
+		deleteChildApp(oldStorApp)
+		updTimestampMap("lastAnalyticUpdDt", null)
 	}
-	storageAppInst(false)
-	return null
 }
 
 def donationPage() {
@@ -590,10 +579,12 @@ def devPrefPage() {
 				if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt() || betaMarker()) {
 					input "camTakeSnapOnEvt", "bool", title: "Take Snapshot on Motion Events?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("snapshot_icon.png")
 					input "motionSndChgWaitVal", "enum", title: "Delay before Motion/Sound Events are marked Inactive?", required: false, defaultValue: 60, metadata: [values:waitValAltEnum(true)], submitOnChange: true, image: getAppImg("delay_time_icon.png")
-					// input "camEnMotionZoneFltr", "bool", title: "Allow filtering motion events by configured zones?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("motion_icon.png")
-					// if(settings?.camEnMotionZoneFltr) {
-					// 	href "camMotionZoneFltrPage", title: "Select the Zones for each camera to be used to trigger Motion?", description: "Tap to modify", image: getAppImg("zone_icon.png")
-					// }
+					input "camEnMotionZoneFltr", "bool", title: "Allow filtering motion events by configured zones?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("motion_icon.png")
+					if(settings?.camEnMotionZoneFltr) {
+						def camZones = getCamActivityZones()
+						def t0 = camMotionZoneDesc()
+						href "camMotionZoneFltrPage", title: "Restrict Motion to Certain Zones?", description: t0, params: [devices: atomicState?.cameras.sort{it?.value}, camZones: camZones], image: getAppImg("zone_icon.png"), state: (t0 ? "complete" : "")
+					}
 					atomicState.needChildUpd = true
 				} else {
 					paragraph "No Camera Device Options Yet..."
@@ -633,44 +624,58 @@ def devPrefPage() {
 	}
 }
 
-def getCamActivityZones(devId) {
-	def actZones = atomicState?.deviceData?.cameras[devId]?.activity_zones
+def getCamActivityZones() {
 	def camZones = [:]
-	if(actZones.size()) {
-		actZones?.each { zn ->
-			def zId = zn?.id
-			def zName = zn?.name
-			def adni = [zId].join('.')
-			camZones[adni] = zName
+	atomicState?.cameras.sort{it?.value}.each { cam ->
+		camZones[cam?.key] = [:]
+		def actZones = atomicState?.deviceData?.cameras[cam?.key]?.activity_zones
+		if(actZones.size()) {
+			actZones?.each { zn ->
+				camZones[cam?.key][zn?.id as String] = zn?.name as String
+			}
 		}
 	}
 	return camZones
 }
 
-def camMotionZoneFltrPage() {
+def camMotionZoneFltrPage(params) {
+	def cams = params?.devices
+	def camZones = params?.camZones
+	if(params?.devices && params?.camZones) {
+		atomicState.camFilterPageData = params
+	} else {
+		cams = atomicState?.camFilterPageData?.devices
+		camZones = atomicState?.camFilterPageData?.camZones
+	}
 	def execTime = now()
-	dynamicPage(name: "camMotionZoneFltrPage", title: "", nextPage: "", install: false) {
-		def cnt = 1
-		atomicState?.cameras.sort{it?.value}.each { cam ->
-
-		   	def t0 = cam?.key
-			def t1 = cam?.value
-			def camZones = getCamActivityZones(t0)
-			def zoneDesc = camZones.size() ? "Found (${camZones.size()}) Zones" : "No Zones Found"
-			LogAction("${zoneDesc} (${camZones})", "info", true)
-			section("Camera: (${t1})") {
-				if(!camZones?.size()) {
-					paragraph "No Zones were found for this camera."
-				} else {
-					input(name: "${t0}_zones", title:"Available Zones", type: "enum",  description: "${zoneDesc}", required: false, multiple: true, submitOnChange: true,
-							metadata: [values:camZones], image: getAppImg("zone_icon.png"))
+	dynamicPage(name: "camMotionZoneFltrPage", title: "", nextPage: "devPrefPage", install: false) {
+		if(cams && camZones) {
+			cams?.each { cm->
+				def zones = camZones[cm?.key]?.sort { it?.value }
+				section("(${cm?.value}) Zones") {
+					if(!zones?.size()) {
+						paragraph "Camera has NO Zones..."
+					} else {
+						input("camera_${cm?.key}_zones", "enum", title:"Available Zones", description: "Found (${zones?.size()}) Zones", required: false, multiple: true, submitOnChange: true, options: zones, image: getAppImg("zone_icon.png"))
+					}
 				}
 			}
-		}
-
+		} else { section() { paragraph "NO Camera Zones Found..." } }
 		atomicState.needChildUpd = true
 		devPageFooter("camZoneFltLoadCnt", execTime)
 	}
+}
+
+def camMotionZoneDesc() {
+	def desc = ""
+	if(atomicState?.cameras) {
+		atomicState?.cameras.sort{it?.value}.each { cam ->
+			if(settings?."camera_${cam?.key}_zones"?.size()) {
+				desc += "${desc == "" ? "" : "\n"}${cam?.value}: (${settings?."camera_${cam?.key}_zones"?.size()}) Zones"
+			}
+		}
+	}
+	return desc == "" ? null : desc
 }
 
 def custWeatherPage() {
@@ -700,7 +705,7 @@ def custWeatherPage() {
 				section("Manually Enter a Location:") {
 					href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
 							description: "Lookup Weather Station ID", image: getAppImg("search_icon.png")
-					input("custLocStr", "text", title: "Manaually Set Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
+					input("custLocStr", "text", title: "Manually Set Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
 					def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]\nZWM: [zwm:zwm_number]"
 					paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
 				}
@@ -1151,7 +1156,7 @@ def automationsPage() {
 				}
 				href "automationStatisticsPage", title: "View Automation Statistics", description: "", image: getAppImg("app_analytics_icon.png")
 			}
-			section("Advanced Options: (Tap + to Show)                                                          ", hideable: true, hidden: true) {
+			section("Advanced Options: (Tap + to Show)                 ", hideable: true, hidden: true) {
 				def descStr = ""
 				descStr += (settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "Comfort Settings:" : ""
 				descStr += settings?.locDesiredHeatTemp ? "\n • Desired Heat Temp: (${settings?.locDesiredHeatTemp}${tUnitStr()})" : ""
@@ -1291,7 +1296,7 @@ def locDesiredClear() {
 	LogTrace("locDesiredClear")
 	def list = [ "locDesiredHeatTemp", "locDesiredCoolTemp","locDesiredComfortDewpointMax", "locDesiredTempScale", "locDesiredButton" ]
 	list.each { item ->
-		settingUpdate(item.toString(), "")
+		settingRemove(item.toString())
 	}
 	if(atomicState?.thermostats && settings?.clearLocDesired) {
 		atomicState?.thermostats?.each { ts ->
@@ -1299,20 +1304,20 @@ def locDesiredClear() {
 			def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
 			def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true
 			if(canHeat) {
-				settingUpdate("${dev?.deviceNetworkId}_safety_temp_min", "")
+				settingRemove("${dev?.deviceNetworkId}_safety_temp_min")
 			}
 			if(canCool) {
-				settingUpdate("${dev?.deviceNetworkId}_safety_temp_max", "")
+				settingRemove("${dev?.deviceNetworkId}_safety_temp_max")
 			}
 			if(settings?."${dev?.deviceNetworkId}_comfort_dewpoint_max") {
-				settingUpdate("${dev?.deviceNetworkId}_comfort_dewpoint_max", "")
+				settingRemove("${dev?.deviceNetworkId}_comfort_dewpoint_max")
 			}
 			if(settings?."${dev?.deviceNetworkId}_comfort_humidity_max") {
-				settingUpdate("${dev?.deviceNetworkId}_comfort_humidity_max", "")
+				settingRemove("${dev?.deviceNetworkId}_comfort_humidity_max")
 			}
 		}
 	}
-	settingUpdate("clearLocDesired", false)
+	settingRemove("clearLocDesired")
 }
 
 def getGlobTitleStr(typ) {
@@ -1429,23 +1434,17 @@ def automationKickStartPage() {
 def notifPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "notifPrefPage", install: false) {
-		def sectDesc = !location.contactBookEnabled ? "Enable push notifications below" : "Select People or Devices to Receive Notifications"
-		section(sectDesc) {
-			if(!location.contactBookEnabled) {
-				input(name: "usePush", type: "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
-			} else {
-				input(name: "recipients", type: "contact", title: "Select Default Contacts", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-					input ("phone", "phone", title: "Phone Number to send SMS to", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png"))
-				}
-			}
-			if(settings?.recipients || settings?.phone || settings?.usePush) {
+		section("Enable push notifications below") {
+			input ("usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
+			input ("phone", "phone", title: "Phone Number to send SMS to", required: false, multiple: true, submitOnChange: true, image: getAppImg("notification_icon2.png"))
+			if(settings?.phone || settings?.usePush) {
 				def t1 = getNotifSchedDesc()
 				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("restriction_icon.png")
 			}
 		}
-		if(settings?.recipients || settings?.phone || settings?.usePush) {
-			if(settings?.recipients && !atomicState?.pushTested) {
-				if(sendMsg("Info", "Push Notification Test Successful. Notifications Enabled for ${appName()}", false)) {
+		if(settings?.phone || settings?.usePush) {
+			if(settings?.usePush && !atomicState?.pushTested) {
+				if(sendMsg("Info", "Push Notification Test Successful. Notifications Enabled for ${appName()}", true)) {
 					atomicState.pushTested = true
 				}
 			}
@@ -1622,9 +1621,8 @@ def getAppNotifConfDesc() {
 		def de = getDevNotifDesc()
 		def au = getAutoNotifDesc()
 		def nd = getNotifSchedDesc()
-		str += (settings?.recipients) ? "Sending via Contact Book (True)" : ""
-		str += (settings?.usePush) ? "Sending via Push: (True)" : ""
-		str += (settings?.phone) ? "\nSending via SMS: (True)" : ""
+		str += (settings?.usePush) ? "Sending via: (Push)" : ""
+		str += (settings?.phone) ? "\nSending via: (SMS)" : ""
 		str += (ap || de || au) ? "\nEnabled Alerts:" : ""
 		str += (ap) ? "\n• App Alerts (True)" : ""
 		str += (de) ? "\n• Device Alerts (True)" : ""
@@ -2243,6 +2241,11 @@ def updated() {
 	} else {
 		LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
 	}
+	atomicState?.pollBlocked = true
+	atomicState?.pollBlockedReason = "Software Update pending"
+	restStreamHandler(true)   // stop the rest stream
+	atomicState?.restStreamingOn = false
+	atomicState.ssdpOn = false
 	// if(atomicState?.migrationInProgress == true) { LogAction("Skipping updated() as migration in-progress", "warn", true); return }
 	if(atomicState?.needToFinalize == true) { LogAction("Skipping updated() as auth change in-progress", "warn", true); return }
 	initialize()
@@ -2263,10 +2266,9 @@ def uninstalled() {
 def initialize() {
 	//LogTrace("initialize")
 	if(!atomicState?.tsMigration) { timestampMigration() }
-	def storageApp = checkStorageApp()
 	if(atomicState?.resetAllData || settings?.resetAllData) {
-		if(fixState()) { return }	// runIn of fixState will call initAutoApp() or initManagerApp()
-		settingUpdate("resetAllData", "false", "bool")
+		if(fixState()) { return }	// runIn of fixState will call initManagerApp()
+		//settingUpdate("resetAllData", "false", "bool")
 	}
 	if(!isAppLiteMode()) {
 		runIn(5, "reInitBuiltins", [overwrite: true])  // These are to have these apps release subscriptions to devices (in case of delete)
@@ -2275,9 +2277,11 @@ def initialize() {
 }
 
 def reInitBuiltins() {
+	checkStorageApp()
 	if(!isAppLiteMode()) {
 		initWatchdogApp()
   		initNestModeApp()
+		initStorageApp()
 	}
 	if(atomicState?.tsMigration) { initRemDiagApp() }
 }
@@ -2404,6 +2408,9 @@ def initManagerApp() {
 	}
 	if(!addRemoveDevices()) { // if we changed any devices or had an error trying, reset queues and polling
 		atomicState.cmdQlist = []
+		if(!isAppLiteMode()) {
+			runIn(15, "reInitBuiltins", [overwrite: true])  // need to have watchdog/nestmode check if we created devices
+		}
 	}
 	if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
 		atomicState?.isInstalled = true
@@ -2421,39 +2428,43 @@ def finishInitManagerApp() {
 		createSavedNest()
 		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
 		def badAutomation = false
-		def autoId = null
 		def storId = null
 		if(!isAppLiteMode()) {
 			getChildApps()?.sort()?.each { chld ->
-				if(autoId == null) {autoId = chld?.smartAppId}
 				chld?.update()
 			}
 		} else {
 			badAutomation = true
 		}
-		//if(autoId) { updAppCodeId("auto", autoId) }
 
-		def tstatAutoApp = getChildApps()?.find {
-			def aa = null
-			try {
-				aa = it?.getAutomationType()
-				def bb = it?.getCurrentSchedule()
-				def ai = it?.getAutomationsInstalled()
-			} catch (Exception e) {
-				LogAction("BAD Automation file ${it?.label?.toString()} (${it?.id}), please INSTALL proper automation file", "error", true)
-				badAutomation = true
-				appUpdateNotify(true, "automation")
+		if (!badAutomation) {
+			def tstatAutoApp = getChildApps()?.find {
+				def aa = null
+				try {
+					aa = it?.getAutomationType()
+					def bb = it?.getCurrentSchedule()
+					def ai = it?.getAutomationsInstalled()
+				} catch (Exception e) {
+					LogAction("BAD Automation file ${it?.label?.toString()} (${it?.id}), please INSTALL proper automation file", "error", true)
+					badAutomation = true
+					appUpdateNotify(true, "automation")
+				}
+				if( !badAutomation && !(aa in ["nMode", "watchDog", "remDiag", "schMot", "storage"]) ) { badAutomation = true }
 			}
-			if( !badAutomation && !(aa in ["nMode", "watchDog", "remDiag", "schMot", "storage"]) ) { badAutomation = true }
-		}
-		if(!isAppLiteMode()) {
-			runIn(5, "reInitBuiltins", [overwrite: true])  // need to have watchdog/nestmode check if we created devices
 		}
 		if(badAutomation) {
 			LogAction("Deleting BAD Automations in 10 mins", "warn", true)
 			runIn(600, "removeBadAutomations", [overwrite: true])
 		}
+		if(resetAllData) { // This is to cleanup state for resetAllData - children are given 90 seconds to fixState()
+			runIn(90, "cleanupResetSettings", [overwrite: true])
+		}
 	}
+}
+
+def cleanupResetSettings() {
+	settingUpdate("resetAllData", "false", "bool")
+	runIn(75, "initialize", [overwrite: true]) // cause cleanup to propagate to child apps
 }
 
 def removeBadAutomations() {
@@ -2943,19 +2954,19 @@ def startStopStream() {
 		return
 	}
 	if(strEn && settings?.restStreaming && atomicState?.restStreamingOn) {
-		runIn(5, "restStreamCheck", [overwrite: true])
+		runIn(25, "restStreamCheck", [overwrite: true])
 		return
 	}
 	if(strEn && settings?.restStreaming && !atomicState?.restStreamingOn) {
 		//LogAction("Sending restStreamHandler(Start) Event to local node service", "debug", true)
 		restStreamHandler()
-		runIn(5, "restStreamCheck", [overwrite: true])
+		runIn(25, "restStreamCheck", [overwrite: true])
 	}
 	else if ((!settings?.restStreaming || !strEn) && atomicState?.restStreamingOn) {
 		//LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
 		atomicState?.restStreamingOn = false
-		runIn(5, "restStreamCheck", [overwrite: true])
+		runIn(25, "restStreamCheck", [overwrite: true])
 	}
 }
 
@@ -3230,7 +3241,7 @@ def getInstAutoTypesDesc() {
  						deleteChildApp(a)
 						updTimestampMap("lastAnalyticUpdDt", null)
 					 }
-					def test = checkStorageApp()
+					checkStorageApp()
 					break
  				default:
  					LogAction("Deleting Unknown Automation (${a?.id})", "warn", true)
@@ -3303,13 +3314,15 @@ def setPollingState() {
 			pollStrTime = Math.max(pollStrTime, theMax)
 			def weatherTimer = pollTime
 			if(atomicState?.weatherDevice) { weatherTimer = (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900) }
-			def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
+			Integer timgcd = gcd([pollTime, pollStrTime, weatherTimer])
 			def random = new Random()
 			def random_int = random.nextInt(60)
-			timgcd = (timgcd.toInteger() / 60) < 1 ? 1 : timgcd.toInteger() / 60
+			timgcd = (timgcd.div(60) < 1) ? 1 : (timgcd.div(60))
 			def random_dint = random.nextInt(timgcd.toInteger())
 			LogAction("POLL scheduled (${random_int} ${random_dint}/${timgcd} * * * ?)", "info", true)
 			schedule("${random_int} ${random_dint}/${timgcd} * * * ?", poll)	// this runs every timgcd minutes
+			atomicState?.pollBlocked = false
+			atomicState?.pollBlockedReason = null
 			def timChk = atomicState?.streamPolling ? 1200 : 240
 			if(!getTimestampVal("lastDevDataUpd") || getLastDevicePollSec() > timChk) {
 				if(atomicState.streamPolling) {
@@ -3338,29 +3351,17 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
+/*
+// Debug to remove
+		def sData = atomicState?.swVer ?: [:]
+		sData["mgrVer"] = "tester"
+		atomicState?.swVer = sData
+		return
+*/
 	stateCleanup()
 	createSavedNest()
-	//settingsUpdate
 	poll(true)
 }
-
-/*
-void updAppCodeId(type,id) {
-	def appCodeId = atomicState?.appCodeIdData ?: [:]
-	if(appCodeId) {
-		appCodeId[type.toString()] = id.toString()
-	}
-	atomicState?.appCodeIdData = appCodeId
-}
-
-void updDevCodeId(type,id) {
-	def devCodeId = atomicState?.devCodeIdData ?: [:]
-	if(devCodeId) {
-		devCodeId[type.toString()] = id.toString()
-	}
-	atomicState?.devCodeIdData = devCodeId
-}
-*/
 
 def refresh(child = null) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
@@ -3388,7 +3389,13 @@ def checkIfSwupdated() {
 		iData["shownFeedback"] = false
 		iData["shownDonation"] = false
 		atomicState?.installData = iData
-		updated()
+// force full fixState
+		settingUpdate("resetAllData", "true", "bool")
+		atomicState?.resetAllData = false
+		atomicState?.pollBlocked = true
+		atomicState?.pollBlockedReason = "Software Update pending"
+		runIn(20, "updated", [overwrite: true])
+		//updated()
 		sendInstallSlackNotif(false)
 		return true
 	}
@@ -3545,6 +3552,7 @@ def forcedPoll(type = null) {
 
 	if(lastFrcdPoll > pollWaitVal) { // This limits manual forces to 10 seconds or more
 		updTimestampMap("lastForcePoll", getDtNow())
+		atomicState?.workQrunInActive = false
 		atomicState?.pollBlocked = false
 		atomicState?.pollBlockedReason = null
 		cmdProcState(false)
@@ -4233,7 +4241,8 @@ def updateChildData(force = false) {
 			}
 			else if(devId && atomicState?.cameras && atomicState?.deviceData?.cameras && atomicState?.deviceData?.cameras[devId]) {
 				//devCodeIds["camera"] = it?.getDevTypeId()
-				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix,
+				List camMotionZones = (settings?.camEnMotionZoneFltr && settings?."camera_${devId}_zones"?.size()) ? settings?."camera_${devId}_zones" : []
+				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "camMotionZones": camMotionZones,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString(), "clientBl":clientBl,
 						"hcTimeout":hcCamTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
 						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData, "restStreaming":streamingActive, "motionSndChgWaitVal":motionSndChgWaitVal,
@@ -4249,7 +4258,7 @@ def updateChildData(force = false) {
 					sData["camDevVer"] = t1 ?: ""
 					atomicState?.swVer = sData
 					if(sData?.camDevVer != "" && (versionStr2Int(sData?.camDevVer) >= minVersions()?.camera?.val)) {
-						//LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
+						// LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
 						LogTrace("UpdateChildData >> Camera id: ${devId} | oldCamData: ${oldCamData} cDataChecksum: ${cDataChecksum} force: $force  nforce: $nforce")
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
@@ -4489,7 +4498,7 @@ void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, 
 	def curlbl = devLbl?.toString()
 	if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 	def newlbl = "getNest${abrevStr.capitalize()}Label"(apiName, devId)
-	LogTrace("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} || devId: ${devId}")
+	//LogTrace("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} || devId: ${devId}")
 	if(ovrRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 		if(curlbl != newlbl) {
 			LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -4503,14 +4512,14 @@ void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, 
 	if(atomicState?.custLabelUsed && settings?."${abrevStr}_${devId}_lbl" != curlbl) {
 		settingUpdate("${abrevStr}_${devId}_lbl", curlbl?.toString())
 	}
-	if(!atomicState?.custLabelUsed && settings?."${abrevStr}_${devId}_lbl") { settingUpdate("${abrevStr}_${devId}_lbl", "") }
-	if(settings?."${abrevStr}_${deflblval}_lbl") { settingUpdate("${abrevStr}_${deflblval}_lbl", "") } // clean up old stuff
+	if(!atomicState?.custLabelUsed && settings?."${abrevStr}_${devId}_lbl") { settingRemove("${abrevStr}_${devId}_lbl") }
+	if(settings?."${abrevStr}_${deflblval}_lbl") { settingRemove("${abrevStr}_${deflblval}_lbl") } // clean up old stuff
 }
 
 void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 	def curlbl = devLbl?.toString()
 	def newlbl = "getNest${devMethAbrev.capitalize()}Label"()
-	LogTrace("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}")
+	//LogTrace("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}")
 	if(ovrRideNames && curlbl != newlbl) {
 		LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
 		setDeviceLabel(devId, newlbl?.toString())
@@ -4519,7 +4528,7 @@ void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 	if(atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl" != curlbl) {
 		settingUpdate("${abrevStr}Dev_lbl", curlbl?.toString())
 	}
-	if(!atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl") { settingUpdate("${abrevStr}Dev_lbl", "") }
+	if(!atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl") { settingRemove("${abrevStr}Dev_lbl") }
 }
 
 def apiIssues() {
@@ -5045,10 +5054,13 @@ private getQueueNumber(cmdTypeId) {
 		qnum = cmdQueueList.indexOf(cmdTypeId)
 		atomicState?."cmdQ${qnum}" = null
 		setLastCmdSentSeconds(qnum, null)
-		setRecentSendCmd(qnum, null)
+		//setRecentSendCmd(qnum, null)
 	}
 	qnum = cmdQueueList.indexOf(cmdTypeId)
 	if(qnum == -1 ) { LogAction("getQueueNumber: NOT FOUND", "warn", true ) }
+	if(qnum != -1) {
+		if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset = 3 command limit
+	}
 	return qnum
 }
 
@@ -5069,6 +5081,9 @@ def getQueueToWork() {
 		}
 	}
 	LogTrace("getQueueToWork queue: ${qnum}")
+	if(qnum != -1) {
+		if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset = 3 command limit
+	}
 	return qnum
 }
 
@@ -5091,18 +5106,37 @@ void schedNextWorkQ(useShort=false) {
 
 	def qnum = getQueueToWork()
 	def timeVal = cmdDelay
+	def str = ""
+	def queueItemsAvail
+	def lastCommandSent
 	if(qnum != null) {
-		if( !(getRecentSendCmd(qnum) > 0 || getLastCmdSentSeconds(qnum) > 60) ) {
-			timeVal = (60 - getLastCmdSentSeconds(qnum) + getChildWaitVal())
+		queueItemsAvail = getRecentSendCmd(qnum)
+		lastCommandSent = getLastCmdSentSeconds(qnum)
+		//if( !(getRecentSendCmd(qnum) > 0 || getLastCmdSentSeconds(qnum) > 60) ) {
+		if( queueItemsAvail <= 0  || atomicState?.apiRateLimited) {
+			timeVal = 60 + cmdDelay
+			//atomicState?.workQrunInActive = false
+		} else if(lastCommandSent < 60) {
+			timeVal = (60 - lastCommandSent + cmdDelay)
+			if(queueItemsAvail > 0) { timeVal = 0 }
 		}
-		def str = timeVal > cmdDelay ? "*RATE LIMITING ON* " : ""
-		LogAction("schedNextWorkQ │ ${str}queue: ${qnum} │ schedTime: ${timeVal} │ recentSendCmd: ${getRecentSendCmd(qnum)} │ last seconds: ${getLastCmdSentSeconds(qnum)} │ cmdDelay: ${cmdDelay} │ allowAsync: ${allowAsync}", "info", true)
-	}
-	if(timeVal != 0) {
-		runIn(timeVal, "workQueue", [overwrite: true])
+		str = timeVal > cmdDelay || atomicState?.apiRateLimited ? "*RATE LIMITING ON* " : ""
+		//LogAction("schedNextWorkQ │ ${str}queue: ${qnum} │ schedTime: ${timeVal} │ recentSendCmd: ${queueItemsAvail} │ last seconds: ${lastCommandSent} │ cmdDelay: ${cmdDelay} │ allowAsync: ${allowAsync} | runInActive: ${atomicState?.workQrunInActive} | Api Limited: ${atomicState?.apiRateLimited}", "info", true)
 	} else {
-		workQueue()
+		timeVal = 0
 	}
+	def actStr = "ALREADY PENDING "
+	if(!atomicState?.workQrunInActive) {
+		atomicState?.workQrunInActive = true
+		if(timeVal != 0) {
+			actStr = "RUNIN "
+			runIn(timeVal, "workQueue", [overwrite: true])
+		} else {
+			actStr = "DIRECT CALL "
+			workQueue()
+		}
+	}
+	LogAction("schedNextWorkQ ${actStr} │ ${str}queue: ${qnum} │ schedTime: ${timeVal} │ recentSendCmd: ${queueItemsAvail} │ last seconds: ${lastCommandSent} │ cmdDelay: ${cmdDelay} │ allowAsync: ${allowAsync} | runInActive: ${atomicState?.workQrunInActive} | Api Limited: ${atomicState?.apiRateLimited}", "info", true)
 }
 
 private getRecentSendCmd(qnum) {
@@ -5153,6 +5187,7 @@ def storeLastCmdData(cmd, qnum) {
 
 void workQueue() {
 	LogTrace("workQueue")
+	atomicState?.workQrunInActive = false
 	//def cmdDelay = getChildWaitVal()
 	if(!atomicState?.cmdQlist) { atomicState?.cmdQlist = [] }
 	def cmdQueueList = atomicState?.cmdQlist
@@ -5185,7 +5220,7 @@ void workQueue() {
 				atomicState?."cmdQ${qnum}" = cmdQueue
 				def cmdres
 
-				if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset 3 command limit
+				if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset = 3 command limit
 
 				storeLastCmdData(cmd, qnum)
 
@@ -5199,7 +5234,7 @@ void workQueue() {
 						cmdres = queueProcNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], qnum, cmd)
 						return
 					} else {
-						cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], qnum)
+						cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], qnum, cmd)
 					}
 				}
 				finishWorkQ(cmd, cmdres)
@@ -5215,6 +5250,7 @@ void workQueue() {
 		atomicState.forceChildUpd = true
 		atomicState?.pollBlocked = false
 		atomicState?.pollBlockedReason = null
+		atomicState?.workQrunInActive = true
 		runIn(60, "workQueue", [overwrite: true])
 		runIn((60 + 4), "postCmd", [overwrite: true])
 		return
@@ -5280,7 +5316,7 @@ def queueProcNestApiCmd(uri, typeId, type, obj, objVal, qnum, cmd, redir = false
 		LogAction("Processing Queued Cmd: [ObjId: ${typeId} | ObjType: ${type} | ObjKey: ${obj} | ObjVal: ${objVal} | QueueNum: ${qnum} | Redirect: ${redir}]", "trace", true)
 		atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
 
-		if(!redir && (getRecentSendCmd(qnum) > 0) && (getLastCmdSentSeconds(qnum) < 60)) {
+		if(!redir && (getRecentSendCmd(qnum) > 0) /* && (getLastCmdSentSeconds(qnum) < 60) */ ) {
 			def val = getRecentSendCmd(qnum)
 			val -= 1
 			setRecentSendCmd(qnum, val)
@@ -5332,13 +5368,34 @@ def nestCmdResponse(resp, data) {
 			atomicState?.apiRateLimited = false
 			atomicState?.apiCmdFailData = null
 			result = true
-		} else {
+		}
+/*
+		if(resp?.status == 429) {
+			// requeue command
+			def newCmd = [command[0], command[1], command[2], command[3], command[4]]
+			def tempQueue = []
+			tempQueue << newCmd
+			if(!atomicState?."cmdQ${qnum}" ) { atomicState."cmdQ${qnum}" = [] }
+			def cmdQueue = atomicState?."cmdQ${qnum}"
+			cmdQueue.each { cmd ->
+				newCmd = [cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]]
+				tempQueue << newCmd
+			}
+			atomicState."cmdQ${qnum}" = tempQueue
+		}
+*/
+		if(resp?.status != 200) {
 			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
 			if(resp?.hasError()) {
 				apiRespHandler((resp?.getStatus() ?: null), (resp?.getErrorJson() ?: null), "nestCmdResponse", "nestCmdResponse ${qnum} ($type{$obj:$objVal})", true)
 			}
 		}
+/*
+		if(resp?.status == 429) {
+			result = true // we requeued the command
+		}
+*/
 		finishWorkQ(command, result)
 
 	} catch (ex) {
@@ -5353,7 +5410,7 @@ def nestCmdResponse(resp, data) {
 	}
 }
 
-def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
+def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, origcmd, redir = false) {
 	LogTrace("procNestApiCmd: typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, qnum: ${qnum},  isRedirUri: ${redir}")
 	def result = false
 	if(!atomicState?.authToken) { return result }
@@ -5371,7 +5428,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 		LogAction("procNestApiCmd Url: $uri | params: ${params}", "trace", true)
 		atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
 
-		if(!redir && (getRecentSendCmd(qnum) > 0) && (getLastCmdSentSeconds(qnum) < 60)) {
+		if(!redir && (getRecentSendCmd(qnum) > 0) /* && (getLastCmdSentSeconds(qnum) < 60)*/ ) {
 			def val = getRecentSendCmd(qnum)
 			val -= 1
 			setRecentSendCmd(qnum, val)
@@ -5385,9 +5442,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 			if(resp?.status == 307) {
 				def newUrl = resp?.headers?.location?.split("\\?")
 				LogTrace("NewUrl: ${newUrl[0]}")
-				if( procNestApiCmd(newUrl[0], typeId, type, obj, objVal, qnum, true) ) {
+				if( procNestApiCmd(newUrl[0], typeId, type, obj, objVal, qnum, origcmd, true) ) {
 					result = true
 				}
+				return result
 			}
 			else if(resp?.status == 200) {
 				LogAction("procNestApiCmd Processed queue: ${qnum} ($type{$obj:$objVal}) SUCCESSFULLY!", "info", true)
@@ -5397,13 +5455,32 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 				atomicState?.apiRateLimited = false
 				atomicState?.apiCmdFailData = null
 				result = true
+				return result
 			}
-			else {
-				apiIssueEvent(true)
-				atomicState?.lastCmdSentStatus = "failed"
-				result = false
-				apiRespHandler(resp?.status, resp?.data, "procNestApiCmd", "procNestApiCmd ${qnum} ($type{$obj:$objVal})", true)
+/*
+			if(resp?.status == 429) {
+				// requeue command
+				def newCmd = [origcmd[0], origcmd[1], origcmd[2], origcmd[3], origcmd[4]]
+				def tempQueue = []
+				tempQueue << newCmd
+				if(!atomicState?."cmdQ${qnum}" ) { atomicState."cmdQ${qnum}" = [] }
+				def cmdQueue = atomicState?."cmdQ${qnum}"
+				cmdQueue.each { cmd ->
+					newCmd = [cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]]
+					tempQueue << newCmd
+				}
+				atomicState."cmdQ${qnum}" = tempQueue
 			}
+*/
+			apiIssueEvent(true)
+			atomicState?.lastCmdSentStatus = "failed"
+			result = false
+			apiRespHandler(resp?.status, resp?.data, "procNestApiCmd", "procNestApiCmd ${qnum} ($type{$obj:$objVal})", true)
+/*
+			if(resp?.status == 429) {
+				result = true // we requeued the command
+			}
+*/
 		}
 	} catch (ex) {
 		apiIssueEvent(true)
@@ -5508,19 +5585,17 @@ def incAppNotifSentCnt() {
 /************************************************************************************************
 |								Push Notification Functions										|
 *************************************************************************************************/
-def pushStatus() { return (settings?.recipients || settings?.phone || settings?.usePush) ? (settings?.usePush ? "Push Enabled" : "Enabled") : null }
+def pushStatus() { return (settings?.phone || settings?.usePush) ? (settings?.usePush ? "Push Enabled" : "Enabled") : null }
 //def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt, null, "getLastMsgSec").toInteger() }
 def getLastUpdMsgSec() { return !getTimestampVal("lastUpdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdMsgDt"), null, "getLastUpdMsgSec").toInteger() }
 def getLastMissPollMsgSec() { return !getTimestampVal("lastMisPollMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMisPollMsgDt"), null, "getLastMissPollMsgSec").toInteger() }
 def getLastApiIssueMsgSec() { return !getTimestampVal("lastApiIssueMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastApiIssueMsgDt"), null, "getLastApiIssueMsgSec").toInteger() }
 def getLastLogRemindMsgSec() { return !getTimestampVal("lastLogRemindMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastLogRemindMsgDt"), null, "getLastLogRemindMsgSec").toInteger() }
 def getLastFailedCmdMsgSec() { return !getTimestampVal("lastFailedCmdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastFailedCmdMsgDt"), null, "getLastFailedCmdMsgSec").toInteger() }
-def getLastDevHealthMsgSec() { return !atomicState?.lastDevHealthMsgData?.dt ? 100000 : GetTimeDiffSeconds(atomicState?.lastDevHealthMsgData?.dt, null, "getLastDevHealthMsgSec").toInteger() }
 def getDebugLogsOnSec() { return !getTimestampVal("debugEnableDt") ? 0 : GetTimeDiffSeconds(getTimestampVal("debugEnableDt"), null, "getDebugLogsOnSec").toInteger() }
 
-def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients?.size() }
-
 def notificationCheck() {
+	LogTrace("notificationCheck")
 	def nPrefs = atomicState?.notificationPrefs
 	if(!getOk2Notify()) { return }
 	apiIssueNotify(nPrefs?.app?.api?.issueMsg, nPrefs?.app?.api?.rateLimitMsg, nPrefs?.app?.api?.issueMsgWait)
@@ -5534,14 +5609,24 @@ def cameraStreamNotify(child, Boolean streaming) {
 	sendMsg("${child?.device?.displayName} Info", "Streaming is now '${streaming ? "ON" : "OFF"}'", false)
 }
 
+def getLastDevHealthMsgSec(timeVal) { return !timeVal ? 100000 : GetTimeDiffSeconds(timeVal, null, "getLastDevHealthMsgSec").toInteger() }
+
 def deviceHealthNotify(child, Boolean isHealthy) {
 	// log.trace "deviceHealthNotify(${child?.device?.displayName}, $isHealthy)"
 	def nPrefs = atomicState?.notificationPrefs?.dev?.devHealth
+	if(isHealthy == true || nPrefs?.healthMsg != true) {
+		return
+	}
 	def devLbl = child?.device?.displayName
-	def sameAsLastDev = (atomicState?.lastDevHealthMsgData?.device == devLbl)
-	if(isHealthy == true || nPrefs?.healthMsg != true || (getLastDevHealthMsgSec() <= nPrefs?.healthMsgWait?.toInteger() && sameAsLastDev) ) { return }
-	sendMsg("$devLbl Health Warning", "\nDevice is currently OFFLINE. Please check your logs for possible issues.")
-	atomicState?.lastDevHealthMsgData = ["device":"$devLbl", "dt":getDtNow()]
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+	def t0 =  atomicState?.lastDevHealthMsgMap ?: [:]
+	def lastTime = t0 && devId && t0?."${devId}" ? t0["${devId}"].dt : null
+	if(!devId || getLastDevHealthMsgSec(lastTime) <= nPrefs?.healthMsgWait?.toInteger() ) {
+		return 
+	}
+	sendMsg("$devLbl Health Warning", "\nDevice is OFFLINE. Please check your logs for possible issues.")
+	t0["${devId}"] = ["device":"$devLbl", "dt":getDtNow()]
+	atomicState.lastDevHealthMsgMap = t0
 }
 
 def getNestZipCode() {
@@ -5593,7 +5678,7 @@ def apiIssueNotify(msgOn, rateOn, wait) {
 		def msg = ""
 		msg += !rateLimit && apiIssue ? "\nThe Nest API appears to be having issues. This will effect the updating of device and location data.\nThe issues started at (${getTimestampVal("apiIssueDt")})" : ""
 		msg += rateLimit ? "${apiIssue ? "\n\n" : "\n"}Your API connection is currently being Rate-limited for excessive commands." : ""
-		if(sendMsg("${app?.name} API Issue Warning", msg, true)) {
+		if(sendMsg("${app?.label} API Issue Warning", msg, true)) {
 			updTimestampMap("lastApiIssueMsgDt", getDtNow())
 		}
 	}
@@ -5603,10 +5688,10 @@ def failedCmdNotify(failData, tstr) {
 	if(!(getLastFailedCmdMsgSec() > 300)) { return }
 	def nPrefs = atomicState?.notificationPrefs
 	def cmdFail = (nPrefs?.app?.api?.cmdFailMsg && failData?.msg != null) ? true : false
+	def cmdstr = tstr ?: atomicState?.lastCmdSent
+	def msg = "\nThe (${cmdstr}) CMD sent to the API has failed.\nStatus Code: ${failData?.code}\nErrorMsg: ${failData?.msg}\nDT: ${failData?.dt}"
 	if(cmdFail) {
-		def cmdstr = tstr ?: atomicState?.lastCmdSent
-		def msg = "\nThe (${cmdstr}) CMD sent to the API has failed.\nStatus Code: ${failData?.code}\nErrorMsg: ${failData?.msg}\nDT: ${failData?.dt}"
-		if(sendMsg("${app?.name} API CMD Failed", msg)) {
+		if(sendMsg("${app?.label} API CMD Failed", msg)) {
 			updTimestampMap("lastFailedCmdMsgDt", getDtNow())
 		}
 	}
@@ -5619,7 +5704,7 @@ def loggingRemindNotify(msgOn) {
 	def dbgAlert = (getDebugLogsOnSec() > 86400)
 	if(dbgAlert) {
 		def msg = "Your debug logging has remained enabled for more than 24 hours please disable them to reduce resource usage on ST platform."
-		if(sendMsg(("${app?.name} Debug Logging Reminder"), msg, true)) {
+		if(sendMsg(("${app?.label} Debug Logging Reminder"), msg, true)) {
 			updTimestampMap("lastLogRemindMsgDt", getDtNow())
 		}
 	}
@@ -5641,9 +5726,9 @@ def missPollNotify(on) {
 			restStreamHandler(true)   // close the stream if we have not heard from it in a while
 			atomicState?.restStreamingOn = false
 		}
-		def msgWait = atomicState?.notificationPrefs?.msgDefaultWait ?: 900
+		def msgWait = atomicState?.notificationPrefs?.msgDefaultWait ?: 3600
 		if(on && getLastMissPollMsgSec() > msgWait.toInteger()) {
-			if(sendMsg("${app.name} Nest Data update Issue", msg)) {
+			if(sendMsg("${app.label} Nest Data update Issue", msg)) {
 				updTimestampMap("lastMisPollMsgDt", getDtNow())
 			}
 		}
@@ -5706,11 +5791,13 @@ def updateHandler() {
 			sendMsg("Critical", "There are Critical Updates available for ${appName()}! Please visit the IDE and make sure to update the App and Devices Code")
 			atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater?.updateVer?.toInteger()]
 		}
-		if(atomicState?.appData?.updater?.updateMsg != null && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+		def t0 = atomicState?.appData?.updater?.updateMsg
+		LogAction("updateHandler: t0 is ${t0}", "info", true)
+		if(t0 != null && t0 != "" && t0 != atomicState?.lastUpdateMsg) {
 			if(getLastUpdateMsgSec() > 86400) {
-				if(sendMsg("Info", "${atomicState?.updater?.updateMsg}")) {
+				if(sendMsg("Info", "${t0}")) {
 					updTimestampMap("lastUpdateMsgDt", getDtNow())
-					atomicState.lastUpdateMsg = atomicState?.appData?.updater?.updateMsg
+					atomicState.lastUpdateMsg = t0
 				}
 			}
 		}
@@ -5720,6 +5807,7 @@ def updateHandler() {
 def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
 
 def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, brdcast = null) {
+	//LogAction("sendMsg:  msgType: ${msgType}, msg: ${msg}, showEvt: ${showEvt}", "warn", true)
 	LogTrace("sendMsg")
 	def sentstr = "Push"
 	def sent = false
@@ -5728,29 +5816,31 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 		def flatMsg = newMsg.toString().replaceAll("\n", " ")
 		if(!getOk2Notify()) {
 			LogAction("sendMsg: Skipping Due to Quiet Time ($flatMsg)", "info", true)
+			if(showEvt) {
+				sendNotificationEvent(newMsg)
+			}
 		} else {
 			if(!brdcast) {
-				def who = people ? people : settings?.recipients
-				if(location.contactBookEnabled) {
-					if(who) {
-						sentstr = "Pushing to Contacts $who"
-						sendNotificationToContacts(newMsg, who, [event: showEvt])
-						sent = true
-					}
-				} else {
-					LogAction("ContactBook is NOT Enabled on your SmartThings Account", "warn", false)
-					if(push || settings?.usePush) {
-						sentstr = "Push Message"
+				LogAction("ContactBook is NOT Enabled on your SmartThings Account", "warn", false)
+				if(push || settings?.usePush) {
+					sentstr = "Push Message"
+					if(showEvt) {
 						sendPush(newMsg)	// sends push and notification feed
-						sent = true
+					} else {
+						sendPushMessage(newMsg)	// sends push
 					}
-					def thephone = sms ? sms.toString() : settings?.phone ? settings?.phone?.toString() : ""
-					if(thephone) {
-						sentstr = "Text Message to Phone $thephone"
-						def t0 = newMsg.take(140)
+					sent = true
+				}
+				def thephone = sms ? sms.toString() : settings?.phone ? settings?.phone?.toString() : ""
+				if(thephone) {
+					sentstr = "Text Message to Phone $thephone"
+					def t0 = newMsg.take(140)
+					if(showEvt) {
 						sendSms(thephone as String, t0 as String)	// send SMS and notification feed
-						sent = true
+					} else {
+						sendSmsMessage(thephone as String, t0 as String)	// send SMS
 					}
+					sent = true
 				}
 			} else {
 				sentstr = "Broadcast"
@@ -5779,10 +5869,11 @@ def getLastUpdateMsgSec() { return !getTimestampVal("lastUpdateMsgDt") ? 100000 
 
 def getStZipCode() { return location?.zipCode?.toString() }
 
-def updateWebStuff(now = false) {
-	LogTrace("updateWebStuff")
+def updateWebStuff(now=false) {
+	//LogTrace("updateWebStuff $now")
 	def nnow = now
 	if(!atomicState?.appData) { nnow = true }
+	LogTrace("updateWebStuff $now $nnow")
 	if(nnow || (getLastWebUpdSec() > (3600*4))) {
 		if(nnow) {
 			getWebFileData()
@@ -5803,7 +5894,7 @@ def updateWebStuff(now = false) {
 }
 
 def getWeatherConditions(force = false) {
-	LogTrace("getWeatherConditions")
+	LogTrace("getWeatherConditions $force")
 	if(atomicState?.weatherDevice) {
 		def storageApp = getStorageApp()
 		try {
@@ -5897,13 +5988,15 @@ def getWeatherConditions(force = false) {
 
 def getWeatherData(dataName) {
 	def storageApp = getStorageApp()
-	if(storageApp) {
+	if(storageApp && !isAppLiteMode()) {
 		def t0 = getStorageVal(dataName)
 		if(t0) {
 			return t0
 		} else { if(getWeatherConditions(true)) { return getStorageVal(dataName) } }
 	} else {
-log.warn "storageApp not found getWeatherData"
+		if(!isAppLiteMode()) {
+			log.warn "storageApp not found getWeatherData"
+		}
 		if(atomicState?."$dataName") {
 			return atomicState?."$dataName"
 		} else { if(getWeatherConditions(true)) { return atomicState?."$dataName" }	}
@@ -5932,7 +6025,7 @@ def getWeatherDeviceInst() {
 }
 
 def getWebFileData(now = true) {
-	//LogTrace("getWebFileData")
+	LogTrace("getWebFileData $now")
 	def params = [ uri: "https://raw.githubusercontent.com/${gitPath()}/Data/appData.json", contentType: 'application/json' ]
 	def result = false
 	try {
@@ -6082,9 +6175,10 @@ def clientBlacklisted() {
 }
 
 def broadcastCheck() {
+	LogTrace("broadcastCheck")
 	def bCastData = atomicState?.appData?.broadcast
 	if(atomicState?.isInstalled && bCastData) {
-		if(bCastData?.msgId != null && atomicState?.lastBroadcastId != bCastData?.msgId) {
+		if(bCastData?.msgId != "" && bCastData?.message != "" && atomicState?.lastBroadcastId != bCastData?.msgId) {
 			if(sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), true, null, null, null, true)) {
 				atomicState?.lastBroadcastId = bCastData?.msgId
 			}
@@ -6109,6 +6203,8 @@ def helpHandler() {
 }
 
 def getHtmlInfo() {
+	return "not used"
+/*
 	if(atomicState?.appData?.html?.cssUrl && atomicState?.appData?.html?.cssVer && atomicState?.appData?.html?.chartJsUrl && atomicState?.appData?.html?.chartJsVer ) {
 		return ["cssUrl":atomicState?.appData?.html?.cssUrl, "cssVer":atomicState?.appData?.html?.cssVer, "chartJsUrl":atomicState?.appData?.html?.chartJsUrl, "chartJsVer":atomicState?.appData?.html?.chartJsVer]
 	} else {
@@ -6116,6 +6212,7 @@ def getHtmlInfo() {
 			return ["cssUrl":atomicState?.appData?.html?.cssUrl, "cssVer":atomicState?.appData?.html?.cssVer, "chartJsUrl":atomicState?.appData?.html?.chartJsUrl, "chartJsVer":atomicState?.appData?.html?.chartJsVer]
 		}
 	}
+*/
 }
 
 def allowDbException() {
@@ -6228,7 +6325,7 @@ def isStreamUpdateAvail() {
 }
 
 def reqSchedInfoRprt(child, report=true) {
-	LogTrace("reqSchedInfoRprt: (${child.device.label})")
+	LogTrace("reqSchedInfoRprt: (${child.device.label}, $report)")
 	def result = null
 
 	def tstat = getChildDevice(child.device.deviceNetworkId)
@@ -6259,7 +6356,9 @@ def reqSchedInfoRprt(child, report=true) {
 			if(!report) {
 				def useMot = (schedMotionActive && (schedData?.mctemp || schedData?.mhtemp)) ? true : false
 				tempSrcStr = useMot ? "Schedule Motion Trigger" : tempSrcStr
+
 				return ["scdNum":actSchedNum, "schedName":schedData?.lbl, "reqSenHeatSetPoint":reqSenHeatSetPoint, "reqSenCoolSetPoint":reqSenCoolSetPoint, "curZoneTemp":curZoneTemp, "tempSrc":tempSrc, "tempSrcDesc":tempSrcStr]
+
 			} else {
 				def tempScaleStr = " degrees"
 				def canHeat = tstat?.currentCanHeat?.toString() == "true" ? true : false
@@ -6308,10 +6407,11 @@ def reqSchedInfoRprt(child, report=true) {
 				}
 			}
 		} else {
-			//LogAction ("reqSchedInfoRprt: No Automation Schedules were found for ${tstat} device", "warn", false)
+			LogTrace("reqSchedInfoRprt: No Automation Schedules were found for ${tstat} device")
 			if(report) {
 				result = "No Thermostat Automation Schedules were found for ${tstat} device"
 			}
+			result = [:]
 		}
 	} else {
 		LogAction("reqSchedInfoRprt: Thermostat device not found", "error", true)
@@ -6861,10 +6961,7 @@ def addRemoveDevices(uninst = null) {
 		}
 
 		if(!atomicState?.weatherDevice) {
-			remStorageVal("curForecast")
-			remStorageVal("curAstronomy")
-			remStorageVal("curWeather")
-			remStorageVal("curAlerts")
+			runIn(5, "cleanStorage", [overwrite: true]) // calling the child truncates logs
 			atomicState?.curWeather = null
 			atomicState?.curForecast = null
 			atomicState?.curAstronomy = null
@@ -6881,7 +6978,7 @@ def addRemoveDevices(uninst = null) {
 			noDeleteErr = false
 			updTimestampMap("lastAnalyticUpdDt", null)
 			LogAction("Removing ${delete.size()} devices: ${delete}", "debug", true)
-			delete.each { deleteChildDevice(it.deviceNetworkId) }
+			delete.each { deleteChildDevice(it.deviceNetworkId, true) }
 			noDeleteErr = true
 		}
 		retVal = ((unist && noDeleteErr) || (!uninst && (noCreates && noDeletes))) ? true : false // it worked = no delete errors on uninstall; or no creates or deletes done
@@ -7198,6 +7295,7 @@ def revokeCleanState() {
 	updTimestampMap("lastMetaDataUpd", null)
 	atomicState?.pollingOn = false
 	atomicState?.pollBlocked = false
+	atomicState?.workQrunInActive = false
 	atomicState?.pollBlockedReason = "No Auth Token"
 }
 
@@ -7412,7 +7510,7 @@ def fixState() {
 	def before = getStateSizePerc()
 	if(!parent) {
 		if(!atomicState?.resetAllData && resetAllData) {
-			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "authTokenExpires", "timestampDtMap", "authTokenNum", "enRemDiagLogging", "installationId", "installData", "remDiagLogDataStore", "remDiagDataSentDt", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete", "tsMigration" ]) }
+			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "authTokenExpires", "timestampDtMap", "authTokenNum", "enRemDiagLogging", "installationId", "installData", "remDiagLogDataStore", "remDiagDataSentDt", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete", "tsMigration", "savedNestSettings" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -7432,7 +7530,7 @@ def fixState() {
 	if(result) {
 		atomicState.resetAllData = true
 		LogAction("fixState: State Data: before: $before  after: ${getStateSizePerc()}", "info", true)
-		runIn(20, "finishFixState", [overwrite: true])
+		runIn(22, "finishFixState", [overwrite: true])
 	}
 	return result
 }
@@ -7466,7 +7564,8 @@ void finishFixState() {
 				atomicState?.setupVersion = atomicState?.appData?.updater?.setupVersion?.toInteger() ?: 0
 			} else { atomicState.isInstalled = false }
 
-			initManagerApp()
+			runIn(21, "initManagerApp", [overwrite: true])	// need to give time for watchdog updates before we try to delete devices.
+			//initManagerApp()
 		}
 	} else {
 		LogAction("finishFixState called as CHILD", "error", true)
@@ -7483,6 +7582,12 @@ def fixDevAS() {
 
 void settingUpdate(name, value, type=null) {
 	LogAction("settingUpdate($name, $value, $type)...", "trace", false)
+	if(name) {
+		if(value == "" || value == null || value == []) {
+			settingRemove(name)
+			return
+		}
+	}
 	if(name && type) {
 		app?.updateSetting("$name", [type: "$type", value: value])
 	}
@@ -7536,10 +7641,10 @@ def stateCleanup() {
 		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQlist", "cmdQ", "recentSendCmd", "cmdIsProc", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
 		"swVersion", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "devCodeIdData", "appCodeIdData",
 		"automationsActive", "temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug", "updNotifyWaitVal",
-		"appApiIssuesWaitVal", "misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "autoSaVer", "lastAnalyticUpdDt", "lastHeardFromRestDt",
+		"appApiIssuesWaitVal", "misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "autoSaVer", "lastHeardFromRestDt",
 		"remDiagApp", "remDiagClientId", "restorationInProgress", "diagManagAppStateFilters", "diagChildAppStateFilters", "lastFinishedPoll","tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "streamDevVer", 
 		"curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "lastForecastUpdDt", "lastWeatherUpdDt",
-		"lastMsg", "lastMsgDt", "qFirebaseRequested", "qmetaRequested", "debugAppendAppName", "ReallyChanged", "tsMigrationDone"
+		"lastMsg", "lastMsgDt", "qFirebaseRequested", "qmetaRequested", "debugAppendAppName", "ReallyChanged", "tsMigrationDone", "pushTested", "lastDevHealthMsgData"
  	]
 
 	["oldTstatData", "oldCamData", "oldProtData", "oldPresData", "oldWeatherData", "lastCmdSentDt"]?.each { oi->
@@ -7547,10 +7652,9 @@ def stateCleanup() {
 		data = data+oiRem
 	}
 	data?.each { item ->
-		if(state?.containsKey(item)) { state.remove(item?.toString()) }
+		//if(state?.containsKey(item)) { state.remove(item?.toString()) }
+		state.remove(item?.toString())
 	}
-
-	atomicState?.swVer = [ "tDevVer": null, "pDevVer": null, "camDevVer": null, "presDevVer": null, "weatDevVer": null, "vtDevVer": null, "streamDevVer": null]
 
 	atomicState.authTokenExpires = atomicState?.tokenExpires ?: atomicState?.authTokenExpires
 	state.remove("tokenExpires")
@@ -7558,24 +7662,38 @@ def stateCleanup() {
 	state.remove("tokenCreatedDt")
 
 	if(!atomicState?.cmdQlist) {
-		data = [ "cmdQ2", "cmdQ3", "cmdQ4", "cmdQ5", "cmdQ6", "cmdQ7", "cmdQ8", "cmdQ9", "cmdQ10", "cmdQ11", "cmdQ12", "cmdQ13", "cmdQ14", "cmdQ15", "lastCmdSentDt2", "lastCmdSentDt3",
+		data = [ "cmdQ0", "cmdQ1", "cmdQ2", "cmdQ3", "cmdQ4", "cmdQ5", "cmdQ6", "cmdQ7", "cmdQ8", "cmdQ9", "cmdQ10", "cmdQ11", "cmdQ12", "cmdQ13", "cmdQ14", "cmdQ15", "lastCmdSentDt0", "lastCmdSentDt1", "lastCmdSentDt2", "lastCmdSentDt3",
 			"lastCmdSentDt4", "lastCmdSentDt5", "lastCmdSentDt6", "lastCmdSentDt7", "lastCmdSentDt8", "lastCmdSentDt9", "lastCmdSentDt10", "lastCmdSentDt11", "lastCmdSentDt12", "lastCmdSentDt13",
-			"lastCmdSentDt14", "lastCmdSentDt15", "recentSendCmd2", "recentSendCmd3", "recentSendCmd4", "recentSendCmd5", "recentSendCmd6", "recentSendCmd7", "recentSendCmd8", "recentSendCmd9",
+			"lastCmdSentDt14", "lastCmdSentDt15", "recentSendCmd0", "recentSendCmd1", "recentSendCmd2", "recentSendCmd3", "recentSendCmd4", "recentSendCmd5", "recentSendCmd6", "recentSendCmd7", "recentSendCmd8", "recentSendCmd9",
 			"recentSendCmd10", "recentSendCmd11", "recentSendCmd12", "recentSendCmd13", "recentSendCmd14", "recentSendCmd15"
 		]
 		data.each { item ->
-			if(state?.containsKey(item)) { state.remove(item?.toString()) }
+			//if(state?.containsKey(item)) { state.remove(item?.toString()) }
+			state.remove(item?.toString()) 
 		}
 	}
+	atomicState?.workQrunInActive = false
 	atomicState.forceChildUpd = true
 	def remSettings = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevPageRfsh", "childDevDataRfshVal", "childDevDataStateFilter", "childDevPageShowAttr", 
-		"childDevPageShowCapab", "childDevPageShowCmds", "childDevPageShowState", "managAppPageRfsh", "managAppPageShowMeta", "managAppPageShowSet", "managAppPageShowState", "updChildOnNewOnly"
+		"childDevPageShowCapab", "childDevPageShowCmds", "childDevPageShowState", "managAppPageRfsh", "managAppPageShowMeta", "managAppPageShowSet", "managAppPageShowState", "updChildOnNewOnly", 
+		"locDesiredButton", "locDesiredTempScale", "recipients"
 	]
-	remSettings.each { item ->
-		if(settings?.containsKey(item)) {
-			settingRemove(item as String)	// removes settings
+	List camMotionSets = settings?.keySet()?.findAll { it?.toString()?.startsWith("camera_") && it?.toString()?.endsWith("_zones") }?.collect { it as String }
+	if(camMotionSets?.size()) {
+		if(settings?.camEnMotionZoneFltr) {
+			atomicState?.cameras?.keySet()?.each { cam-> if(camMotionSets?.find {"camera_${cam}_zones"}) { camMotionSets = camMotionSets - "camera_${cam}_zones" } }
 		}
+		remSettings = remSettings+camMotionSets
 	}
+	remSettings.each { item ->
+		//if(settings?.containsKey(item)) {
+			settingRemove(item.toString())	// removes settings
+		//}
+	}
+	runIn(25, "cleanStorage", [overwrite: true]) // calling the child truncates logs
+}
+
+def cleanStorage() {
 	remStorageVal("curForecast")
 	remStorageVal("curAstronomy")
 	remStorageVal("curWeather")
@@ -7939,10 +8057,10 @@ def alarmTestPage() {
 
 void resetAlarmTest() {
 	LogAction("Resetting Protect Alarm Test back to the default.", "info", true)
-	settingUpdate("alarmCoTestDevice", "")
-	settingUpdate("alarmCoTestDeviceSimSmoke", "false")
-	settingUpdate("alarmCoTestDeviceSimCo", "false")
-	settingUpdate("alarmCoTestDeviceSimLowBatt", "false")
+	settingRemove("alarmCoTestDevice")
+	settingRemove("alarmCoTestDeviceSimSmoke")
+	settingRemove("alarmCoTestDeviceSimCo")
+	settingRemove("alarmCoTestDeviceSimLowBatt")
 	atomicState?.isAlarmCoTestActive = false
 	atomicState?.curProtTestPageData = null
 }
@@ -8095,22 +8213,10 @@ def sendFeedbackPage() {
 	}
 }
 
-/*
-def getAppIds() {
-	updAppCodeId("main", app?.smartAppId.toString())
-	def appIds = atomicState?.appCodeIdData
-	return appIds
-}
-
-def getDevIds() {
-	return atomicState?.devCodeIdData ?: [:]
-}
-*/
-
 def procDiagCmd() {
 	def status = [:]
 	def rData = request?.JSON
-	log.trace "procDiagCmd($rData)"
+	// log.trace "procDiagCmd($rData)"
 	if(rData) {
 		status["code"] = 200
 		if(rData?.cmd) {
@@ -8130,7 +8236,6 @@ def procDiagCmd() {
 			}
 		}
 	}
-
 	return [contentType: 'application/json', gotData: (rData != null), status: status?.code]
 }
 
@@ -8321,10 +8426,10 @@ def getWebHeaderHtml(title, clipboard=true, vex=false, swiper=false, charts=fals
 	"""
 	html += clipboard ? """<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js"></script>""" : ""
 	html += vex ? """<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js"></script>""" : ""
-	html += swiper ? """<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.0.6/css/swiper.min.css" />""" : ""
+	html += swiper ? """<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.3.3/css/swiper.min.css" />""" : ""
 	html += vex ? """<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css" />""" : ""
 	html += vex ? """<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css" />""" : ""
-	html += swiper ? """<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.0.6/js/swiper.min.js"></script>""" : ""
+	html += swiper ? """<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.3.3/js/swiper.min.js"></script>""" : ""
 	html += charts ? """<script src="https://www.gstatic.com/charts/loader.js"></script>""" : ""
 	html += vex ? """<script>vex.defaultOptions.className = 'vex-theme-default'</script>""" : ""
 	
@@ -9870,41 +9975,6 @@ def isPluralString(obj) {
 /************************************************************************************************
 |					GLOBAL Code | Logging AND Diagnostic							|
 *************************************************************************************************/
-
-def sendEventPushNotifications(message, type, pName) {
-	//LogTrace("sendEventPushNotifications($message, $type, $pName)")
-	if(settings["${pName}_Alert_1_Send_Push"] || settings["${pName}_Alert_2_Send_Push"]) {
-//TODO this portion is never reached
-		if(settings["${pName}_Alert_1_CustomPushMessage"]) {
-			sendNofificationMsg(settings["${pName}_Alert_1_CustomPushMessage"].toString(), type, settings?."${pName}NotifRecips", settings?."${pName}NotifPhones", settings?."${pName}UsePush")
-		} else {
-			sendNofificationMsg(message, type, settings?."${pName}NotifRecips", settings?."${pName}NotifPhones", settings?."${pName}UsePush")
-		}
-	} else {
-		sendNofificationMsg(message, type, settings?."${pName}NotifRecips", settings?."${pName}NotifPhones", settings?."${pName}UsePush")
-	}
-}
-
-def sendEventVoiceNotifications(vMsg, pName, msgId, rmAAMsg=false, rmMsgId) {
-	def allowNotif = settings?."${pName}NotificationsOn" ? true : false
-	def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
-	def ok2Notify = getOk2Notify()
-
-	LogAction("sendEventVoiceNotifications($vMsg, $pName)   ok2Notify: $ok2Notify", "trace", false)
-	if(allowNotif && allowSpeech) {
-		if(ok2Notify && (settings["${pName}SpeechDevices"] || settings["${pName}SpeechMediaPlayer"])) {
-			sendTTS(vMsg, pName)
-		}
-		if(settings["${pName}SendToAskAlexaQueue"]) {		// we queue to Alexa regardless of quiet times
-			if(rmMsgId != null && rmAAMsg == true) {
-				removeAskAlexaQueueMsg(rmMsgId)
-			}
-			if (vMsg && msgId != null) {
-				addEventToAskAlexaQueue(vMsg, msgId)
-			}
-		}
-	}
-}
 
 def addEventToAskAlexaQueue(vMsg, msgId, queue=null) {
 	if(getAskAlexaMQEn()) {

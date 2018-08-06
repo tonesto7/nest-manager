@@ -1712,14 +1712,12 @@ def getWeatherHTML() {
 						</div>
 					</div>
 					<script>
-						function reloadWeatherPage() {
-							// var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
-							// window.location = url;
+						function reloadPage() {
 							window.location.reload();
 						}
 					</script>
 					<div class="pageFooterBtn">
-					    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadWeatherPage()">
+					    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadPage()">
 						  <span>&#10227;</span> Refresh
 					    </button>
 					</div>
@@ -1918,7 +1916,6 @@ def historyGraphHtml(devNum="") {
 				<p>This may take at a couple hours</p>
 				</div>
 			"""
-/* """ */
 		}
 	}
 }

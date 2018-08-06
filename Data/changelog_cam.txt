@@ -1,3 +1,11 @@
+<p style="font-size: 15px;"><strong>V5.3.8 (July 30th, 2018):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>ADDED:</strong> Now Supports filtering of Motion Zones when using Nest Aware and NST Streaming Service</li>
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks</li>
+</ul>
+<br>
+
 <p style="font-size: 15px;"><strong>V5.3.7 (July 4th, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">

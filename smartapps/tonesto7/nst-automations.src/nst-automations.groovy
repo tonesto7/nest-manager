@@ -26,8 +26,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.5" }
-def appVerDate() { "06-27-2018" }
+def appVersion() { "5.3.6" }
+def appVerDate() { "07-30-2018" }
 
 preferences {
 	//startPage
@@ -125,7 +125,7 @@ def installed() {
 def updated() {
 	LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
 	initialize()
-	sendNotificationEvent("${appName()} has updated settings")
+	//sendNotificationEvent("${appName()} has updated settings")
 	atomicState?.lastUpdatedDt = getDtNow()
 }
 
@@ -347,7 +347,9 @@ def mainAutoPage(params) {
 								}
 							}
 						}
-						nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
+						def t1 = getNotifConfigDesc("nMode")
+						nDesc += t1 ? "\n\n${t1}" : ""
+						nDesc += t1 || (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
 						def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
 						href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to configure", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
 					}
@@ -360,9 +362,10 @@ def mainAutoPage(params) {
 					if(autoType == "watchDog") {
 						//paragraph title:"Watch your Nest Location for Events:", ""
 						def watDesc = ""
-						def t1 = getVoiceNotifConfigDesc("watchDog")
-						watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && t1) ?
-								"\n\nVoice Notifications:${t1}" : ""
+						//def t1 = getVoiceNotifConfigDesc("watchDog")
+						//watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && t1) ?  "\n\nVoice Notifications:${t1}" : ""
+						def t1 = getNotifConfigDesc("watchDog")
+						watDesc += t1 ? "${t1}\n\nTap to modify" : ""
 						def watDogDesc = isWatchdogConfigured() ? "${watDesc}" : null
 						href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
 					}
@@ -421,6 +424,8 @@ def getSchMotConfigDesc(retAsList=false) {
 		list?.each { ls ->
 			sDesc += "\n • ${ls}"
 		}
+		def t1 = getNotifConfigDesc("schMot")
+		sDesc += t1 ? "\n\n${t1}" : ""
 		sDesc += settings?.schMotTstat ? "\n\nTap to modify" : ""
 		return isSchMotConfigured() ? "${sDesc}" : null
 	}
@@ -501,10 +506,19 @@ def backupConfigToFirebase() {
 
 void settingUpdate(name, value, type=null) {
 	LogTrace("settingUpdate($name, $value, $type)...")
-	try {
-		if(name && type) { app?.updateSetting("$name", [type: "$type", value: value]) }
-		else if (name && type == null) { app?.updateSetting(name.toString(), value) }
-	} catch(e) { log.error "settingUpdate Exception:", ex }
+	if(name) {
+		if(value == "" || value == null || value == []) {
+			settingRemove(name)
+			return
+		}
+	}
+	if(name && type) { app?.updateSetting("$name", [type: "$type", value: value]) }
+	else if (name && type == null) { app?.updateSetting(name.toString(), value) }
+}
+
+void settingRemove(name) {
+	LogAction("settingRemove($name)...", "trace", false)
+	if(name) { app?.deleteSetting("$name") }
 }
 
 def stateUpdate(key, value) {
@@ -818,8 +832,8 @@ def subscribeToEvents() {
 					if(d1) {
 						LogAction("Found: ${d1?.displayName} with (Id: ${dni?.key})", "debug", false)
 
-						subscribe(d1, "nestThermostatMode", automationGenericEvt)
-						subscribe(d1, "presence", automationGenericEvt)
+						//subscribe(d1, "nestThermostatMode", automationGenericEvt) // this is not needed for nMode
+						//subscribe(d1, "presence", automationGenericEvt) // this is not needed, tracking only
 					}
 					return d1
 				}
@@ -955,7 +969,8 @@ def subscribeToEvents() {
 					}
 				}
 			}
-			if(settings?.schMotOperateFan || settings?.schMotRemoteSensor || settings?.schMotHumidityControl) {
+			def hasFan = atomicState?.schMotTstatHasFan ? true : false
+			if(hasFan && (settings?.schMotOperateFan || settings?.schMotRemoteSensor || settings?.schMotHumidityControl)) {
 				subscribe(schMotTstat, "thermostatFanMode", automationGenericEvt)
 			}
 
@@ -1045,8 +1060,14 @@ def subscribeToEvents() {
 			subscribe(schMotTstat, "thermostatOperatingState", automationGenericEvt)
 			subscribe(schMotTstat, "temperature", automationGenericEvt)
 			subscribe(schMotTstat, "presence", automationGenericEvt)
-			subscribe(schMotTstat, "coolingSetpoint", automationGenericEvt)
-			subscribe(schMotTstat, "heatingSetpoint", automationGenericEvt)
+			def canCool = atomicState?.schMotTstatCanCool
+			if(canCool) {
+				subscribe(schMotTstat, "coolingSetpoint", automationGenericEvt)
+			}
+			def canHeat = atomicState?.schMotTstatCanHeat
+			if(canHeat) {
+				subscribe(schMotTstat, "heatingSetpoint", automationGenericEvt)
+			}
 			subscribe(schMotTstat, "safetyTempExceeded", automationSafetyTempEvt)
 			subscribe(location, "sunset", automationGenericEvt)
 			subscribe(location, "sunrise", automationGenericEvt)
@@ -1317,9 +1338,10 @@ def watchDogPage() {
 	def pName = watchDogPrefix()
 	dynamicPage(name: "watchDogPage", title: "Nest Location Watchdog", uninstall: false, install: true) {
 		section("Notifications:") {
-			def pageDesc = getNotifConfigDesc(pName)
+			def t0 = getNotifConfigDesc(pName)
+			def pageDesc = t0 ? "${t0}\n\nTap to modify" : ""
 			href "setNotificationPage", title: "Configured Alerts", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
-					state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
+				state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
 			input "watDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("switch_on_icon.png")
 		}
 		//remove("Remove ${app?.label}!", "Last Chance!!!", "Warning!!! This action is not reversible\n\nThis Automation will be removed completely")
@@ -1378,7 +1400,6 @@ def watchDogCheck() {
 
 def watchDogAlarmActions(dev, dni, actType) {
 	def pName = watchDogPrefix()
-	//def allowNotif = (settings["${pName}NotificationsOn"] && (settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"] || settings["${pName}UsePush"])) ? true : false
 	def allowNotif = settings["${pName}NotificationsOn"] ? true : false
 	def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 	def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -1396,25 +1417,25 @@ def watchDogAlarmActions(dev, dni, actType) {
 			} else {return}
 			break
 	}
-	if(getLastWatDogSafetyAlertDtSec(dni) > getWatDogRepeatMsgDelayVal()) {
+	if(getLastWatDogSafetyAlertDtSec("${dni?.key}") > getWatDogRepeatMsgDelayVal()) {
 		LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "warn", true)
 
 		if(allowNotif) {
-			sendEventPushNotifications(evtNotifMsg, "Warning", pName)
+			sendEventPushNotifications(evtNotifMsg, "Warning", pName) // this uses parent and honors quiet times others do NOT
 			if(allowSpeech) {
 				sendEventVoiceNotifications(voiceNotifString(evtVoiceMsg, pName), pName, "nmWatDogEvt_${app?.id}", true, "nmWatDogEvt_${app?.id}")
 			}
 			if(allowAlarm) {
 				scheduleAlarmOn(pName)
 			}
+			atomicState?."lastWatDogSafetyAlertDt${dni?.key}" = getDtNow()
 		} else {
-			sendNofificationMsg("Warning", evtNotifMsg)
+			//sendNofificationMsg(evtNotifMsg, "Warning")
 		}
-		atomicState?."lastWatDogSafetyAlertDt${dni}" = getDtNow()
 	}
 }
 
-def getLastWatDogSafetyAlertDtSec(dni) { return !atomicState?."lastWatDogSafetyAlertDt{$dni}" ? 10000 : GetTimeDiffSeconds(atomicState?."lastWatDogSafetyAlertDt${dni}", null, "getLastWatDogSafetyAlertDtSec").toInteger() }
+def getLastWatDogSafetyAlertDtSec(dni) { return !atomicState?."lastWatDogSafetyAlertDt${dni}" ? 10000 : GetTimeDiffSeconds(atomicState?."lastWatDogSafetyAlertDt${dni}", null, "getLastWatDogSafetyAlertDtSec").toInteger() }
 def getWatDogRepeatMsgDelayVal() { return !watDogRepeatMsgDelay ? 3600 : watDogRepeatMsgDelay.toInteger() }
 
 def isWatchdogConfigured() {
@@ -4004,12 +4025,13 @@ def nestModePresPage() {
 			section(getDmtSectionDesc(nModePrefix())) {
 				def pageDesc = getDayModeTimeDesc(pName)
 				href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
-						image: getAppImg("cal_filter_icon.png")
+					image: getAppImg("cal_filter_icon.png")
 			}
 			section("Notifications:") {
-				def pageDesc = getNotifConfigDesc(pName)
+				def t0 = getNotifConfigDesc(pName)
+				def pageDesc = t0 ? "${t0}\n\nTap to modify" : ""
 				href "setNotificationPage", title: "Configured Alerts", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":false, "allowAlarm":false, "showSchedule":true],
-						state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
+					state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
 			}
 		}
 		if(atomicState?.showHelp) {
@@ -4030,7 +4052,7 @@ def nModePresenceDesc() {
 			cnt = cnt+1
 			def t0 = strCapitalize(dev?.currentPresence)
 			def presState = t0 ?: "No State"
-			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${presState})"
+			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : " │"} └ " : ""}(${presState})"
 		}
 		return str
 	}
@@ -4060,11 +4082,11 @@ def nModeGenericEvt(evt) {
 }
 
 def adjustCameras(on, sendAutoType=null) {
-	def cams = settings?.nModeCamsSel ?: parent?.getCams()
-	def foundCams
+	def cams = parent?.getCams()
 	if(cams) {
+		def foundCams
 		if(settings?.nModeCamsSel) {
-			foundCams = cams
+			foundCams = settings?.nModeCamsSel
 		} else {
 			foundCams = cams?.collect { parent.getCameraDevice(it) }
 		}
@@ -4083,7 +4105,7 @@ def adjustCameras(on, sendAutoType=null) {
 				}
 				catch (ex) {
 					log.error "adjustCameras() Exception: ${dev?.label} does not support commands on / off", ex
-					sendNofificationMsg("Warning", "Camera commands not found, check IDE logs and installation instructions")
+					sendNofificationMsg("Camera commands not found, check IDE logs and installation instructions", "Warning")
 					parent?.sendExceptionData(ex, "adjustCameras", true, getAutoType())
 				}
 				return dev
@@ -4100,25 +4122,30 @@ def adjustEco(on, senderAutoType=null) {
 			def d1 = parent.getThermostatDevice(dni)
 			if(d1) {
 				def didstr = null
+				def tstatAction = null
 				def curMode = d1?.currentnestThermostatMode?.toString()
-				if(on && (curMode in ["eco"])) {
-					if(senderAutoType) { sendEcoActionDescToDevice(d1, senderAutoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
-				}
+				def prevMode = d1?.currentpreviousthermostatMode?.toString()
+				//LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
+
 				if(on && !(curMode in ["eco", "off"])) {
 					didstr = "ECO"
-					setTstatMode(d1, "eco", senderAutoType)
+					tstatAction = "eco"
 				}
-				def prevMode = d1?.currentpreviousthermostatMode?.toString()
-				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
 				if(!on && curMode in ["eco"]) {
 					if(prevMode && prevMode != curMode) {
 						didstr = "$prevMode"
-						setTstatMode(d1, prevMode, senderAutoType)
+						tstatAction = prevMode
 					}
 				}
 				if(didstr) {
+					setTstatMode(d1, tstatAction, senderAutoType)
 					LogAction("adjustEco($on): | Thermostat: ${d1?.displayName} setting to HVAC mode $didstr was $curMode", "trace", true)
 					storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow(), senderAutoType, d1)
+				} else {
+					if(on && (curMode in ["eco"])) { // override device to know nMODE is active
+						if(senderAutoType) { sendEcoActionDescToDevice(d1, senderAutoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+					}
+					LogAction("adjustEco: | Thermostat: ${d1?.displayName} NOCHANGES CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
 				}
 				return d1
 			} else { LogAction("adjustEco NO D1", "warn", true) }
@@ -5085,7 +5112,7 @@ def schMotModePage() {
 						leakDesc += (settings?.leakWatSensors) ? "\n\nTap to modify" : ""
 						def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
 						href "tstatConfigAutoPage", title: "Leak Sensor Automation", description: leakWatDesc ?: "Tap to configure", params: ["configType":"leakWat"], required: true, state: (leakWatDesc ? "complete" : null),
-								image: getAppImg("configure_icon.png")
+							image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
 					paragraph "Leak Detection is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
@@ -5111,7 +5138,7 @@ def schMotModePage() {
 						conDesc += (settings?.conWatContacts) ? "\n\nTap to modify" : ""
 						def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
 						href "tstatConfigAutoPage", title: "Contact Sensors Config", description: conWatDesc ?: "Tap to configure", params: ["configType":"conWat"], required: true, state: (conWatDesc ? "complete" : null),
-								image: getAppImg("configure_icon.png")
+							image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
 					paragraph "Contact automation is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
@@ -5135,7 +5162,7 @@ def schMotModePage() {
 					humDesc += ((settings?.humCtrlTempSensor || settings?.humCtrlUseWeather) ) ? "\n\nTap to modify" : ""
 					def humCtrlDesc = isHumCtrlConfigured() ? "${humDesc}" : null
 					href "tstatConfigAutoPage", title: "Humidifier Config", description: humCtrlDesc ?: "Tap to configure", params: ["configType":"humCtrl"], required: true, state: (humCtrlDesc ? "complete" : null),
-							image: getAppImg("configure_icon.png")
+						image: getAppImg("configure_icon.png")
 				}
 			}
 			section("External Temp:") {
@@ -5159,7 +5186,7 @@ def schMotModePage() {
 						extDesc += ((settings?.extTmpTempSensor || settings?.extTmpUseWeather) ) ? "\n\nTap to modify" : ""
 						def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
 						href "tstatConfigAutoPage", title: "External Temps Config", description: extTmpDesc ?: "Tap to configure", params: ["configType":"extTmp"], required: true, state: (extTmpDesc ? "complete" : null),
-								image: getAppImg("configure_icon.png")
+							image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
 					paragraph "External Temp automation is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
@@ -5343,7 +5370,7 @@ def tstatConfigAutoPage(params) {
 				section(getDmtSectionDesc(fanCtrlPrefix())) {
 					def pageDesc = getDayModeTimeDesc(pName)
 					href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
-							image: getAppImg("cal_filter_icon.png")
+						image: getAppImg("cal_filter_icon.png")
 				}
 
 				if(settings?."${pName}FanSwitches") {
@@ -5478,9 +5505,10 @@ def tstatConfigAutoPage(params) {
 								image: getAppImg("delay_time_icon.png")
 					}
 					section("Notifications:") {
-						def pageDesc = getNotifConfigDesc(pName)
+						def t0 = getNotifConfigDesc(pName)
+						def pageDesc = t0 ? "${t0}\n\nTap to modify" : ""
 						href "setNotificationPage", title: "Configured Alerts", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
-								state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
+							state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
 					}
 				}
 			}
@@ -5515,12 +5543,13 @@ def tstatConfigAutoPage(params) {
 					section(getDmtSectionDesc(conWatPrefix())) {
 						def pageDesc = getDayModeTimeDesc(pName)
 						href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
-								image: getAppImg("cal_filter_icon.png")
+							image: getAppImg("cal_filter_icon.png")
 					}
 					section("Notifications:") {
-						def pageDesc = getNotifConfigDesc(pName)
+						def t0 = getNotifConfigDesc(pName)
+						def pageDesc = t0 ? "${t0}\n\nTap to modify" : ""
 						href "setNotificationPage", title: "Configured Alerts", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
-								state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
+							state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
 					}
 				}
 			}
@@ -5602,7 +5631,7 @@ this does not work...
 					section(getDmtSectionDesc(humCtrlPrefix())) {
 						def pageDesc = getDayModeTimeDesc(pName)
 						href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
-								image: getAppImg("cal_filter_icon.png")
+							image: getAppImg("cal_filter_icon.png")
 					}
 				}
 			}
@@ -5658,12 +5687,13 @@ this does not work...
 					section(getDmtSectionDesc(extTmpPrefix())) {
 						def pageDesc = getDayModeTimeDesc(pName)
 						href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
-								image: getAppImg("cal_filter_icon.png")
+							image: getAppImg("cal_filter_icon.png")
 					}
 					section("Notifications:") {
-						def pageDesc = getNotifConfigDesc(pName)
+						def t0 = getNotifConfigDesc(pName)
+						def pageDesc = t0 ? "${t0}\n\nTap to modify" : ""
 						href "setNotificationPage", title: "Configured Alerts", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
-								state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
+							state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
 					}
 					def schTitle
 					if(!atomicState?.activeSchedData?.size()) {
@@ -6334,19 +6364,14 @@ def setNotificationPage(params) {
 	}
 	dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
 		section("Notification Preferences:") {
-			input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: (!settings["${pName}NotificationsOn"] ? "Enable Text, Voice, Ask Alexa, or Alarm Notifications" : ""), required: false, defaultValue: false, submitOnChange: true,
-						image: getAppImg("notification_icon.png")
+			input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: (!settings["${pName}NotificationsOn"] ? "Enable Text, Voice, Ask Alexa, or Alarm Notifications" : ""), required: false, 
+					defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
 		}
 		if(settings["${pName}NotificationsOn"]) {
 			def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below" : "(Manager App Recipients are used by default)"
-			section("${notifDesc}") {
-				if(!location.contactBookEnabled) {
-					input "${pName}UsePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
-				} else {
-					input("${pName}NotifRecips", "contact", title: "Select Recipients\n(Optional)", required: false, multiple: true, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-						input ("${pName}NotifPhones", "phone", title: "Phone Number to Send SMS to\n(Optional)", submitOnChange: true, required: false)
-					}
-				}
+			section("Enable Push Messages Below") {
+				input "${pName}UsePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
+				input "${pName}NotifPhones", "phone", title: "Send SMS to\n(Optional)", submitOnChange: true, required: false, image: getAppImg("notification_icon2.png")
 			}
 		}
 		if(allowSpeech && settings?."${pName}NotificationsOn") {
@@ -6483,31 +6508,22 @@ def voiceNotifString(phrase, pName) {
 	return phrase
 }
 
-def getNotificationOptionsConf(pName) {
-	LogTrace("getNotificationOptionsConf pName: $pName")
-	def res = (settings?."${pName}NotificationsOn" &&
-			(getRecipientDesc(pName) ||
-			(settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ||
-			(settings?."${pName}AllowAlarmNofif" && settings?."${pName}AlarmDevices")
-		) ) ? true : false
-	return res
-}
-
 def getNotifConfigDesc(pName) {
 	LogTrace("getNotifConfigDesc pName: $pName")
 	def str = ""
 	if(settings?."${pName}NotificationsOn") {
-		str += ( getRecipientDesc(pName) || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer"))) ?
-			"Notification Status:" : ""
-		str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
+		str += "Notification Status:"
+		if(!getRecipientDesc(pName)) {
+			str += "\n • Contacts: Using Manager Settings"
+		}
 		str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
 		str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
 		def t0 = getVoiceNotifConfigDesc(pName)
-		str += t0 ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${t0}") : ""
+		str += t0 ? "\n\nVoice Status:${t0}" : ""
 		def t1 = getAlarmNotifConfigDesc(pName)
-		str += t1 ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${t1}") : ""
+		str += t1 ?  "\n\nAlarm Status:${t1}" : ""
 		def t2 = getAlertNotifConfigDesc(pName)
-		str += t2 ? "\n${t2}" : ""
+		str += t2 ? "\n\n${t2}" : ""
 	}
 	return (str != "") ? "${str}" : null
 }
@@ -6596,7 +6612,7 @@ def getRecipientsNames(val) {
 }
 
 def getRecipientDesc(pName) {
-	return ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifPhones" || settings?."${pName}NotifUsePush")) ? getRecipientsNames(settings?."${pName}NotifRecips") : null
+	return (settings?."${pName}NotifPhones" || settings?."${pName}NotifUsePush") ? "" : null
 }
 
 def setDayModeTimePage(params) {
@@ -6734,18 +6750,12 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 /************************************************************************************************
 |							GLOBAL Code | Logging AND Diagnostic							    |
 *************************************************************************************************/
-
+// parent has  res["msgDefaultWait"] = (settings?.notifyMsgWaitVal == null ? 3600 : settings?.notifyMsgWaitVal.toInteger())
 def sendEventPushNotifications(message, type, pName) {
 	LogTrace("sendEventPushNotifications($message, $type, $pName)")
-	if(settings["${pName}_Alert_1_Send_Push"] || settings["${pName}_Alert_2_Send_Push"]) {
-//TODO this portion is never reached
-		if(settings["${pName}_Alert_1_CustomPushMessage"]) {
-			sendNofificationMsg(settings["${pName}_Alert_1_CustomPushMessage"].toString(), type, settings?."${pName}NotifRecips", settings?."${pName}NotifPhones", settings?."${pName}UsePush")
-		} else {
-			sendNofificationMsg(message, type, settings?."${pName}NotifRecips", settings?."${pName}NotifPhones", settings?."${pName}UsePush")
-		}
-	} else {
-		sendNofificationMsg(message, type, settings?."${pName}NotifRecips", settings?."${pName}NotifPhones", settings?."${pName}UsePush")
+	def allowNotif = settings?."${pName}NotificationsOn" ? true : false
+	if(allowNotif) {
+		sendNofificationMsg(message, type, null, settings?."${pName}NotifPhones", settings?."${pName}UsePush")
 	}
 }
 
@@ -7219,7 +7229,7 @@ def setTstatMode(tstat, mode, autoType=null) {
 			}
 			catch (ex) {
 				log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}; check IDE and install instructions", ex
-				parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+				//parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
 			}
 		}
 
@@ -7237,7 +7247,7 @@ def setMultipleTstatMode(tstats, mode, autoType=null) {
 		tstats?.each { ts ->
 			def retval
 //			try {
-				retval = setTstatMode(ts, mode, autoType)   // THERE IS A PROBLEM HERE IF MIRROR THERMOSTATS ARE NOT NEST
+				retval = setTstatMode(ts, mode, autoType)
 //			} catch (ex) {
 //				log.error "setMultipleTstatMode() Exception:", ex
 //				parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())

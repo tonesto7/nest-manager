@@ -24,10 +24,10 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.3.8"
+                "ver": "5.3.9"
             },
             "autoapp": {
-                "ver": "5.3.5"
+                "ver": "5.3.6"
             },
             "storapp": {
                 "ver": "5.4.0"
@@ -39,7 +39,7 @@
                 "ver": "5.3.6"
             },
             "camera": {
-                "ver": "5.3.7"
+                "ver": "5.3.8"
             },
             "presence": {
                 "ver": "5.3.6"
