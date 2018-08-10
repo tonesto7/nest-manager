@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.3.7" }
+def devVer() { return "5.3.8" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -44,10 +44,9 @@ metadata {
 		attribute "activityZoneName", "string"
 		attribute "isStreaming", "string"
 		attribute "audioInputEnabled", "string"
-		attribute "videoHistoryEnabled", "string"
+		attribute "nestAware", "string"
 		attribute "motionPerson", "string"
-		attribute "minVideoHistoryHours", "string"
-		attribute "maxVideoHistoryHours", "string"
+		attribute "videoQualityLevel", "string"
 		attribute "publicShareEnabled", "string"
 		attribute "lastEventStart", "string"
 		attribute "lastEventEnd", "string"
@@ -111,8 +110,8 @@ metadata {
 			state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
 		}
 		standardTile("sound", "device.sound", width: 2, height: 2, decoration: "flat", wordWrap: true) {
-			state "detected", label:'Noise', icon:"st.sound.sound.detected", backgroundColor:"#00a0dc"
-			state "not detected", label:'Quiet', icon:"st.sound.sound.notdetected", backgroundColor:"#ffffff"
+			state "detected", label:'Noise', icon:"st.Entertainment.entertainment15", backgroundColor:"#00a0dc"
+			state "not detected", label:'Quiet', icon:"st.Entertainment.entertainment15", backgroundColor:"#ffffff"
 		}
 		valueTile("softwareVer", "device.softwareVer", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Firmware:\nv${currentValue}')
@@ -281,7 +280,7 @@ def processEvent() {
 	if(state?.swVersion != devVer()) {
 		initialize()
 		state.swVersion = devVer()
-		state?.shownChgLog = false
+		state.shownChgLog = false
 		state.androidDisclaimerShown = false
 	}
 	def eventData = state?.eventData
@@ -292,7 +291,7 @@ def processEvent() {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
-			//log.debug "results: $results"
+			// log.debug "results: $results"
 			state.isBeta = eventData?.isBeta == true ? true : false
 			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.takeSnapOnEvt = eventData?.camTakeSnapOnEvt == true ? true : false
@@ -302,13 +301,11 @@ def processEvent() {
 			state.streamMsg = eventData?.streamNotify == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
 			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal?.toInteger() : 60
-//			if(useTrackedHealth()) {
-				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-					state.hcTimeout = eventData?.hcTimeout
-					verifyHC()
-				}
-//			}
-			state?.useMilitaryTime = eventData?.mt ? true : false
+			if(eventData?.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
+			state.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
@@ -325,19 +322,22 @@ def processEvent() {
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			apiStatusEvent(eventData?.apiIssues)
 			debugOnEvent(eventData?.debug ? true : false)
+			state?.camMotionZones = eventData?.camMotionZones ?: []
 			audioInputEnabledEvent(results?.is_audio_input_enabled?.toString())
 			softwareVerEvent(results?.software_version?.toString())
 			if(results?.activity_zones) { state?.activityZones = results?.activity_zones }
+			
 			if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
 			if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
 			if(results?.last_event) {
-				state?.animation_url = null
+				// state?.animation_url = null
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 				if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
 			}
 			deviceVerEvent(eventData?.latestVer?.toString())
-			vidHistoryTimeEvent()
+			// videoQualityEvent()
+			// findCameraModel()
 			lastUpdatedEvent(true)
 			checkHealth()
 			if(state?.ok2Checkin == true) {
@@ -350,9 +350,7 @@ def processEvent() {
 	}
 	catch (ex) {
 		def s = ""
-		if(ex && ex?.message) {
-			s = ex?.message?.toString()
-		}
+		if(ex && ex?.message) { s = ex?.message?.toString() }
 		log.error "processEvent Exception: ${s}", ex
 		exceptionDataHandler(s, "processEvent")
 	}
@@ -463,6 +461,13 @@ def lastOnlineEvent(dt) {
 
 def onlineStatusEvent(isOnline) {
 	LogAction("onlineStatusEvent($isOnline)")
+	// if(state?.camApiServerData) {
+	// 	state?.camApiServerData?.items[0]?.capabilities?.each {
+	// 		if(it?.startsWith("streaming.cameraprofile") || it?.startsWith("streaming.data-usage-tier")) {
+	// 			log.debug "${it}"
+	// 		}
+	// 	}
+	// }
 	if(state?.camApiServerData && (state?.camApiServerData?.items[0]?.is_online != isOnline?.toBoolean() ) ) {
 		Logger("onlineStatusEvent: ${isOnline?.toBoolean()} | CamData: ${state?.camApiServerData?.items[0]?.is_online}")
 		//isOnline = state?.camApiServerData?.items[0]?.is_online
@@ -526,14 +531,15 @@ def audioInputEnabledEvent(on) {
 }
 
 def videoHistEnabledEvent(on) {
-	def isOn = device.currentState("videoHistoryEnabled")?.value
-	def val = (on?.toString() == "true") ? "Enabled" : "Disabled"
+	def isOn = device.currentState("nestAware")?.value
+	def val = (on?.toString() == "true") ? "Active" : "Inactive"
+	state?.nestAwareActive = (on?.toString() == "true")
 	state?.videoHistoryEnabled = val
-	if(isStateChange(device, "videoHistoryEnabled", val?.toString())) {
-		Logger("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
-		sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		addCheckinReason("videoHistoryEnabled")
-	} else { LogAction("Video History Status is: (${val}) | Original State: (${isOn})") }
+	if(isStateChange(device, "nestAware", val?.toString())) {
+		Logger("UPDATED | Nest Aware Status is: (${val}) | Original State: (${isOn})")
+		sendEvent(name: "nestAware", value: val, descriptionText: "Nest Aware Status is: ${val}", displayed: true, isStateChange: true, state: val)
+		addCheckinReason("nestAware")
+	} else { LogAction("Nest Aware Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def publicShareEnabledEvent(on) {
@@ -565,7 +571,9 @@ def lastEventDataEvent(data) {
 	def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value?.toString())) : null
 	def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time?.toString())) : "Not Available"
 	def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time?.toString())) : "Not Available"
-
+	
+	def camMotionZones = state?.camMotionZones && state?.camMotionZones != [] ? state?.camMotionZones : []
+	
 	def hasPerson = data?.has_person ? data?.has_person?.toBoolean() : false
 	state?.motionPerson = hasPerson
 	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
@@ -574,7 +582,7 @@ def lastEventDataEvent(data) {
 	def evtZoneIds = data?.activity_zone_ids
 	def evtZoneNames = null
 
-	def evtType = !hasMotion ? "Sound Event" : "Motion Event${hasPerson ? " (Person)${hasSound ? " (Sound)" : ""}" : ""}"
+	String evtType = !hasMotion ? "Sound Event" : "Motion Event${hasPerson ? " (Person)${hasSound ? " (Sound)" : ""}" : ""}"
 	state?.lastEventTypeHtml = !hasMotion && hasSound ? "Sound Event" : "Motion Event${hasPerson ? "<br>(Person)${hasSound ? "<br>(Sound)" : ""}" : ""}"
 	if(actZones && evtZoneIds) {
 		evtZoneNames = actZones.findAll { it?.id?.toString() in evtZoneIds }.collect { it?.name }
@@ -587,6 +595,7 @@ def lastEventDataEvent(data) {
 		state?.lastEventZonesHtml = zstr
 	}
 
+	def motionZoneOk = isMotionZoneOk(evtZoneIds)
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 
 	state.lastEventDate = formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time?.toString()), "MMMMM d, yyyy")?.toString()
@@ -605,6 +614,7 @@ def lastEventDataEvent(data) {
 		Logger(state?.enRemDiagLogging ? "└──────────────" : "└────────────────────────────")
 		//Logger("│	URL: ${state?.animation_url ?: "None"}")
 		Logger("│	Took Snapshot: (${tryPic})")
+		if(evtType?.startsWith("Motion Event")) { Logger("│	Zone Motion Filtered: (${(motionZoneOk == false)})") }
 		Logger("│	Zones: ${evtZoneNames ?: "None"}")
 		Logger("│	End Time: (${newEndDt})")
 		Logger("│	Start Time: (${newStartDt})")
@@ -616,9 +626,9 @@ def lastEventDataEvent(data) {
 		LogAction("Last Event End Time: (${newEndDt}) - Zones: ${evtZoneNames} | Original State: (${curEndDt})")
 		LogAction("Last Event Type: (${evtType}) - Zones: ${evtZoneNames}")
 	}
-	motionSoundEvtHandler()
-	if(tryPic) {
-		if(state?.videoHistoryEnabled == "Enabled" && state?.animation_url) {
+	motionSoundEvtHandler(motionZoneOk)
+	if(tryPic && motionZoneOk) {
+		if(state?.videoHistoryEnabled == "Active" && state?.animation_url) {
 			takePicture(state?.animation_url)
 		} else {
 			takePicture(state?.snapshot_url)
@@ -626,20 +636,32 @@ def lastEventDataEvent(data) {
 	}
 }
 
-def motionSoundEvtHandler() {
+def isMotionZoneOk(evtZoneIds) {
+	if(state?.camMotionZones && evtZoneIds) {
+		if(evtZoneIds?.size()) {
+			def res = evtZoneIds?.find { it?.toString() in state?.camMotionZones }
+			// log.debug "result: ${res}"
+			if(res) { return false}
+		}
+	}
+	return true
+}
+
+def motionSoundEvtHandler(zoneOk=true) {
 	def data = state?.lastCamEvtData
 	if(data) {
-		motionEvtHandler(data)
+		motionEvtHandler(data, zoneOk)
 		data = state?.lastCamEvtData
 		soundEvtHandler(data)
 	}
 }
 
-void motionEvtHandler(data) {
+void motionEvtHandler(data, zoneOk) {
+	
 	def curMotion = device.currentState("motion")?.stringValue
 	def motionStat = "inactive"
 	def motionPerStat = "inactive"
-	if(state?.restStreaming == true && data) {
+	if(state?.restStreaming == true && data && zoneOk != false) {
 		if(data?.endDt && data?.hasMotion && !data?.sentMUpd) {
 			def t0 = getTimeDiffSeconds(data?.startDt, data?.endDt)
 			def newDur = Math.min( Math.max(3, t0) , state?.motionSndChgWaitVal)
@@ -661,6 +683,7 @@ void motionEvtHandler(data) {
 			}
 		}
 	}
+	// log.trace "motionEvtHandler(zoneOk: $zoneOk) | motionStat: $motionStat | curMotion: $curMotion"
 	if(isStateChange(device, "motion", motionStat?.toString()) || isStateChange(device, "motionPerson", motionPerStat?.toString())) {
 		Logger("UPDATED | Motion Sensor is: (${motionStat}) | Person: (${motionPerStat}) | Original State: (${curMotion})")
 		sendEvent(name: "motion", value: motionStat, descriptionText: "Motion Sensor is: ${motionStat}", displayed: true, isStateChange: true, state: motionStat)
@@ -735,21 +758,47 @@ def lastUpdatedEvent(sendEvt=false) {
 	}
 }
 
-def vidHistoryTimeEvent() {
+def videoQualityEvent() {
 	if(!state?.camApiServerData) { return }
-	def camData = state?.camApiServerData
-	def newMin = (camData?.items[0]?.hours_of_free_tier_history > 3 ? camData?.items[0]?.hours_of_free_tier_history : 3)
-	def newMax = (camData?.items[0]?.hours_of_recording_max > 3 ? camData?.items[0]?.hours_of_recording_max : 3)
-	def curMin = device.currentState("minVideoHistoryHours")?.value
-	def curMax = device.currentState("maxVideoHistoryHours")?.value
-	state?.minVideoHistoryHours = newMin
-	state?.maxVideoHistoryHours = newMax
-	if(isStateChange(device, "minVideoHistoryHours", newMin?.toString()) || isStateChange(device, "maxVideoHistoryHours", newMax?.toString())) {
-		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
-		sendEvent(name: "minVideoHistoryHours", value: newMin, descriptionText: "Minimum Video Recording History Hours is Now: (${newMin} hours)", displayed: false, isStateChange: true, state: newMin)
-		sendEvent(name: "maxVideoHistoryHours", value: newMax, descriptionText: "Maximum Video Recording History Hours is Now: (${newMax} hours)", displayed: false, isStateChange: true, state: newMax)
-		addCheckinReason("videoHistoryTime")
-	} else { LogAction("Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})") }
+	def camData = state?.camApiServerData?.items[0]?.capabilities?.findAll { it?.startsWith("streaming.data-usage-tier") }.collect { it as String }
+	log.debug "camData: $camData"
+	/*
+		Nest Cam IQ (Indoor/Outdoor)
+		* Low: 100GB
+		* Medium Low: 200GB
+		* Medium High: 300GB
+		* High: 400GB
+
+		Nest Cam Indoor/Outdoor
+		* Low: 30GB
+		* Medium: 120GB
+		* High: 300GB
+
+		Dropcam, Dropcam HD
+		* Low: 30GB
+		* Medium: 120GB
+		
+		Nest Hello Doorbell
+		* Low: 50GB
+		* Medium: 150GB
+		* High: 300GB
+		
+	*/
+	def vals = []
+	camData?.each { item->
+		log.debug "${item?.split(".")}"
+		
+		// if(t[2]?.isNumber()) {
+		// 	vals.push(t[2] as Integer)
+		// }
+	}
+	log.debug "vals: ${vals} | max: "
+}
+
+def findCameraModel() {
+	// if(!state?.camApiServerData) { return }
+	// def camData = state?.camApiServerData?.items[0]?.capabilities?.findAll { it?.startsWith("streaming.cameraprofile") }
+	
 }
 
 def publicShareUrlEvent(url) {
@@ -782,8 +831,6 @@ def publicShareUrlEvent(url) {
 		}
 	} else {
 		//Logger("Url: $url | Url(state): ${state?.public_share_url} | pubVidId: ${state.pubVidId} | lastVidId: ${state.lastPubVidId} | camUUID: ${state?.camUUID} | camApiServerData ${state?.camApiServerData} | animation_url ${state?.animation_url} | snapshot_url ${state?.snapshot_url}", "warn")
-		//if(state?.public_share_url || state?.pubVidId || state?.lastPubVidId || state?.camUUID || state?.camApiServerData || state?.animation_url || state?.snapshot_url) {
-
 		if(state?.public_share_url || state?.pubVidId || state?.lastPubVidId || state?.camUUID || state?.camApiServerData) {
 			state?.public_share_url = null
 			state?.pubVidId = null
@@ -1020,25 +1067,14 @@ def exceptionDataHandler(String msg, String methodName) {
 
 def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
-//	try {
-		if((strtDate && !stpDate) || (strtDate && stpDate)) {
-			def now = new Date()
-			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
-/*
-			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
-			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
-			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
-*/
-			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate).getTime()
-			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-			def diff = (int) (long) (stop - start) / 1000
-			return diff
-		} else { return null }
-/*
-	} catch (ex) {
-		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
-	}
-*/
+	if((strtDate && !stpDate) || (strtDate && stpDate)) {
+		def now = new Date()
+		def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate).getTime()
+		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+		def diff = (int) (long) (stop - start) / 1000
+		return diff
+	} else { return null }
 }
 
 def incHtmlLoadCnt() 		{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
@@ -1302,13 +1338,13 @@ def getCamIframHtml() {
 def getCamHtml() {
 	try {
 		// These are used to determine the URL for the nest cam stream
-		//def refreshUrl = "https://api.smartthings.com/elder/${location?.id}/api/devices/${device?.getId()}/getCamHtml"
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 		def pubVidUrl = state?.public_share_url
 		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml(false) : hideCamHtml()
 		def devBrdCastData = state?.devBannerData ?: null
 		def devBrdCastHtml = ""
+		def refreshBtnHtml = state.mobileClientType == "ios" ? """<div class="pageFooterCls"><p class="slideFooterText">Swipe/Tap to Change Slide</p><button type="button" class="btn btn-info slideFooterBtn" onclick="reloadPage()"><span>&#10227;</span> Refresh</button></div>""" : ""
 		if(devBrdCastData) {
 			def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 			def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", devBrdCastData?.expireDt?.toString())
@@ -1333,10 +1369,32 @@ def getCamHtml() {
 				<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 
 				<link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css"/>
-				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.2/css/swiper.min.css" />
+				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.3.3/css/swiper.min.css" />
 				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" async/>
 				<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-top.min.css" async />
-				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.2/js/swiper.min.js"></script>
+				<style>
+					.swiper-container {
+						width: 95%;
+						min-height: 300px;
+						padding: 0 10px !important;
+					}
+
+					.swiper-pagination-bullet {
+						width: 20px;
+						height: 20px;
+						text-align: center;
+						line-height: 20px;
+						font-size: 10px;
+						color: #000;
+						opacity: 1;
+						background: rgba(0, 0, 0, 0.2);
+					}
+
+					.swiper-pagination-bullet-active {
+						color: #fff;
+						background: #007aff;
+					}
+				</style>
 			</head>
 			<body>
 				${getChgLogHtml()}
@@ -1367,31 +1425,17 @@ def getCamHtml() {
 						  </section>
 						  <section class="sectionBg">
 							<table class="devInfo">
-							  <col width="50%">
-							  <col width="50%">
-								<thead>
-								  <th>Video History (Min.)</th>
-								  <th>Video History (Max.)</th>
-								</thead>
-								<tbody>
-								  <tr>
-									<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
-									<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
-								  </tr>
-							  </tbody>
-							</table>
-						  </section>
-						  <section class="sectionBg">
-							<table class="devInfo">
 							  <col width="33%">
 							  <col width="33%">
 							  <col width="33%">
 							  <thead>
+								<th>Nest Aware</th>
 								<th>Public Video</th>
 								<th>Mic Status</th>
 							  </thead>
 							  <tbody>
 								<tr>
+								  <td>${state?.nestAwareActive == true ? "Active" : "Not Active"}</td>
 								  <td>${state?.publicShareEnabled?.toString()}</td>
 								  <td>${state?.audioInputEnabled?.toString()}</td>
 								</tr>
@@ -1404,7 +1448,7 @@ def getCamHtml() {
 							  <col width="20%">
 							  <col width="40%">
 							  <thead>
-								<th>FW Version</th>
+								<th>Firmware</th>
 								<th>Debug</th>
 								<th>Device Type</th>
 							  </thead>
@@ -1432,16 +1476,17 @@ def getCamHtml() {
 						</div>
 					</div>
 					<div class="swiper-pagination"></div>
-					<div style="text-align: center;">
-						<p class="slideFooterMsg">Swipe/Tap to Change Slide</p>
-					</div>
+					<div style="text-align: center; padding: 25px 0;"></div>
 				</div>
+				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.3.3/js/swiper.min.js"></script>
 				<script>
 					var mySwiper = new Swiper ('.swiper-container', {
 						direction: 'horizontal',
-						lazyLoading: true,
+						roundLengths: true,
+						updateOnImagesReady: true,
 						loop: true,
 						slidesPerView: '1',
+						grabCursor: true,
 						centeredSlides: true,
 						spaceBetween: 100,
 						autoHeight: true,
@@ -1449,30 +1494,32 @@ def getCamHtml() {
 						parallax: true,
 						slideToClickedSlide: true,
 						effect: 'coverflow',
-						coverflow: {
+						coverFlowEffect: {
 						  rotate: 50,
 						  stretch: 0,
 						  depth: 100,
 						  modifier: 1,
-						  slideShadows : true
+						  slideShadows: false
 						},
-						onTap: (swiper, event) => {
-							let element = event.target;
-							swiper.slideNext()
+						on: {
+							tap: function() {
+								this.slideNext()
+							},
 						},
-						pagination: '.swiper-pagination',
-						paginationHide: false,
-						paginationClickable: true
-					})
-					function reloadCamPage() {
-					    window.location.reload();
+						pagination: {
+							el: '.swiper-pagination',
+							hideOnClick: false,
+							clickable: true,
+							renderBullet: function (index, className) {
+								return '<span class="' + className + '">' + (index + 1) + '</span>';
+							},
+						}
+					});
+					function reloadPage() {
+						window.location.reload();
 					}
 				</script>
-				<div class="pageFooterBtn">
-				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadCamPage()">
-					  <span>&#10227;</span> Refresh
-				    </button>
-				</div>
+				${refreshBtnHtml}
 			</body>
 		</html>
 		"""
@@ -1488,7 +1535,7 @@ def getCamHtml() {
 def getDeviceTile(devNum) {
 	try {
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
-		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the NST Manager developer to get the issue resolved!!!</div>""" : ""
 		def pubVidUrl = state?.public_share_url
 		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml(true) : hideCamHtml()
 		def mainHtml = """
@@ -1497,7 +1544,7 @@ def getDeviceTile(devNum) {
 			${getCamIframHtml()}
 			<div class="device">
 				<div class="swiper-container-${devNum}" style="max-width: 100%; overflow: hidden;">
-					<div class="swiper-wrapper">
+					<div class="swiper-wrapper" style="height: auto;">
 						${camHtml}
 						<div class="swiper-slide">
 						  <section class="sectionBgTile">
@@ -1519,31 +1566,17 @@ def getDeviceTile(devNum) {
 						  </section>
 						  <section class="sectionBgTile">
 							<table class="devInfoTile centerText">
-							  <col width="50%">
-							  <col width="50%">
-								<thead>
-								  <th>Video History (Min.)</th>
-								  <th>Video History (Max.)</th>
-								</thead>
-								<tbody>
-								  <tr>
-									<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
-									<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
-								  </tr>
-							  </tbody>
-							</table>
-						  </section>
-						  <section class="sectionBgTile">
-							<table class="devInfoTile centerText">
 							  <col width="33%">
 							  <col width="33%">
 							  <col width="33%">
 							  <thead>
+								<th>Nest Aware</th>
 								<th>Public Video</th>
 								<th>Mic Status</th>
 							  </thead>
 							  <tbody>
 								<tr>
+								  <td>${state?.nestAwareActive == true ? "Active" : "Not Active"}</td>
 								  <td>${state?.publicShareEnabled?.toString()}</td>
 								  <td>${state?.audioInputEnabled?.toString()}</td>
 								</tr>
@@ -1583,18 +1616,20 @@ def getDeviceTile(devNum) {
 						   </section>
 						</div>
 					</div>
-					<div class="swiper-pagination"></div>
-					<div style="text-align: center;">
-						<p class="slideFooterMsgTile">Swipe/Drag to Change Slide</p>
+					<div style="text-align: center; padding: 20px;">
+						<p class="slideFooterTextTile">Swipe/Drag to Change Slide</p>
 					</div>
+					<div class="swiper-pagination"></div>
 				</div>
 			</div>
 			<script>
 				var mySwiper${devNum} = new Swiper ('.swiper-container-${devNum}', {
 					direction: 'horizontal',
-					lazyLoading: true,
+					roundLengths: true,
+					updateOnImagesReady: true,
 					loop: true,
 					slidesPerView: '1',
+					grabCursor: true,
 					centeredSlides: true,
 					spaceBetween: 100,
 					autoHeight: true,
@@ -1602,25 +1637,29 @@ def getDeviceTile(devNum) {
 					parallax: true,
 					slideToClickedSlide: true,
 					effect: 'coverflow',
-					// resistance: true,
-					coverflow: {
-					  rotate: 50,
-					  stretch: 0,
-					  depth: 100,
-					  modifier: 1,
-					  slideShadows : true
+					coverFlowEffect: {
+						rotate: 50,
+						stretch: 0,
+						depth: 100,
+						modifier: 1,
+						slideShadows: false
 					},
-					onTap: (swiper, event) => {
-						let element = event.target;
-						swiper.slideNext()
+					on: {
+						tap: function() {
+							this.slideNext()
+						},
 					},
-					pagination: '.swiper-pagination',
-					paginationHide: false,
-					paginationClickable: true
-				})
+					pagination: {
+						el: '.swiper-pagination',
+						hideOnClick: false,
+						clickable: true,
+						renderBullet: function (index, className) {
+							return '<span class="' + className + '">' + (index + 1) + '</span>';
+						},
+					}
+				});
 			</script>
 		"""
-/* """ */
 		return mainHtml
 	}
 	catch (ex) {
