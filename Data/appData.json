@@ -24,10 +24,10 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.3.9"
+                "ver": "5.4.0"
             },
             "autoapp": {
-                "ver": "5.3.6"
+                "ver": "5.4.0"
             },
             "storapp": {
                 "ver": "5.4.0"

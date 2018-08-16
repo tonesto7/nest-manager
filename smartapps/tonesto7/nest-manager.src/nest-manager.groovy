@@ -34,11 +34,11 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.3.9" }
-def appVerDate() { "08-02-2018" }
+def appVersion() { "5.4.1" }
+def appVerDate() { "08-13-2018" }
 def minVersions() {
 	return [
-		"automation":["val":536, "desc":"5.3.6"],
+		"automation":["val":541, "desc":"5.4.1"],
 		"thermostat":["val":536, "desc":"5.3.6"],
 		"protect":["val":536, "desc":"5.3.6"],
 		"presence":["val":536, "desc":"5.3.6"],
@@ -128,13 +128,8 @@ mappings {
 *******************************************************************************/
 //This Page is used to load either parent or child app interface code
 def startPage() {
-	if(parent) {
-		atomicState?.isParent = false
-		uninstallPage()
-	} else {
-		atomicState?.isParent = true
-		authPage()
-	}
+	atomicState?.isParent = true
+	authPage()
 }
 
 def authPage() {
@@ -287,8 +282,7 @@ def mainPage() {
 		if(isInstalled) {
 			section("Notifications Options:") {
 				def t1 = getAppNotifConfDesc()
-				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
-						image: getAppImg("notification_icon2.png")
+				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),image: getAppImg("notification_icon2.png")
 			}
 			section("Manage Polling, Logging, Nest Login, and More:") {
 				def descStr = ""
@@ -380,9 +374,9 @@ def storageAppInst(available) {
 
 private getStorageApp() {
 	if(isAppLiteMode()) { return null }
-	def storApp = getChildApps()?.find{ it?.getAutomationType() == "storage" && it?.name == autoAppName() }
+	def storApp = getChildApps()?.find { it?.getAutomationType() == "storage" && it?.name == autoAppName() }
 	if(storApp) { 
-		if(storApp?.label != storageAppName()) { storApp?.updateLabel(storageAppName()) }
+		if(storApp?.label != getStorageAppChildLabel()) { storApp?.updateLabel(getStorageAppChildLabel()) }
 		storageAppInst(true)
 		return storApp 
 	} else { 
@@ -1434,26 +1428,46 @@ def automationKickStartPage() {
 def notifPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "notifPrefPage", install: false) {
-		section("Enable push notifications below") {
-			input ("usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
-			input ("phone", "phone", title: "Phone Number to send SMS to", required: false, multiple: true, submitOnChange: true, image: getAppImg("notification_icon2.png"))
-			if(settings?.phone || settings?.usePush) {
+		section("Enable Text Messaging:") {
+			input "phones", "phone", title: "Send SMS to Number\n(Optional)", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png")
+		}
+		section("Enable Push Messages:") {
+			input "usePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
+		}
+		section("Enable Pushover Support:") {
+			input ("pushoverEnabled", "bool", title: "Use Pushover Integration", required: false, submitOnChange: true, image: getAppImg("pushover_icon.png"))
+			if(settings?.pushoverEnabled == true) {
+				if(atomicState?.isInstalled) {
+					if(!atomicState?.pushoverManager) {
+						paragraph "If this is the first time enabling Pushover than leave this page and come back if the devices list is empty"
+						pushover_init()
+					} else {
+						input "pushoverDevices", "enum", title: "Select Pushover Devices", description: "Tap to select", groupedOptions: getPushoverDevices(), multiple: true, required: false, submitOnChange: true
+						if(settings?.pushoverDevices) {
+							def t0 = [(-2):"Lowest", (-1):"Low", 0:"Normal", 1:"High", 2:"Emergency"]
+							input "pushoverPriority", "enum", title: "Notification Priority (Optional)", description: "Tap to select", defaultValue: 0, required: false, multiple: false, submitOnChange: true, options: t0
+							input "pushoverSound", "enum", title: "Notification Sound (Optional)", description: "Tap to select", defaultValue: "pushover", required: false, multiple: false, submitOnChange: true, options: getPushoverSounds()
+						}
+					}
+				} else { paragraph "New Install Detected!!!\n\n1. Press Done to Finish the Install.\n2. Goto the Automations Tab at the Bottom\n3. Tap on the SmartApps Tab above\n4. Select ${app?.getLabel()} and Resume configuration", state: "complete" }
+			}
+		}
+		if(settings?.phone || settings?.usePush || (settings?.pushoverEnabled && settings?.pushoverDevices)) {
+			section("Notification Restrictions:") {
 				def t1 = getNotifSchedDesc()
 				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("restriction_icon.png")
 			}
-		}
-		if(settings?.phone || settings?.usePush) {
-			if(settings?.usePush && !atomicState?.pushTested) {
+			if((settings?.usePush || (settings?.pushoverEnabled && settings?.pushoverDevices)) && !atomicState?.pushTested && atomicState?.pushoverManager) {
 				if(sendMsg("Info", "Push Notification Test Successful. Notifications Enabled for ${appName()}", true)) {
 					atomicState.pushTested = true
 				}
 			}
 
-			section("Location Notifications:") {
+			section("Location Alerts:") {
 				paragraph "Get notified when the Location changes from Home/Away", state: "complete"
 				input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
 			}
-			section("Alert Configurations:") {
+			section("Other Alerts:") {
 				def t1 = getAppNotifDesc()
 				def appDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "App Notifications", description: "${appDesc}Tap to configure", params: [pType:"app"], state: (appDesc != "" ? "complete" : null),
@@ -1585,34 +1599,36 @@ def notifConfigPage(params) {
 
 def getAppNotifDesc() {
 	def str = ""
-	str += settings?.appApiIssuesMsg != false && settings?.appApiFailedCmdMsg != false ? "\n• API CMD Failures: (${strCapitalize(settings?.appApiFailedCmdMsg ?: "True")})" : ""
-	str += settings?.appApiIssuesMsg != false && settings?.appApiRateLimitMsg != false ? "\n• API Rate-Limiting: (${strCapitalize(settings?.appApiRateLimitMsg ?: "True")})" : ""
-	str += settings?.sendMissedPollMsg != false ? "\n• Missed Poll Alerts: (${strCapitalize(settings?.sendMissedPollMsg ?: "True")})" : ""
-	str += settings?.appDbgDiagRemindMsg != false ? "\n• Debug Log Reminder: (${strCapitalize(settings?.appDbgDiagRemindMsg ?: "True")})" : ""
-	str += settings?.sendAppUpdateMsg != false ? "\n• Code Updates: (${strCapitalize(settings?.sendAppUpdateMsg ?: "True")})" : ""
+	str += settings?.appApiIssuesMsg != false && settings?.appApiFailedCmdMsg != false ? "${str != "" ? "\n" : ""} • API CMD Failures: (${strCapitalize(settings?.appApiFailedCmdMsg ?: "True")})" : ""
+	str += settings?.appApiIssuesMsg != false && settings?.appApiRateLimitMsg != false ? "${str != "" ? "\n" : ""} • API Rate-Limiting: (${strCapitalize(settings?.appApiRateLimitMsg ?: "True")})" : ""
+	str += settings?.sendMissedPollMsg != false ? "${str != "" ? "\n" : ""} • Missed Poll Alerts: (${strCapitalize(settings?.sendMissedPollMsg ?: "True")})" : ""
+	str += settings?.appDbgDiagRemindMsg != false ? "${str != "" ? "\n" : ""} • Debug Log Reminder: (${strCapitalize(settings?.appDbgDiagRemindMsg ?: "True")})" : ""
+	str += settings?.sendAppUpdateMsg != false ? "${str != "" ? "\n" : ""} • Code Updates: (${strCapitalize(settings?.sendAppUpdateMsg ?: "True")})" : ""
 	return str != "" ? str : null
 }
 
 def getDevNotifDesc() {
 	def str = ""
-	str += settings?.devHealthNotifyMsg != false ? "\n• Health Alerts: (${strCapitalize(settings?.devHealthNotifyMsg ?: "True")})" : ""
-	str += settings?.camStreamNotifMsg != false ? "\n• Camera Stream Alerts: (${strCapitalize(settings?.camStreamNotifMsg ?: "True")})" : ""
-	str += settings?.weathAlertNotif != false ? "\n• Weather Alerts: (${strCapitalize(settings?.weathAlertNotif ?: "True")})" : ""
+	str += settings?.devHealthNotifyMsg != false ? "${str != "" ? "\n" : ""} • Health Alerts: (${strCapitalize(settings?.devHealthNotifyMsg ?: "True")})" : ""
+	str += settings?.camStreamNotifMsg != false ? "${str != "" ? "\n" : ""} • Camera Stream Alerts: (${strCapitalize(settings?.camStreamNotifMsg ?: "True")})" : ""
+	str += settings?.weathAlertNotif != false ? "${str != "" ? "\n" : ""} • Weather Alerts: (${strCapitalize(settings?.weathAlertNotif ?: "True")})" : ""
 	return str != "" ? str : null
 }
 
 def getAutoNotifDesc() {
 	def str = ""
-	str += settings?.watchDogNotifMissedEco ? "\n• WatchDog Eco Alerts: (${strCapitalize(settings?.watchDogNotifMissedEco)})" : ""
+	str += settings?.watchDogNotifMissedEco ? "${str != "" ? "\n" : ""} • WatchDog Eco Alerts: (${strCapitalize(settings?.watchDogNotifMissedEco)})" : ""
 	return str != "" ? str : null
 }
 
 def getAskAlexaDesc() {
 	def str = ""
-	str += settings?.allowAskAlexaMQ ? "\n• Ask Alexa Msg Queue: (${strCapitalize(settings?.allowAskAlexaMQ)})" : ""
-	str += getAskAlexaMultiQueueEn() && atomicState?.askAlexaMQList ? "\nMultiple Queues Available:\n• Queues: (${atomicState?.askAlexaMQList?.size()})" : ""
+	str += settings?.allowAskAlexaMQ ? "${str != "" ? "\n" : ""} • Ask Alexa Msg Queue: (${strCapitalize(settings?.allowAskAlexaMQ)})" : ""
+	str += getAskAlexaMultiQueueEn() && atomicState?.askAlexaMQList ? "${str != "" ? "\n" : ""}Multiple Queues Available:\n• Queues: (${atomicState?.askAlexaMQList?.size()})" : ""
 	return str != "" ? str : null
 }
+
+def addNewline(str) { return "${str != "" ? "\n" : ""}${str}"}
 
 def getAppNotifConfDesc() {
 	def str = ""
@@ -1621,13 +1637,16 @@ def getAppNotifConfDesc() {
 		def de = getDevNotifDesc()
 		def au = getAutoNotifDesc()
 		def nd = getNotifSchedDesc()
-		str += (settings?.usePush) ? "Sending via: (Push)" : ""
-		str += (settings?.phone) ? "\nSending via: (SMS)" : ""
-		str += (ap || de || au) ? "\nEnabled Alerts:" : ""
-		str += (ap) ? "\n• App Alerts (True)" : ""
-		str += (de) ? "\n• Device Alerts (True)" : ""
-		str += (au) ? "\n• Automation Alerts (True)" : ""
-		str += (nd) ? "\n\nAlert Restrictions:\n${nd}" : ""
+		str += (settings?.usePush) ? "${str != "" ? "\n" : ""}Sending via: (Push)" : ""
+		str += (settings?.pushoverEnabled) ? "${str != "" ? "\n" : ""}Pushover: (Enabled)" : ""
+		str += (settings?.pushoverEnabled && settings?.pushoverPriority) ? "${str != "" ? "\n" : ""} • Priority: (${settings?.pushoverPriority})" : ""
+		str += (settings?.pushoverEnabled && settings?.pushoverSound) ? "${str != "" ? "\n" : ""} • Sound: (${settings?.pushoverSound})" : ""
+		str += (settings?.phone) ? "${str != "" ? "\n" : ""}Sending via: (SMS)" : ""
+		str += (ap || de || au) ? "${str != "" ? "\n" : ""}\nEnabled Alerts:" : ""
+		str += (ap) ? "${str != "" ? "\n" : ""} • App Alerts (True)" : ""
+		str += (de) ? "${str != "" ? "\n" : ""} • Device Alerts (True)" : ""
+		str += (au) ? "${str != "" ? "\n" : ""} • Automation Alerts (True)" : ""
+		str += (nd) ? "${str != "" ? "\n" : ""}\nAlert Restrictions:\n${nd}" : ""
 	}
 	return str != "" ? str : null
 }
@@ -1884,6 +1903,14 @@ def diagnosticPage () {
 }
 
 def getRemDiagApp() {
+	def remDiagApp = getChildApps()?.find { it?.getAutomationType() == "remDiag" && it?.name == autoAppName() }
+	if(remDiagApp) { 
+		if(remDiagApp?.label != getRemDiagAppChildLabel()) { storApp?.updateLabel(getRemDiagAppChildLabel()) }
+		return remDiagApp
+	} else { 
+		return null 
+	}
+/*
 	def remDiagApp = null
 	def cApps = getChildApps()
 	cApps?.each { ca ->
@@ -1892,6 +1919,7 @@ def getRemDiagApp() {
 		}
 	}
 	return remDiagApp
+*/
 }
 
 void diagLogProcChange(setOn) {
@@ -1959,20 +1987,12 @@ def changeLogPage () {
 def uninstallPage() {
 	dynamicPage(name: "uninstallPage", title: "Uninstall", install: false, uninstall: true) {
 		section() {
-			if(parent) {
-				paragraph "This will uninstall the ${app?.label} Automation!"
-			} else {
-				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
-			}
+			paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
 		}
-		if(!parent) {
-			section("Did You Get an Error?") {
-				href "forceUninstallPage", title: "Perform Some Cleanup Steps", description: ""
-			}
-			remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
-		} else {
-			remove("Remove ${app?.label}", "WARNING!!!", "BAD Automation SHOULD be removed")
+		section("Did You Get an Error?") {
+			href "forceUninstallPage", title: "Perform Some Cleanup Steps", description: ""
 		}
+		remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
 	}
 }
 
@@ -2098,7 +2118,6 @@ def getPollingConfDesc() {
 // Parent only method
 def getNotifSchedDesc() {
 	def sun = getSunriseAndSunset()
-	//def schedInverted = settings?.DmtInvert
 	def startInput = settings?.qStartInput
 	def startTime = settings?.qStartTime
 	def stopInput = settings?.qStopInput
@@ -2220,27 +2239,15 @@ def nestTokenResetPage() {
  *#########################	NATIVE ST APP METHODS ############################*
  ******************************************************************************/
 def installed() {
-	if(parent) {
-		LogAction("${app.label} BAD CHILD AUTOMATION FILE installed()...with settings: ${settings}", "error", true)
-		uninstAutomationApp()
-		return
-	} else {
-		LogAction("Installed with settings: ${settings}", "debug", true)
-		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "updatedDt":"Not Set", "freshInstall":true, "shownDonation":false, "shownFeedback":false, "shownChgLog":true, "usingNewAutoFile":true, "liteAppMode":isAppLiteMode()]
-		sendInstallSlackNotif()
-	}
+	LogAction("Installed with settings: ${settings}", "debug", true)
+	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "updatedDt":"Not Set", "freshInstall":true, "shownDonation":false, "shownFeedback":false, "shownChgLog":true, "usingNewAutoFile":true, "liteAppMode":isAppLiteMode()]
+	sendInstallSlackNotif()
 	initialize()
 	sendNotificationEvent("${appName()} installed")
 }
 
 def updated() {
-	if(parent) {
-		LogAction("${app.label} BAD CHILD AUTOMATION FILE Updated...with settings: ${settings}", "error", true)
-		uninstAutomationApp()
-		return
-	} else {
-		LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
-	}
+	LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
 	atomicState?.pollBlocked = true
 	atomicState?.pollBlockedReason = "Software Update pending"
 	restStreamHandler(true)   // stop the rest stream
@@ -2255,11 +2262,7 @@ def updated() {
 
 def uninstalled() {
 	//LogTrace("uninstalled")
-	if(parent) {
-		uninstAutomationApp()
-	} else {
-		uninstManagerApp()
-	}
+	uninstManagerApp()
 	//sendNotificationEvent("${appName()} is uninstalled")
 }
 
@@ -2330,18 +2333,15 @@ def initBuiltin(btype) {
 			updTimestampMap("lastAnalyticUpdDt", null)
 			try {
 				if(btype == "initRemDiagApp") {
-					addChildApp(appNamespace(), autoAppName(), getRemDiagAppChildName(), [settings:[remDiagFlag:["type":"bool", "value":true]]])
+					addChildApp(appNamespace(), autoAppName(), getRemDiagAppChildLabel(), [settings:[remDiagFlag:["type":"bool", "value":true]]])
 				}
 				if(btype == "initWatchdogApp") {
-					addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
+					addChildApp(appNamespace(), autoAppName(), getWatDogAppChildLabel(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
 				}
 				if(btype == "initStorageApp") {
 					def storageApp = getStorageApp()
 					if(!storageApp) {
-						def name = storageAppName()
-						def setData = [:]
-						setData["storageFlag"] = [type:"bool", value:true]
-						addChildApp(appNamespace(), autoAppName(), name, [settings:setData])
+						addChildApp(appNamespace(), autoAppName(), getStorageAppChildLabel(), [settings:[storageFlag:[type:"bool", value:true]]])
 					}
 					storageAppInst(true)
 				}
@@ -3276,6 +3276,9 @@ def subscriber() {
 	if(atomicState.appData?.aaPrefs?.enMultiQueue && settings?.allowAskAlexaMQ) {
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
 	}
+	if(settings?.pushoverEnabled == true) {
+		pushover_init()
+	} else { pushover_cleanup() }
 	if(settings?.restStreaming && !getRestHost()) {
 		restSrvcSubscribe()
 	}
@@ -3515,10 +3518,12 @@ def finishPoll(str=null, dev=null) {
 			runIn(5, "updated", [overwrite: false]) // ensure it does not keep delaying
 			return
 		}
-		schedNextWorkQ();
+		if(getLastAnyCmdSentSeconds() > 75) { // if poll is blocked and we have not sent a command recently, try to kick the queues
+			schedNextWorkQ();
+		}
 		return
 	}
-	if(getLastChildForceUpdSec() > (15*60)-2) {   // if nest goes silent (no changes coming back)
+	if(getLastChildForceUpdSec() > (15*60)-2) {   // if nest goes silent (no changes coming back); force all devices to get an update so they can check health
 		atomicState.forceChildUpd = true
 	}
 	if(dev || str || atomicState?.forceChildUpd || atomicState?.needChildUpd) { runIn(1, "updateChildData", [overwrite : true]) }
@@ -3580,7 +3585,7 @@ def forcedPoll(type = null) {
 		atomicState.needDevPoll = true
 	}
 	atomicState.forceChildUpd = true
-	runIn(1, "updateChildData", [overwrite : true])
+	//runIn(1, "updateChildData", [overwrite : true])
 	//updateChildData()
 }
 
@@ -5154,6 +5159,7 @@ def sendEcoActionDescToDevice(dev, desc) {
 	}
 }
 
+private getLastAnyCmdSentSeconds() { return getTimestampVal("lastCmdSentDt") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt"), null, "getLastAnyCmdSentSeconds") : 3601 }
 private getLastCmdSentSeconds(qnum) { return getTimestampVal("lastCmdSentDt${qnum}") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt${qnum}"), null, "getLastCmdSentSeconds") : 3601 }
 
 private setLastCmdSentSeconds(qnum, val) {
@@ -5207,7 +5213,7 @@ void workQueue() {
 	try {
 		if(cmdQueue?.size() > 0) {
 			LogAction("workQueue │ Run Queue: ${qnum} | ($metstr)", "trace", true)
-			runIn(60, "workQueue", [overwrite: true])  // lost schedule catchall
+			runIn(90, "workQueue", [overwrite: true])  // lost schedule catchall
 			if(!cmdIsProc()) {
 				cmdProcState(true)
 				atomicState?.pollBlocked = true
@@ -5585,7 +5591,7 @@ def incAppNotifSentCnt() {
 /************************************************************************************************
 |								Push Notification Functions										|
 *************************************************************************************************/
-def pushStatus() { return (settings?.phone || settings?.usePush) ? (settings?.usePush ? "Push Enabled" : "Enabled") : null }
+def pushStatus() { return (settings?.phone || settings?.usePush || settings?.pushoverEnabled) ? ((settings?.usePush || (settings?.pushoverEnabled && settings?.pushoverDevices)) ? "Push Enabled" : "Enabled") : null }
 //def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt, null, "getLastMsgSec").toInteger() }
 def getLastUpdMsgSec() { return !getTimestampVal("lastUpdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdMsgDt"), null, "getLastUpdMsgSec").toInteger() }
 def getLastMissPollMsgSec() { return !getTimestampVal("lastMisPollMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMisPollMsgDt"), null, "getLastMissPollMsgSec").toInteger() }
@@ -5593,6 +5599,23 @@ def getLastApiIssueMsgSec() { return !getTimestampVal("lastApiIssueMsgDt") ? 100
 def getLastLogRemindMsgSec() { return !getTimestampVal("lastLogRemindMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastLogRemindMsgDt"), null, "getLastLogRemindMsgSec").toInteger() }
 def getLastFailedCmdMsgSec() { return !getTimestampVal("lastFailedCmdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastFailedCmdMsgDt"), null, "getLastFailedCmdMsgSec").toInteger() }
 def getDebugLogsOnSec() { return !getTimestampVal("debugEnableDt") ? 0 : GetTimeDiffSeconds(getTimestampVal("debugEnableDt"), null, "getDebugLogsOnSec").toInteger() }
+
+//PushOver-Manager Input Generation Functions
+private getPushoverSounds(){return (Map) atomicState?.pushoverManager?.sounds?:[:]}
+private getPushoverDevices(){List opts=[];Map pmd=atomicState?.pushoverManager?:[:];pmd?.apps?.each{k,v->if(v&&v?.devices&&v?.appId){Map dm=[:];v?.devices?.sort{}?.each{i->dm["${i}_${v?.appId}"]=i};addInputGrp(opts,v?.appName,dm);}};return opts;}
+private inputOptGrp(List groups,String title){def group=[values:[],order:groups?.size()];group?.title=title?:"";groups<<group;return groups;}
+private addInputValues(List groups,String key,String value){def lg=groups[-1];lg["values"]<<[key:key,value:value,order:lg["values"]?.size()];return groups;}
+private listToMap(List original){original.inject([:]){r,v->r[v]=v;return r;}}
+private addInputGrp(List groups,String title,values){if(values instanceof List){values=listToMap(values)};values.inject(inputOptGrp(groups,title)){r,k,v->return addInputValues(r,k,v)};return groups;}
+private addInputGrp(values){addInputGrp([],null,values)}
+//PushOver-Manager Location Event Subscription Events, Polling, and Handlers
+public pushover_init(){subscribe(location,"pushoverManager",pushover_handler);pushover_poll()}
+public pushover_cleanup(){state?.remove("pushoverManager");unsubscribe("pushoverManager");}
+public pushover_poll(){sendLocationEvent(name:"pushoverManagerCmd",value:"poll",data:[empty:true],isStateChange:true,descriptionText:"Sending Poll Event to Pushover-Manager")}
+public pushover_msg(List devs,Map data){if(devs&&data){sendLocationEvent(name:"pushoverManagerMsg",value:"sendMsg",data:data,isStateChange:true,descriptionText:"Sending Message to Pushover Devices: ${devs}");}}
+public pushover_handler(evt){Map pmd=atomicState?.pushoverManager?:[:];switch(evt?.value){case"refresh":def ed = evt?.jsonData;String id = ed?.appId;Map pA = pmd?.apps?.size() ? pmd?.apps : [:];if(id){pA[id]=pA?."${id}"instanceof Map?pA[id]:[:];pA[id]?.devices=ed?.devices?:[];pA[id]?.appName=ed?.appName;pA[id]?.appId=id;pmd?.apps = pA;};pmd?.sounds=ed?.sounds;break;case "reset":pmd=[:];break;};atomicState?.pushoverManager=pmd;}
+//Builds Map Message object to send to Pushover Manager
+private buildPushMessage(List devices,Map msgData,timeStamp=false){if(!devices||!msgData){return};Map data=[:];data?.appId=app?.getId();data.devices=devices;data?.msgData=msgData;if(timeStamp){data?.msgData?.timeStamp=new Date().getTime()};pushover_msg(devices,data);}
 
 def notificationCheck() {
 	LogTrace("notificationCheck")
@@ -5806,7 +5829,7 @@ def updateHandler() {
 
 def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
 
-def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, brdcast = null) {
+def sendMsg(String msgType, String msg, Boolean showEvt=true, Map pushoverMap=null, sms=null, push=null, brdcast=null) {
 	//LogAction("sendMsg:  msgType: ${msgType}, msg: ${msg}, showEvt: ${showEvt}", "warn", true)
 	LogTrace("sendMsg")
 	def sentstr = "Push"
@@ -5815,13 +5838,10 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 		def newMsg = "${msgType}: ${msg}" as String
 		def flatMsg = newMsg.toString().replaceAll("\n", " ")
 		if(!getOk2Notify()) {
-			LogAction("sendMsg: Skipping Due to Quiet Time ($flatMsg)", "info", true)
-			if(showEvt) {
-				sendNotificationEvent(newMsg)
-			}
+			LogAction("sendMsg: Message Skipped During Quiet Time ($flatMsg)", "info", true)
+			if(showEvt) { sendNotificationEvent(newMsg) }
 		} else {
 			if(!brdcast) {
-				LogAction("ContactBook is NOT Enabled on your SmartThings Account", "warn", false)
 				if(push || settings?.usePush) {
 					sentstr = "Push Message"
 					if(showEvt) {
@@ -5831,9 +5851,17 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 					}
 					sent = true
 				}
+				if(settings?.pushoverEnabled && settings?.pushoverDevices) {
+					sentstr = "Pushover Message"
+					Map msgObj = [:]
+					msgObj = pushoverMap ?: [title: msgType, message: msg, priority: (settings?.pushoverPriority?:0)]
+					if(settings?.pushoverSound) { msgObj?.sound = settings?.pushoverSound }
+					buildPushMessage(settings?.pushoverDevices, msgObj, true)
+					sent = true
+				}
 				def thephone = sms ? sms.toString() : settings?.phone ? settings?.phone?.toString() : ""
 				if(thephone) {
-					sentstr = "Text Message to Phone $thephone"
+					sentstr = "Text Message to Phone [${thephone}]"
 					def t0 = newMsg.take(140)
 					if(showEvt) {
 						sendSms(thephone as String, t0 as String)	// send SMS and notification feed
@@ -5843,14 +5871,14 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 					sent = true
 				}
 			} else {
-				sentstr = "Broadcast"
-				sendPush(newMsg)		// sends push and notification feed was  sendPushMessage(newMsg)  // push but no notification feed
+				sentstr = "Broadcast Message"
+				sendPush(newMsg) // sends push and notification feed was  sendPushMessage(newMsg)  // push but no notification feed
 				sent = true
 			}
 			if(sent) {
 				//atomicState?.lastMsg = flatMsg
 				//atomicState?.lastMsgDt = getDtNow()
-				LogAction("sendMsg: Sent ${sentstr} Message Sent: ${flatMsg}", "debug", true)
+				LogAction("sendMsg: Sent ${sentstr} (${flatMsg})", "debug", true)
 				incAppNotifSentCnt()
 			}
 		}
@@ -7005,12 +7033,6 @@ def addRemoveDevices(uninst = null) {
 	return retVal
 }
 
-def getMyLockId() {
-	if(parent) { return atomicState?.myID } else { return null }
-}
-
-
-
 def addRemoveVthermostat(tstatdni, tval, myID) {
 	def odevId = tstatdni
 	LogAction("addRemoveVthermostat() tstat: ${tstatdni}   devid: ${odevId}   tval: ${tval}   myID: ${myID} vThermostats: ${atomicState?.vThermostats} ", "trace", true)
@@ -7710,8 +7732,9 @@ def getWeatherChildName()	{ return getChildName("Nest Weather") }
 def getCameraChildName()	{ return getChildName("Nest Camera") }
 
 def getAutoAppChildName()	{ return getChildName(autoAppName()) }
-def getWatDogAppChildName()	{ return getChildName("Nest Location ${location.name} Watchdog") }
-def getRemDiagAppChildName()	{ return getChildName("NST Diagnostics") }
+def getWatDogAppChildLabel()	{ return getChildName("Nest Location ${location.name} Watchdog") }
+def getRemDiagAppChildLabel()	{ return getChildName("NST Location ${location.name} Diagnostics") }
+def getStorageAppChildLabel()	{ return getChildName("NST Location ${location.name} Storage") }
 
 def getChildName(str)		{ return "${str}${appDevName()}" }
 
@@ -7893,7 +7916,6 @@ def notificationTimeOk() {
 	if(strtTime && stopTime) {
 		return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
 	} else { return true }
-
 }
 
 def time2Str(time) {
@@ -10043,7 +10065,6 @@ def appLabel()		{ return "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def autoAppName()	{ return "NST Automations" }
-def storageAppName()	{ return "NST Storage" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return betaMarker() ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}

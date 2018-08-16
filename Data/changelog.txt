@@ -1,3 +1,11 @@
+V5.4.0 (August 10th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: Pushover Manager Integration
+
+Automation App 5.4.0:
+ • ADDED: Pushover Manager Integration
+
 V5.3.9 (July 30th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
@@ -30,9 +38,4 @@ Manager App:
 Automation App 5.3.4:
 • FIXED: Converted degree symbols to unicode
 • FIXED: Code Cleanups and State Usage Reductions
-
-V5.3.6 (May 8th, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • FIXED: State Cleanup optimizations to help prevent Max State Size errors
 
