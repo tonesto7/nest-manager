@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.6" }
+def devVer() { return "5.3.7" }
 
 // for the UI
 metadata {
@@ -200,7 +200,8 @@ def processEvent(data) {
 			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 //			if(useTrackedHealth()) {
 				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 					state.hcTimeout = eventData?.hcTimeout
@@ -365,7 +366,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state?.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}

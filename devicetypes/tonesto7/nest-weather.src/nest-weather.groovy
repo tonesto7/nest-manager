@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.6" }
+def devVer() { return "5.3.7" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -341,7 +341,8 @@ void processEvent() {
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.showGraphs = eventData?.showGraphs == true ? true : false
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
@@ -557,8 +558,9 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
+		def t0 = state.healthMsgWait ?: 3600
 		LogAction("healtNotifyOk: ldtSec: $ldtSec", "debug", true)
-		if(ldtSec < 600) {
+		if(ldtSec < t0) {
 			return false
 		}
 	}

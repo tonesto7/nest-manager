@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.3.8" }
+def devVer() { return "5.3.9" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -299,7 +299,8 @@ def processEvent() {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.streamMsg = eventData?.streamNotify == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal?.toInteger() : 60
 			if(eventData?.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
@@ -887,7 +888,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state?.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}

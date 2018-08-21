@@ -13,11 +13,11 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.3.6" }
+def devVer() { return "5.3.7" }
 
 // for the UI
 metadata {
-	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
+	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.", vid: "SmartThings-smartthings-Z-Wave_Thermostat") {
 		capability "Actuator"
 		capability "Relative Humidity Measurement"
 		capability "Refresh"
@@ -480,7 +480,8 @@ void processEvent(data) {
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.showGraphs = eventData?.showGraphs != null ? eventData?.showGraphs : true
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
@@ -798,7 +799,6 @@ def lastCheckinEvent(checkin, isOnline) {
 	tf.setTimeZone(getTimeZone())
 
 	def lastChk = device.currentState("lastConnection")?.value
-	def lastConnSeconds = (lastChk && lastChk != "Not Available") ? getTimeDiffSeconds(lastChk) : 3000
 	def prevOnlineStat = device.currentState("onlineStatus")?.value
 
 	def hcTimeout = getHcTimeout()
@@ -814,11 +814,15 @@ def lastCheckinEvent(checkin, isOnline) {
 		sendEvent(name: 'lastConnection', value: curConnFmt?.toString(), isStateChange: true)
 	} else { LogAction("Last Nest Check-in was: (${curConnFmt}) | Original State: (${lastChk})") }
 
-	LogAction("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+	lastChk = device.currentState("lastConnection")?.value
+	def lastConnSeconds = (lastChk && lastChk != "Not Available") ? getTimeDiffSeconds(lastChk) : 3000
 
 	if(hcTimeout && isOnline.toString() == "true" && curConnSeconds > hcTimeout && lastConnSeconds > hcTimeout) {
 		onlineStat = "offline"
 		LogAction("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
+		Logger("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+	} else {
+		LogAction("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
 	}
 
 	state?.onlineStatus = onlineStat
@@ -1396,7 +1400,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}
