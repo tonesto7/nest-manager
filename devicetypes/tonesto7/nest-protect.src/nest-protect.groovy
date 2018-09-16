@@ -11,10 +11,10 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.3.6" }
+def devVer() { return "5.4.1" }
 
 metadata {
-	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
+	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7", ocfDeviceType: "x.com.st.d.sensor.smoke", vid: "generic-smoke-co") {
 		//capability "Polling"
 		capability "Actuator"
 		capability "Sensor"
@@ -204,10 +204,8 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-//	if(useTrackedHealth()) {
-		Logger("ping...")
-		keepAwakeEvent()
-//	}
+	Logger("ping...")
+	keepAwakeEvent()
 }
 
 def keepAwakeEvent() {
@@ -329,7 +327,7 @@ def processEvent(data) {
 	state.remove("eventData")
 
 	//log.trace("processEvent Parsing data ${eventData}")
-	try {
+//	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
@@ -338,14 +336,13 @@ def processEvent(data) {
 			state.restStreaming = eventData?.restStreaming == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
-//			if(useTrackedHealth()) {
-				if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
-					state.hcBattTimeout = eventData?.hcBattTimeout
-					state.hcWireTimeout = eventData?.hcWireTimeout
-					verifyHC()
-				}
-//			}
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
+			if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
+				state.hcBattTimeout = eventData?.hcBattTimeout
+				state.hcWireTimeout = eventData?.hcWireTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -364,7 +361,6 @@ def processEvent(data) {
 			softwareVerEvent(results?.software_version.toString())
 			deviceVerEvent(eventData?.latestVer.toString())
 			state?.devBannerData = eventData?.devBannerData ?: null
-			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			determinePwrSrc()
 
@@ -372,11 +368,12 @@ def processEvent(data) {
 			checkHealth()
 		}
 		return null
-	}
+/*	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
 		exceptionDataHandler(ex?.message, "generateEvent")
 	}
+*/
 }
 
 def getDtNow() {
@@ -476,8 +473,6 @@ def lastCheckinEvent(checkin, isOnline) {
 	tf.setTimeZone(getTimeZone())
 
 	def lastChk = device.currentState("lastConnection")?.value
-	def lastConnSeconds = lastChk ? getTimeDiffSeconds(lastChk) : 9000   // try not to disrupt running average for pwr determination
-
 	def prevOnlineStat = device.currentState("onlineStatus")?.value
 
 	def hcTimeout = getHcTimeout()
@@ -486,11 +481,6 @@ def lastCheckinEvent(checkin, isOnline) {
 	def curConnSeconds = (checkin && curConnFmt != "Not Available") ? getTimeDiffSeconds(curConnFmt) : 3000
 
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
-	LogAction("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
-	if(hcTimeout && isOnline.toString() == "true" && curConnSeconds > hcTimeout && lastConnSeconds > hcTimeout) {
-		onlineStat = "offline"
-		LogAction("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
-	}
 
 	state?.lastConnection = curConn?.toString()
 	if(isStateChange(device, "lastConnection", curConnFmt.toString())) {
@@ -498,6 +488,17 @@ def lastCheckinEvent(checkin, isOnline) {
 		sendEvent(name: 'lastConnection', value: curConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 		if(lastConnSeconds >= 0 && onlineStat == "online") { addCheckinTime(lastConnSeconds) }
 	} else { LogAction("Last Nest Check-in was: (${curConnFmt}) | Original State: (${lastChk})") }
+
+	lastChk = device.currentState("lastConnection")?.value
+	def lastConnSeconds = lastChk ? getTimeDiffSeconds(lastChk) : 9000   // try not to disrupt running average for pwr determination
+
+	if(hcTimeout && isOnline.toString() == "true" && curConnSeconds > hcTimeout && lastConnSeconds > hcTimeout) {
+		onlineStat = "offline"
+		LogAction("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
+		Logger("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+	} else {
+		LogAction("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+	}
 
 	state?.onlineStatus = onlineStat
 	modifyDeviceStatus(onlineStat)
@@ -684,7 +685,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state?.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}

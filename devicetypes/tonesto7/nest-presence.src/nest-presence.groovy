@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.6" }
+def devVer() { return "5.4.1" }
 
 // for the UI
 metadata {
@@ -130,9 +130,7 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	Logger("ping...")
-//	if(useTrackedHealth()) {
-		keepAwakeEvent()
-//	}
+	keepAwakeEvent()
 }
 
 def keepAwakeEvent() {
@@ -193,20 +191,19 @@ def processEvent(data) {
 	def eventData = data?.evt
 	state.remove("eventData")
 	//log.trace("processEvent Parsing data ${eventData}")
-	try {
+//	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
 			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
-//			if(useTrackedHealth()) {
-				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-					state.hcTimeout = eventData?.hcTimeout
-					verifyHC()
-				}
-//			}
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.nestTimeZone = eventData?.tz ?: null
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -234,11 +231,12 @@ def processEvent(data) {
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
 		return null
-	}
+/*	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
 		exceptionDataHandler(ex?.message, "generateEvent")
 	}
+*/
 }
 
 def getDataByName(String name) {
@@ -365,7 +363,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state?.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}

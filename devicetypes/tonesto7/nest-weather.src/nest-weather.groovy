@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.3.6" }
+def devVer() { return "5.4.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -235,9 +235,7 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	LogAction("Ping", "info", true)
-//	if(useTrackedHealth()) {
-		keepAwakeEvent()
-//	}
+	keepAwakeEvent()
 }
 
 def keepAwakeEvent() {
@@ -333,7 +331,7 @@ void processEvent() {
 	//LogAction("processEvent Parsing data ${eventData}", "trace")
 	state.eventData = null
 	checkStateClear()
-	try {
+//	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
@@ -341,24 +339,22 @@ void processEvent() {
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.showGraphs = eventData?.showGraphs == true ? true : false
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()
-//			if(useTrackedHealth()) {
-				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-					state.hcTimeout = eventData?.hcTimeout
-					verifyHC()
-				}
-//			}
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
 			state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
 			apiStatusEvent(eventData?.apiIssues)
-			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 
 			if(state?.curWeather == null) {
 				def curWeather = eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null
@@ -377,11 +373,13 @@ void processEvent() {
 		}
 		//LogAction("Device State Data: ${getState()}")
 		//return null
+/*
 	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
 		exceptionDataHandler(ex?.message, "generateEvent")
 	}
+*/
 }
 
 def getStateSize()	{ return state?.toString().length() }
@@ -557,8 +555,9 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
+		def t0 = state.healthMsgWait ?: 3600
 		LogAction("healtNotifyOk: ldtSec: $ldtSec", "debug", true)
-		if(ldtSec < 600) {
+		if(ldtSec < t0) {
 			return false
 		}
 	}
