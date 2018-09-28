@@ -221,7 +221,7 @@ def authPage() {
 			}
 			section(""){
 				paragraph "Tap 'Login to Nest' below to authorize SmartThings to your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
-				paragraph "❖ FYI: Please use the parent Nest account, Nest Family member accounts will not work correctly", state: "complete"
+				paragraph "? FYI: Please use the parent Nest account, Nest Family member accounts will not work correctly", state: "complete"
 				href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
 			}
 			devPageFooter("authLoadCnt", execTime)
@@ -989,19 +989,19 @@ def getRestSrvcDesc() {
 		str += "${str == "" ? "" : "\n"}Host: (${rData?.hostInfo?.hostname})"
 		if(rData?.hostInfo?.osPlatform) {
 			def pd = parseJson(rData?.hostInfo?.osPlatform.toString())
-			str += "\n ├ OS: ${pd?.dist} ${pd?.release}"
-			str += "\n │├ Codename: ${pd?.codename}"
-			str += "\n │└ Kernel: ${pd?.os.toString().capitalize()} ${rData?.hostInfo?.osRelease}"
+			str += "\n + OS: ${pd?.dist} ${pd?.release}"
+			str += "\n ¦+ Codename: ${pd?.codename}"
+			str += "\n ¦+ Kernel: ${pd?.os.toString().capitalize()} ${rData?.hostInfo?.osRelease}"
 		} else {
-			str += "\n ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
+			str += "\n + OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
 		}
-		str += "\n ├ Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
-		str += "\n ├ IP: (${rData?.hostInfo?.ip})"
-		str += "\n ├ Port: (${rData?.hostInfo?.port})"
-		str += "\n ├ Node Service: (v${rData?.version})"
-		str += "\n ├ Active Streaming: (${rData?.streaming.toString().capitalize()})"
-		str += "\n ${dtstr != "" ? "├" : "└"} Session Events: (${rData?.sessionEvts})"
-		str += dtstr != "" ? "\n └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
+		str += "\n + Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
+		str += "\n + IP: (${rData?.hostInfo?.ip})"
+		str += "\n + Port: (${rData?.hostInfo?.port})"
+		str += "\n + Node Service: (v${rData?.version})"
+		str += "\n + Active Streaming: (${rData?.streaming.toString().capitalize()})"
+		str += "\n ${dtstr != "" ? "+" : "+"} Session Events: (${rData?.sessionEvts})"
+		str += dtstr != "" ? "\n + Uptime: ${dtstr.length() > 20 ? "\n     + ${dtstr}" : "${dtstr}"}" : ""
 		paragraph title: "Running Service Info:", str, state: "complete"
 	}
 	return str
@@ -1268,16 +1268,16 @@ def automationStatisticsPage() {
 					def execAvgVal = data?.execAvgVal ?: null
 
 					def str = ""
-					str += lastModDt ? "• Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
+					str += lastModDt ? "• Last Modified:\n  + (${lastModDt})" : "\n • Last Modified: (Not Available)"
 					str += lastEvtDt ? "\n\n• Last Event:" : ""
-					str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 20) ? "\n  │ Device:\n  │└ " : "\n  ├ Device: "}${data?.lastEvent?.displayName}" : ""
-					str += lastEvtDt ? "\n  ├ Type: (${strCapitalize(data?.lastEvent?.name)})" : ""
-					str += lastEvtDt ? "\n  ├ Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
-					str += lastEvtDt ? "\n  └ DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
-					str += lastEvalDt ? "\n\n• Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
-					str += lastSchedDt ? "\n\n• Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
-					str += lastActionDt ? "\n\n• Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
-					str += lastExecVal ? "\n\n• Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
+					str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 20) ? "\n  ¦ Device:\n  ¦+ " : "\n  + Device: "}${data?.lastEvent?.displayName}" : ""
+					str += lastEvtDt ? "\n  + Type: (${strCapitalize(data?.lastEvent?.name)})" : ""
+					str += lastEvtDt ? "\n  + Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
+					str += lastEvtDt ? "\n  + DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
+					str += lastEvalDt ? "\n\n• Last Evaluation:\n  + (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
+					str += lastSchedDt ? "\n\n• Last Schedule:\n  + (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
+					str += lastActionDt ? "\n\n• Last Action:\n  + DateTime: (${lastActionDt})\n  + Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
+					str += lastExecVal ? "\n\n• Execution Info:\n  ${execAvgVal ? "+" : "+"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  + Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
 					paragraph "${str}", state: "complete"
 				}
 			}
@@ -1370,8 +1370,8 @@ def automationGlobalPrefsPage() {
 
 						def str = ""
 						str += "Safety Values:"
-						str += safeTemp ? "\n• Safety Temps:\n  └ Min: ${safeTemp.min}${tUnitStr()}/Max: ${safeTemp.max}${tUnitStr()}" : "\n• Safety Temps: (Not Set)"
-						str += dew_max ? "\n• Comfort Max Dewpoint:\n  └ Max: ${dew_max}${tUnitStr()}" : "\n• Comfort Max Dewpoint: (Not Set)"
+						str += safeTemp ? "\n• Safety Temps:\n  + Min: ${safeTemp.min}${tUnitStr()}/Max: ${safeTemp.max}${tUnitStr()}" : "\n• Safety Temps: (Not Set)"
+						str += dew_max ? "\n• Comfort Max Dewpoint:\n  + Max: ${dew_max}${tUnitStr()}" : "\n• Comfort Max Dewpoint: (Not Set)"
 						paragraph "${str}", title:"${dev?.displayName}", state: "complete", image: getAppImg("instruct_icon.png")
 						if(canHeat) {
 							input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Low Safety Temp (${tUnitStr()})", description: "Range within ${tempRangeValues()}",
@@ -2101,7 +2101,7 @@ def getPollingConfDesc() {
 	pStr += "\n• Device: (${getInputEnumLabel((!atomicState?.streamPolling ? (pollValue ?: 180) : 300), pollValEnum(true))}) ${pollValDesc}"
 	pStr += "\n• Structure: (${getInputEnumLabel((!atomicState?.streamPolling ? (pollStrValue?:180) : 300), pollValEnum())}) ${pollStrValDesc}"
 	pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})${pollWeatherValDesc}" : ""
-	pStr += "\n• Forced Poll Refresh Limit:\n  └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})${pollWaitValDesc}"
+	pStr += "\n• Forced Poll Refresh Limit:\n  + (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})${pollWaitValDesc}"
 	return (pStr != "" ? pStr : "")
 }
 
@@ -2128,7 +2128,7 @@ def getNotifSchedDesc() {
 def getWeatherConfDesc() {
 	def str = ""
 	def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-	str += "• Weather Location:\n   └ ${getCustWeatherLoc() ? "Custom (${getCustWeatherLoc(true)})" : "Hub Location (${defZip})"}"
+	str += "• Weather Location:\n   + ${getCustWeatherLoc() ? "Custom (${getCustWeatherLoc(true)})" : "Hub Location (${defZip})"}"
 	return (str != "") ? "${str}" : null
 }
 
@@ -2150,7 +2150,7 @@ def devCustomizePageDesc() {
 	def tempChgWaitValDesc = (!settings?.tempChgWaitVal || settings?.tempChgWaitVal == 4) ? "" : settings?.tempChgWaitVal
 	def wstr = settings?.weathAlertNotif ? "Enabled" : "Disabled"
 	def str = "Device Customizations:"
-	str += "\n• Man. Temp Change Delay:\n   └ (${getInputEnumLabel(settings?.tempChgWaitVal ?: 4, waitValEnum())})"
+	str += "\n• Man. Temp Change Delay:\n   + (${getInputEnumLabel(settings?.tempChgWaitVal ?: 4, waitValEnum())})"
 	str += "\n${getWeatherConfDesc()}"
 	str += "\n• Weather Alerts: (${wstr})"
 	return ((tempChgWaitValDesc || getCustWeatherLoc() || settings?.weathAlertNotif) ? str : "")
@@ -3279,7 +3279,7 @@ def getInstAutoTypesDesc() {
 	def scii = 1
 	def newList = schMotItems?.unique()
 	newList?.sort()?.each { sci ->
-		str += "${scii == newList?.size() ? "\n  └" : "\n  ├"} $sci"
+		str += "${scii == newList?.size() ? "\n  +" : "\n  +"} $sci"
 		scii = scii+1
 	}
 	str += (disItems?.size() > 0) ? "\n• Disabled: (${disItems?.size()})" : ""
@@ -5187,7 +5187,7 @@ void schedNextWorkQ(useShort=false) {
 			if(queueItemsAvail > 0) { timeVal = 0 }
 		}
 		str = timeVal > cmdDelay || atomicState?.apiRateLimited ? "*RATE LIMITING ON* " : ""
-		//LogAction("schedNextWorkQ │ ${str}queue: ${qnum} │ schedTime: ${timeVal} │ recentSendCmd: ${queueItemsAvail} │ last seconds: ${lastCommandSent} │ cmdDelay: ${cmdDelay} | runInActive: ${atomicState?.workQrunInActive} | Api Limited: ${atomicState?.apiRateLimited}", "info", true)
+		//LogAction("schedNextWorkQ ¦ ${str}queue: ${qnum} ¦ schedTime: ${timeVal} ¦ recentSendCmd: ${queueItemsAvail} ¦ last seconds: ${lastCommandSent} ¦ cmdDelay: ${cmdDelay} | runInActive: ${atomicState?.workQrunInActive} | Api Limited: ${atomicState?.apiRateLimited}", "info", true)
 	} else {
 		timeVal = 0
 	}
@@ -5203,7 +5203,7 @@ void schedNextWorkQ(useShort=false) {
 			workQueue()
 		}
 	}
-	LogAction("schedNextWorkQ ${actStr} │ ${str}queue: ${qnum} │ schedTime: ${timeVal} │ recentSendCmd: ${queueItemsAvail} │ last seconds: ${lastCommandSent} │ cmdDelay: ${cmdDelay} | runInActive: ${atomicState?.workQrunInActive} | command proc: ${cmdIsProc()} | Api Limited: ${atomicState?.apiRateLimited}", "info", true)
+	LogAction("schedNextWorkQ ${actStr} ¦ ${str}queue: ${qnum} ¦ schedTime: ${timeVal} ¦ recentSendCmd: ${queueItemsAvail} ¦ last seconds: ${lastCommandSent} ¦ cmdDelay: ${cmdDelay} | runInActive: ${atomicState?.workQrunInActive} | command proc: ${cmdIsProc()} | Api Limited: ${atomicState?.apiRateLimited}", "info", true)
 }
 
 private getRecentSendCmd(qnum) {
@@ -5273,7 +5273,7 @@ void workQueue() {
 	def cmdQueue = atomicState?."cmdQ${qnum}"
 	try {
 		if(cmdQueue?.size() > 0) {
-			LogAction("workQueue │ Run Queue: ${qnum} | ($metstr)", "trace", true)
+			LogAction("workQueue ¦ Run Queue: ${qnum} | ($metstr)", "trace", true)
 			runIn(90, "workQueue", [overwrite: true])  // lost schedule catchall
 			if(!cmdIsProc()) {
 				cmdProcState(true)
@@ -8762,9 +8762,9 @@ def dumpListDesc(data, level, List lastLevel, listLabel, html=false) {
 		} else {
 			def lineStrt = "\n"
 			for(int i=0; i < level; i++) {
-				lineStrt += (i+1 < level) ? (!lastLevel[i] ? "   │" : "    " ) : "   "
+				lineStrt += (i+1 < level) ? (!lastLevel[i] ? "   ¦" : "    " ) : "   "
 			}
-			lineStrt += (cnt == 1 && list1.size() > 1) ? "┌── " : (cnt < list1?.size() ? "├── " : "└── ")
+			lineStrt += (cnt == 1 && list1.size() > 1) ? "+-- " : (cnt < list1?.size() ? "+-- " : "+-- ")
 			str += "${lineStrt}${listLabel}[${t0}]: ${par} (${getObjType(par)})"
 		}
 		cnt = cnt+1
@@ -8789,9 +8789,9 @@ def dumpMapDesc(data, level, List lastLevel, listCall=false, html=false) {
 			theLast == (last && thisIsLast) ? true : false
 			lineStrt = "\n"
 			for(int i=0; i < level; i++) {
-				lineStrt += (i+1 < level) ? (!newLevel[i] ? "   │" : "    " ) : "   "
+				lineStrt += (i+1 < level) ? (!newLevel[i] ? "   ¦" : "    " ) : "   "
 			}
-			lineStrt += ((cnt < data?.size() || listCall) && !thisIsLast) ? "├── " : "└── "
+			lineStrt += ((cnt < data?.size() || listCall) && !thisIsLast) ? "+-- " : "+-- "
 		}
 		if(par?.value instanceof Map) {
 			str += "${lineStrt}${par?.key.toString()}: (Map)"
@@ -8822,7 +8822,7 @@ def mapDescValHtmlCls(value) {
 	if(!value) { return "" }
 }
 
-def preSymObj() { [1:"•", 2:"│", 3:"├", 4:"└", 5:"    ", 6:"┌", 7:"├──", 8:"└── "] }
+def preSymObj() { [1:"•", 2:"¦", 3:"+", 4:"+", 5:"    ", 6:"+", 7:"+--", 8:"+-- "] }
 
 def getMapDescStr(data) {
 	def str = ""
