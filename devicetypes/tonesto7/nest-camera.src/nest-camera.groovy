@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.3.8" }
+def devVer() { return "5.4.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -151,12 +151,10 @@ metadata {
 
 mappings {
 	path("/getInHomeURL") {action: [GET: "getInHomeURL"]}
-	path("/getOutHomeURL") {action: [GET: "getOutHomeURL"]}
 	path("/getCamHtml") {action: [GET: "getCamHtml"]}
 }
 
-def getInHomeURL() { return [InHomeURL: getCamPlaylistURL()?.toString()] }
-def getOutHomeURL() { return [OutHomeURL: getCamPlaylistURL()?.toString()] }
+def getInHomeURL() { return [InHomeURL: (getCamPlaylistURL() ?: "")] }
 
 def initialize() {
 	Logger("initialized...")
@@ -213,9 +211,7 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	Logger("ping...")
-//	if(useTrackedHealth()) {
-		keepAwakeEvent()
-//	}
+	keepAwakeEvent()
 }
 
 def keepAwakeEvent() {
@@ -259,12 +255,13 @@ void refresh() {
 
 void cltLiveStreamStart() {
 	//log.trace "video stream start()"
-	def url = getCamPlaylistURL()?.toString()
-	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
-	//def imgUrl = state?.snapshot_url
-	def dataLiveVideo = [OutHomeURL: url, InHomeURL: url, ThumbnailURL: imgUrl, cookie: [key: "key", value: "value"]]
-	def evtData = groovy.json.JsonOutput.toJson(dataLiveVideo)
-	sendEvent(name: "stream", value: evtData.toString(), data: evtData, descriptionText: "Starting the livestream", eventType: "VIDEO", displayed: false, isStateChange: true)
+	String url = getCamPlaylistURL()
+	String imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
+	if(url && imgUrl) {
+		Map dataLiveVideo = [OutHomeURL: url, InHomeURL: url, ThumbnailURL: imgUrl, cookie: [key: "key", value: "value"]]
+		def evtData = groovy.json.JsonOutput.toJson(dataLiveVideo)
+		sendEvent(name: "stream", value: evtData.toString(), data: evtData, descriptionText: "Starting the Live Video Stream", eventType: "VIDEO", displayed: false, isStateChange: true)
+	}
 }
 
 // parent calls this method to queue data.
@@ -273,7 +270,8 @@ void cltLiveStreamStart() {
 def generateEvent(Map eventData) {
 	//log.trace("generateEvent Parsing data ${eventData}")
 	state.eventData = eventData
-	runIn(1, "processEvent", [overwrite: true] )
+	//runIn(1, "processEvent", [overwrite: true] )
+	processEvent()
 }
 
 def processEvent() {
@@ -287,7 +285,7 @@ def processEvent() {
 	state.eventData = null
 	def dtNow = getDtNow()
 	//log.trace("processEvent Parsing data ${eventData}")
-	try {
+//	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
@@ -299,7 +297,8 @@ def processEvent() {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.streamMsg = eventData?.streamNotify == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal?.toInteger() : 60
 			if(eventData?.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
@@ -318,7 +317,6 @@ def processEvent() {
 			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
 			if(results?.last_is_online_change) { lastOnlineEvent(results?.last_is_online_change?.toString()) }
-			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			apiStatusEvent(eventData?.apiIssues)
 			debugOnEvent(eventData?.debug ? true : false)
@@ -347,13 +345,14 @@ def processEvent() {
 			// Logger("Device Health Status: ${device.getStatus()}")
 		}
 		return null
-	}
+/*	}
 	catch (ex) {
 		def s = ""
 		if(ex && ex?.message) { s = ex?.message?.toString() }
 		log.error "processEvent Exception: ${s}", ex
 		exceptionDataHandler(s, "processEvent")
 	}
+*/
 }
 
 def getStateSize()      { return state?.toString().length() }
@@ -544,7 +543,7 @@ def videoHistEnabledEvent(on) {
 
 def publicShareEnabledEvent(on) {
 	def isOn = device.currentState("publicShareEnabled")?.value
-	def val = on ? "Enabled" : "Disabled"
+	def val = (on?.toString() == "true") ? "Enabled" : "Disabled"
 	state?.publicShareEnabled = val
 	if(isStateChange(device, "publicShareEnabled", val?.toString())) {
 		Logger("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
@@ -663,16 +662,17 @@ void motionEvtHandler(data, zoneOk) {
 	def motionPerStat = "inactive"
 	if(state?.restStreaming == true && data && zoneOk != false) {
 		if(data?.endDt && data?.hasMotion && !data?.sentMUpd) {
-			def t0 = getTimeDiffSeconds(data?.startDt, data?.endDt)
-			def newDur = Math.min( Math.max(3, t0) , state?.motionSndChgWaitVal)
+			int t0 = getTimeDiffSeconds(data?.startDt, data?.endDt)
+			int t1 = state?.motionSndChgWaitVal ?: 4
+			int newDur = Math.min( Math.max(3, t0) , t1)
 
 			t0 = getTimeDiffSeconds(data?.endDt)
 			def howRecent = Math.max(1, t0)
 			//Logger("MOTION NewDur: ${newDur}    howRecent: ${howRecent}")
 
-			t0 = state?.lastCamEvtData
-			t0.sentMUpd = true
-			state.lastCamEvtData = t0
+			def tt0 = state?.lastCamEvtData
+			tt0.sentMUpd = true
+			state.lastCamEvtData = tt0
 			if(howRecent <= 60) {
 				def motGo = (data?.motionOnPersonOnly == true && data?.hasPerson != true) ? false : true
 				if(motGo) {
@@ -697,16 +697,17 @@ void soundEvtHandler(data) {
 	def sndStat = "not detected"
 	if(state?.restStreaming == true && data) {
 		if(data?.endDt && data?.hasSound && !data?.sentSUpd) {
-			def t0 = getTimeDiffSeconds(data?.startDt, data?.endDt)
-			def newDur = Math.min( Math.max(3, t0) , state?.motionSndChgWaitVal)
+			int t0 = getTimeDiffSeconds(data?.startDt, data?.endDt)
+			int t1 = state?.motionSndChgWaitVal ?: 4
+			int newDur = Math.min( Math.max(3, t0) , state?.motionSndChgWaitVal)
 
 			t0 = getTimeDiffSeconds(data?.endDt)
 			def howRecent = Math.max(1, t0)
 			//Logger("SOUND NewDur: ${newDur}    howRecent: ${howRecent}")
 
-			t0 = state?.lastCamEvtData
-			t0.sentSUpd = true
-			state.lastCamEvtData = t0
+			def tt0 = state?.lastCamEvtData
+			tt0.sentSUpd = true
+			state.lastCamEvtData = tt0
 			if(howRecent <= 60) {
 				sndStat = "detected"
 				runIn(newDur?.toInteger(), "motionSoundEvtHandler", [overwrite: true])
@@ -887,7 +888,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state?.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}
@@ -1280,8 +1282,8 @@ def getStreamHostUrl() {
 	return data ?: null
 }
 
-def getCamPlaylistURL() {
-	def hUrl = getStreamHostUrl()
+String getCamPlaylistURL() {
+	String hUrl = getStreamHostUrl()
 	if(hUrl && state?.camUUID) { return "https://${hUrl}/nexus_aac/${state?.camUUID}/playlist.m3u8" }
 	return null
 }

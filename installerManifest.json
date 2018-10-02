@@ -28,7 +28,7 @@
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5.png",
             "published": true,
             "oAuth": true,
-            "version": "5.3.9",
+            "version": "5.5.1",
             "appSettings": {
                 "clientId": "",
                 "clientSecret": "",
@@ -41,7 +41,7 @@
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_automations_5.png",
             "published": true,
             "oAuth": false,
-            "version": "5.3.6",
+            "version": "5.4.4",
             "appSettings": {},
             "appUrl": "smartapps/tonesto7/nst-automations.src/nst-automations.groovy",
             "optional": false
@@ -51,7 +51,7 @@
             "name": "Nest Thermostat",
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_icon.png",
             "published": true,
-            "version": "5.3.6",
+            "version": "5.4.1",
             "appUrl": "deviceTypes/tonesto7/nest-thermostat.src/nest-thermostat.groovy",
             "optional": false
         },
@@ -59,7 +59,7 @@
             "name": "Nest Protect",
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png",
             "published": true,
-            "version": "5.3.6",
+            "version": "5.4.1",
             "appUrl": "deviceTypes/tonesto7/nest-protect.src/nest-protect.groovy",
             "optional": false
         },
@@ -67,7 +67,7 @@
             "name": "Nest Camera",
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_icon.png",
             "published": true,
-            "version": "5.3.8",
+            "version": "5.4.1",
             "appUrl": "deviceTypes/tonesto7/nest-camera.src/nest-camera.groovy",
             "optional": false
         },
@@ -75,7 +75,7 @@
             "name": "Nest Presence",
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/presence_icon.png",
             "published": true,
-            "version": "5.3.6",
+            "version": "5.4.1",
             "appUrl": "deviceTypes/tonesto7/nest-presence.src/nest-presence.groovy",
             "optional": true
         },
@@ -83,7 +83,7 @@
             "name": "Nest Weather",
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
             "published": true,
-            "version": "5.3.6",
+            "version": "5.4.1",
             "appUrl": "deviceTypes/tonesto7/nest-weather.src/nest-weather.groovy",
             "optional": true
         }

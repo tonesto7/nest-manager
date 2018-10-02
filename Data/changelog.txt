@@ -1,3 +1,28 @@
+V5.5.1 (September 8th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: Bug Fixes
+
+Automation App 5.4.4:
+ • FIXED: Bug Fixes
+
+V5.5.0 (August 28th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: NST Streaming is now communicates via local network (when enabled)
+ • FIXED: Bug Fixes
+
+Automation App 5.4.3:
+ • FIXED: Bug Fixes
+
+V5.4.0 (August 10th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: Pushover Manager Integration
+
+Automation App 5.4.0:
+ • ADDED: Pushover Manager Integration
+
 V5.3.9 (July 30th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
@@ -17,22 +42,4 @@ Automation App 5.3.5:
 • FIXED: Converted degree symbols to unicode
 • ADDED: Storage codebase is now part of Automations file
 • FIXED: Code Cleanups and State Usage Reductions
-
-V5.3.7 (May 31st, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • ADDED: New Storage App to help eliminate State Size issues (It's not storing any data yet)
- • ADDED: Maintenance Commands can now be run from the Diagnostics Web Interface (More Commands to Come)
- • UPDATED: Will remove un-needed or broken automations
- • FIXED: Converted degree symbols to unicode
- • FIXED: Bug fixes and Code Cleanups
-
-Automation App 5.3.4:
-• FIXED: Converted degree symbols to unicode
-• FIXED: Code Cleanups and State Usage Reductions
-
-V5.3.6 (May 8th, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • FIXED: State Cleanup optimizations to help prevent Max State Size errors
 

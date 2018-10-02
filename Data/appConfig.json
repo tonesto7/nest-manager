@@ -1,0 +1,86 @@
+{
+    "broadcast": {
+        "msgId": "7lswwqfVCjHA",
+        "message": "A critical SmartApp update was just published for NST Manager.  Please update your NST Manager SmartApps and Devices to avoid any disruptions",
+        "type": "warn",
+        "minVer": "5.5.1",
+        "devBannerMsg": {
+            "msgId": "",
+            "message": "",
+            "type": "warn",
+            "minVer": "5.5.1",
+            "expireDt": "Wed Feb 20 00:00:00 EST 2018"
+        }
+    },
+    "updater": {
+        "updateVer": 1,
+        "updateMsg": "",
+        "updateDesc": "",
+        "updateType": "std",
+        "setupVersion": 2,
+        "versions": {
+            "app": {
+                "ver": "5.5.1"
+            },
+            "autoapp": {
+                "ver": "5.4.4"
+            },
+            "thermostat": {
+                "ver": "5.4.1"
+            },
+            "protect": {
+                "ver": "5.4.1"
+            },
+            "camera": {
+                "ver": "5.4.1"
+            },
+            "presence": {
+                "ver": "5.4.1"
+            },
+            "weather": {
+                "ver": "5.4.1"
+            },
+            "stream": {
+                "ver": "2.0.1"
+            }
+        }
+    },
+    "settings": {
+        "askAlexa": {
+            "enAaMsgQueue": true,
+            "enMultiQueue": false
+        },
+        "database": {
+            "disableExceptions": true,
+            "exceptionKey": "exceptions",
+            "pullSettingFromFB": false,
+            "metricsUrl": "https://nst-manager-metrics.firebaseio.com",
+            "exceptionUrl": "https://nst-manager-exceptions.firebaseio.com"
+        },
+        "reports": {
+            "disVoiceZoneRprt": false,
+            "disVoiceUsageRprt": false
+        },
+        "schedules": {
+            "count": 8
+        },
+        "healthcheck": {
+            "camTimeout": 120,
+            "protWireTimeout": 45,
+            "protBattTimeout": 1500,
+            "tstatTimeout": 45,
+            "longTimeout": 120,
+            "timeout": 45,
+            "enabled": true,
+            "repairEnabled": false
+        },
+        "maintenance": {
+            "stateVer": 3
+        }
+    },
+    "blacklists": {
+        "clients": [],
+        "metrics": [],
+        "exceptions": []
+    }
+}

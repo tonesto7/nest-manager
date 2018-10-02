@@ -1,3 +1,10 @@
+<p style="font-size: 15px;"><strong>V5.4.1 (September 8th, 2018):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks.</li>
+</ul>
+<br>
+
 <p style="font-size: 15px;"><strong>V5.3.6 (July 4th, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
@@ -6,17 +13,10 @@
     <li><strong>FIXED:</strong> Bug Fixes / Tweaks.</li>
 </ul>
 <br>
+
 <p style="font-size: 15px;"><strong>V5.3.5 (May 31st, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>FIXED:</strong> State use reductions and cleanups</li>
     <li><strong>FIXED:</strong> Bug Fixes / Tweaks.</li>
-</ul>
-<br>
-<p style="font-size: 15px;"><strong>V5.3.1 (January 11th, 2018):</strong><p>
-<hr noshade>
-<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Lot's of HTML UI polishing.</li>
-    <li><strong>ADDED:</strong> You can now view the web tiles in browser (link is in the smartapp > Manage Devices).</li>
-    <li><strong>FIXED:</strong> Some Bug Fixes / Tweaks.</li>
 </ul>
