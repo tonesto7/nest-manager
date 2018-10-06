@@ -1,3 +1,12 @@
+V5.5.2 (September 9th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • Enabled new camera options
+ • FIXED: Bug Fixes
+
+Automation App 5.4.5:
+ • FIXED: Bug Fixes
+
 V5.5.1 (September 8th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
@@ -31,15 +40,4 @@ Manager App:
 
 Automation App 5.3.6:
 • REMOVED: Support for Contact Book
-
-V5.3.8 (July 4th, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • FIXED: Storage App file no longer required
- • FIXED: Bug fixes and Code Cleanups
-
-Automation App 5.3.5:
-• FIXED: Converted degree symbols to unicode
-• ADDED: Storage codebase is now part of Automations file
-• FIXED: Code Cleanups and State Usage Reductions
 

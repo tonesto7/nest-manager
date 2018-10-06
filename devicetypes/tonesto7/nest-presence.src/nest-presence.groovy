@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.4.1" }
+def devVer() { return "5.4.2" }
 
 // for the UI
 metadata {
@@ -212,7 +212,7 @@ def processEvent(data) {
 			presenceEvent(eventData?.pres)
 			apiStatusEvent((!eventData?.apiIssues ? false : true))
 			deviceVerEvent(eventData?.latestVer.toString())
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException == false ? false : true }
 			lastUpdatedEvent(true)
 
 			if(eventData?.lastStrucDataUpd) {

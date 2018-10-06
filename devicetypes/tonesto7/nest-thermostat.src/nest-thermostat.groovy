@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.4.1" }
+def devVer() { return "5.4.2" }
 
 // for the UI
 metadata {
@@ -490,7 +490,7 @@ void processEvent(data) {
 			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
 			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.showGraphs = eventData?.showGraphs != null ? eventData?.showGraphs : true
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException == false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }

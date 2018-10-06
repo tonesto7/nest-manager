@@ -3,12 +3,12 @@
         "msgId": "7lswwqfVCjHA",
         "message": "A critical SmartApp update was just published for NST Manager.  Please update your NST Manager SmartApps and Devices to avoid any disruptions",
         "type": "warn",
-        "minVer": "5.5.1",
+        "minVer": "5.5.2",
         "devBannerMsg": {
             "msgId": "",
             "message": "",
             "type": "warn",
-            "minVer": "5.5.1",
+            "minVer": "5.5.2",
             "expireDt": "Wed Feb 20 00:00:00 EST 2018"
         }
     },
@@ -20,25 +20,25 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.5.1"
+                "ver": "5.5.2"
             },
             "autoapp": {
-                "ver": "5.4.4"
+                "ver": "5.4.5"
             },
             "thermostat": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "protect": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "camera": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "presence": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "weather": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "stream": {
                 "ver": "2.0.1"

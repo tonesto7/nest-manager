@@ -24,28 +24,28 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.5.1"
+                "ver": "5.5.2"
             },
             "autoapp": {
-                "ver": "5.4.4"
+                "ver": "5.4.5"
             },
             "storapp": {
                 "ver": "5.4.0"
             },
             "thermostat": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "protect": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "camera": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "presence": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             },
             "weather": {
-                "ver": "5.4.1"
+                "ver": "5.4.2"
             }
         },
         "allowInApp": false

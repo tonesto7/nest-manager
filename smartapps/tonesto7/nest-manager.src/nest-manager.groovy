@@ -34,16 +34,16 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.5.1" }
-def appVerDate() { "09-08-2018" }
+def appVersion() { "5.5.2" }
+def appVerDate() { "09-19-2018" }
 def minVersions() {
 	return [
-		"automation":["val":544, "desc":"5.4.4"],
-		"thermostat":["val":541, "desc":"5.4.1"],
-		"protect":["val":541, "desc":"5.4.1"],
-		"presence":["val":541, "desc":"5.4.1"],
-		"weather":["val":541, "desc":"5.4.1"],
-		"camera":["val":541, "desc":"5.4.1"],
+		"automation":["val":545, "desc":"5.4.5"],
+		"thermostat":["val":542, "desc":"5.4.2"],
+		"protect":["val":542, "desc":"5.4.2"],
+		"presence":["val":542, "desc":"5.4.2"],
+		"weather":["val":542, "desc":"5.4.2"],
+		"camera":["val":542, "desc":"5.4.2"],
 		"stream":["val":201, "desc":"2.0.1"]
 	]
 }
@@ -322,8 +322,9 @@ def mainPage() {
 
 // NEW STORAGE SmartApp
 def storageInfoSect() {
-	if(!atomicState?.isInstalled || isAppLiteMode() || (stateSz < 55)) { return "" }
-	def storApp = getStorageApp()
+	//Integer stateSz = getStateSizePerc()
+	//if(!atomicState?.isInstalled || isAppLiteMode() || (stateSz < 50)) { return "" }
+	def storApp = getStorageApp(false)
 	section("Storage App Info:") {
 		if(storApp) {
 			def str = ""
@@ -376,8 +377,8 @@ public storageAppInst(Boolean available) {
 
 private getStorageApp(honorState = true) {
 	Integer stateSz = getStateSizePerc()
-	if(honorState && stateSz < 55) { return null }
-	if(isAppLiteMode()) { return null }
+	if(honorState && stateSz < 50) { return null }
+	if(honorState && isAppLiteMode()) { return null }
 	def storApp = getChildApps()?.find { it?.getAutomationType() == "storage" && it?.name == autoAppName() }
 	if(storApp) {
 		if(storApp?.label != getStorageAppChildLabel()) { storApp?.updateLabel(getStorageAppChildLabel()) }
@@ -574,7 +575,7 @@ def devPrefPage() {
 		}
 		if(atomicState?.cameras) {
 			section("Camera Devices:") {
-				if(getDevOpt() || betaMarker()) {
+			//	if(getDevOpt() || betaMarker()) {
 					input "camTakeSnapOnEvt", "bool", title: "Take Snapshot on Motion Events?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("snapshot_icon.png")
 					input "motionSndChgWaitVal", "enum", title: "Delay before Motion/Sound Events are marked Inactive?", required: false, defaultValue: 60, metadata: [values:waitValAltEnum(true)], submitOnChange: true, image: getAppImg("delay_time_icon.png")
 					input "camEnMotionZoneFltr", "bool", title: "Allow filtering motion events by configured zones?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("motion_icon.png")
@@ -584,9 +585,9 @@ def devPrefPage() {
 						href "camMotionZoneFltrPage", title: "Restrict Motion to Certain Zones?", description: t0, params: [devices: atomicState?.cameras.sort{it?.value}, camZones: camZones], image: getAppImg("zone_icon.png"), state: (t0 ? "complete" : "")
 					}
 					atomicState.needChildUpd = true
-				} else {
-					paragraph "No Camera Device Options Yet..."
-				}
+			//	} else {
+			//		paragraph "No Camera Device Options Yet..."
+			//	}
 			}
 		}
 		if(atomicState?.protects) {
@@ -2304,7 +2305,7 @@ def initBuiltin(btype) {
 			autoStr = "storage"
 			keepApp = true
 			def stateSz = getStateSizePerc()
-			if(stateSz < 59) { keepApp = false }
+			if(stateSz < 50) { keepApp = false }
 			else {
 				def kdata = getState()?.findAll { (it?.key in [ "curWeather", "curForecast", "curAstronomy", "curAlerts" ]) }
 				kdata.each { kitem ->
@@ -6090,17 +6091,25 @@ def getWeatherConditions(force = false) {
 }
 
 def getWeatherData(dataName) {
-	def storageApp = getStorageApp()
-	if(storageApp && !isAppLiteMode()) {
-		def t0 = getStorageVal(dataName)
+	def storageApp = getStorageApp(false)
+	def stateSz = getStateSizePerc()
+	def t1 = isAppLiteMode()
+	if(storageApp && (stateSz < 46 || t1)) {
+		initStorageApp() // should delete storageapp
+	}
+	storageApp = getStorageApp()
+	if(storageApp && !t1) {
+		def t0 = findStateStorageVal(dataName)
 		if(t0) {
 			return t0
 		} else { if(getWeatherConditions(true)) { return getStorageVal(dataName) } }
 	} else {
-		if(!isAppLiteMode() ) {
-			def stateSz = getStateSizePerc()
-			if(stateSz > 60) {
-				log.warn "storageApp not found getWeatherData"
+		if(stateSz > 62) {
+			LogAction("storageApp not found getWeatherData ${stateSz}%", "warn", true)
+		}
+		if(!t1) {
+			if(stateSz > 62) {
+				initStorageApp() // should create storage App
 			}
 		}
 		if(atomicState?."$dataName") {
