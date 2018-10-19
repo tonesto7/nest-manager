@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.4.1" }
+def devVer() { return "5.4.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7", ocfDeviceType: "x.com.st.d.sensor.smoke", vid: "generic-smoke-co") {
@@ -361,7 +361,7 @@ def processEvent(data) {
 			softwareVerEvent(results?.software_version.toString())
 			deviceVerEvent(eventData?.latestVer.toString())
 			state?.devBannerData = eventData?.devBannerData ?: null
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException == false ? false : true }
 			determinePwrSrc()
 
 			lastUpdatedEvent(true)

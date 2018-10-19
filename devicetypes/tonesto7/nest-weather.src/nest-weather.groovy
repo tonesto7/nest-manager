@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.4.1" }
+def devVer() { return "5.4.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -342,7 +342,7 @@ void processEvent() {
 			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
 			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
 			state.showGraphs = eventData?.showGraphs == true ? true : false
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException == false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()

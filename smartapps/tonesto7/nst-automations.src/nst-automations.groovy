@@ -26,8 +26,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.4.4" }
-def appVerDate() { "09-08-2018" }
+def appVersion() { "5.4.5" }
+def appVerDate() { "09-18-2018" }
 
 preferences {
 	//startPage
@@ -1821,7 +1821,7 @@ private remSenCheck() {
 			def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
 			def maxTempChangeVal = tempChangeVal * 3
 			def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
-			def curSenTemp = (settings?.remSensorDay) ? getRemoteSenTemp().toDouble() : null
+			def curSenTemp = getRemoteSenTemp().toDouble()
 
 			def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
 			def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
@@ -2077,8 +2077,8 @@ def getRemoteSenThreshold() {
 
 def getRemoteSenTemp() {
 	def mySched = getCurrentSchedule()
-	if(!atomicState.remoteTempSourceStr) { atomicState.remoteTempSourceStr = null }
-	if(!atomicState.currentSchedNum) { atomicState.currentSchedNum = null }
+	if(atomicState?.remoteTempSourceStr != null) { atomicState.remoteTempSourceStr = null }
+	if(atomicState?.currentSchedNum != null) { atomicState.currentSchedNum = null }
 	def sens
 	if(mySched) {
 		def sLbl = "schMot_${mySched}_"
@@ -2089,12 +2089,11 @@ def getRemoteSenTemp() {
 			return getDeviceTempAvg(sens).toDouble()
 		}
 	}
-	if(settings?.remSensorDay) {
+	if(isRemSenConfigured()) {
 		atomicState.remoteTempSourceStr = "Remote Sensor"
 		atomicState.currentSchedNum = null
 		return getDeviceTempAvg(settings?.remSensorDay).toDouble()
-	}
-	else {
+	} else {
 		atomicState.remoteTempSourceStr = "Thermostat"
 		atomicState.currentSchedNum = null
 		return getDeviceTemp(schMotTstat).toDouble()
@@ -2134,10 +2133,12 @@ def getRemSenCoolSetTemp(curMode=null, isEco=false, useCurrent=true) {
 		def tstat = schMotTstat
 		theMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 	}
+	atomicState.remoteCoolSetSourceStr = ""
 	if(theMode != "eco") {
 		if(getLastOverrideCoolSec() < (3600 * 4)) {
 			if(atomicState?.coolOverride != null) {
 				coolTemp = fixTempSetting(atomicState?.coolOverride.toDouble())
+				atomicState.remoteCoolSetSourceStr = "Remote Sensor Override"
 			}
 		} else { atomicState?.coolOverride = null }
 
@@ -2147,23 +2148,34 @@ def getRemSenCoolSetTemp(curMode=null, isEco=false, useCurrent=true) {
 				def useMotion = atomicState?."motion${mySched}UseMotionSettings"
 				def hvacSettings = atomicState?."sched${mySched}restrictions"
 				coolTemp = !useMotion ? hvacSettings?.ctemp : hvacSettings?.mctemp ?: hvacSettings?.ctemp
+				atomicState.remoteCoolSetSourceStr = "Schedule"
 			}
 // ERS if Remsensor is enabled
 			if(isRemSenConfigured()) {
 				if(theMode == "cool" && coolTemp == null /* && isEco */) {
-					if(atomicState?.extTmpLastDesiredTemp) { coolTemp = atomicState?.extTmpLastDesiredTemp }
+					if(atomicState?.extTmpLastDesiredTemp) {
+						coolTemp = atomicState?.extTmpLastDesiredTemp
+						atomicState.remoteCoolSetSourceStr = "Last Desired Temp"
+					}
 				}
 				if(theMode == "auto" && coolTemp == null /* && isEco */) {
-					if(atomicState?.extTmpLastDesiredCTemp) { coolTemp = atomicState?.extTmpLastDesiredCTemp }
+					if(atomicState?.extTmpLastDesiredCTemp) {
+						coolTemp = atomicState?.extTmpLastDesiredCTemp
+						atomicState.remoteCoolSetSourceStr = "Last Desired CTemp"
+					}
 				}
 
 				if(coolTemp == null && remSenDayCoolTemp) {
 					coolTemp = remSenDayCoolTemp.toDouble()
+					atomicState.remoteCoolSetSourceStr = "RemSen Day Cool Temp"
 				}
 
 				if(coolTemp == null) {
 					def desiredCoolTemp = getGlobalDesiredCoolTemp()
-					if(desiredCoolTemp) { coolTemp = desiredCoolTemp.toDouble() }
+					if(desiredCoolTemp) {
+						coolTemp = desiredCoolTemp.toDouble()
+						atomicState.remoteCoolSetSourceStr = "Global Desired Cool Temp"
+					}
 				}
 
 				if(coolTemp) {
@@ -2174,6 +2186,7 @@ def getRemSenCoolSetTemp(curMode=null, isEco=false, useCurrent=true) {
 	}
 	if(coolTemp == null && useCurrent) {
 		coolTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "cool") : coolTemp
+		atomicState.remoteCoolSetSourceStr = "Thermostat"
 	}
 	return coolTemp
 }
@@ -2185,10 +2198,12 @@ def getRemSenHeatSetTemp(curMode=null, isEco=false, useCurrent=true) {
 		def tstat = schMotTstat
 		theMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 	}
+	atomicState.remoteHeatSetSourceStr = ""
 	if(theMode != "eco") {
 		if(getLastOverrideHeatSec() < (3600 * 4)) {
 			if(atomicState?.heatOverride != null) {
 				heatTemp = fixTempSetting(atomicState.heatOverride.toDouble())
+				atomicState.remoteHeatSetSourceStr = "Remote Sensor Override"
 			}
 		} else { atomicState?.heatOverride = null }
 
@@ -2198,23 +2213,34 @@ def getRemSenHeatSetTemp(curMode=null, isEco=false, useCurrent=true) {
 				def useMotion = atomicState?."motion${mySched}UseMotionSettings"
 				def hvacSettings = atomicState?."sched${mySched}restrictions"
 				heatTemp = !useMotion ? hvacSettings?.htemp : hvacSettings?.mhtemp ?: hvacSettings?.htemp
+				atomicState.remoteHeatSetSourceStr = "Schedule"
 			}
 // ERS if Remsensor is enabled
 			if(isRemSenConfigured()) {
 				if(theMode == "heat" && heatTemp == null /* && isEco */) {
-					if(atomicState?.extTmpLastDesiredTemp) { heatTemp = atomicState?.extTmpLastDesiredTemp }
+					if(atomicState?.extTmpLastDesiredTemp) {
+						heatTemp = atomicState?.extTmpLastDesiredTemp
+						atomicState.remoteHeatSetSourceStr = "Last Desired Temp"
+					}
 				}
 				if(theMode == "auto" && heatTemp == null /* && isEco */) {
-					if(atomicState?.extTmpLastDesiredHTemp) { heatTemp = atomicState?.extTmpLastDesiredHTemp }
+					if(atomicState?.extTmpLastDesiredHTemp) {
+						heatTemp = atomicState?.extTmpLastDesiredHTemp
+						atomicState.remoteHeatSetSourceStr = "Last Desired HTemp"
+				 	}
 				}
 
 				if(heatTemp == null && remSenDayHeatTemp) {
 					heatTemp = remSenDayHeatTemp.toDouble()
+					atomicState.remoteHeatSetSourceStr = "RemSen Day Heat Temp"
 				}
 
 				if(heatTemp == null) {
 					def desiredHeatTemp = getGlobalDesiredHeatTemp()
-					if(desiredHeatTemp) { heatTemp = desiredHeatTemp.toDouble() }
+					if(desiredHeatTemp) {
+						heatTemp = desiredHeatTemp.toDouble()
+						atomicState.remoteHeatSetSourceStr = "Global Desired Heat Temp"
+					}
 				}
 
 				if(heatTemp) {
@@ -2226,6 +2252,7 @@ def getRemSenHeatSetTemp(curMode=null, isEco=false, useCurrent=true) {
 
 	if(heatTemp == null && useCurrent) {
 		heatTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "heat") : heatTemp
+		atomicState.remoteHeatSetSourceStr = "Thermostat"
 	}
 	return heatTemp
 }
@@ -2389,10 +2416,33 @@ def fanCtrlCheck() {
 		def execTime = now()
 		//atomicState?.lastEvalDt = getDtNow()
 
-		def reqHeatSetPoint = getRemSenHeatSetTemp()
-		reqHeatSetPoint = reqHeatSetPoint ?: 0
+		def curMode = schMotTstat ? schMotTstat?.currentnestThermostatMode?.toString() : null
+		def modeEco = (curMode in ["eco"]) ? true : false
 
-		def reqCoolSetPoint = getRemSenCoolSetTemp()
+		def reqHeatSetPoint
+		def reqCoolSetPoint
+		if(!modeEco) {
+			reqHeatSetPoint = getRemSenHeatSetTemp(curMode)
+			reqCoolSetPoint = getRemSenCoolSetTemp(curMode)
+		}
+
+		def lastMode = schMotTstat ? schMotTstat?.currentpreviousthermostatMode?.toString() : null
+		if(!lastMode && modeEco && isRemSenConfigured()) {
+			if( /* !lastMode && */ atomicState?.extTmpTstatOffRequested && atomicState?.extTmplastMode) {
+				lastMode = atomicState?.extTmplastMode
+			}
+		}
+		if(lastMode) {
+			if(!reqHeatSetpoint) { reqHeatSetPoint = getRemSenHeatSetTemp(lastMode, modeEco, false) }
+			if(!reqCoolSetpoint) { reqCoolSetPoint = getRemSenCoolSetTemp(lastMode, modeEco, false) }
+			if(isRemSenConfigured()) {
+				if(!reqHeatSetPoint) { reqHeatSetPoint = atomicState?.extTmpLastDesiredHTemp }
+				if(!reqCoolSetPoint) { reqCoolSetPoint = atomicState?.extTmpLastDesiredCTemp }
+			}
+			LogAction("fanCtrlCheck: Using lastMode: ${lastMode} | extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested} | curMode: ${curMode}", "debug", true)
+		}
+
+		reqHeatSetPoint = reqHeatSetPoint ?: 0
 		reqCoolSetPoint = reqCoolSetPoint ?: 0
 
 		def curTstatTemp = getRemoteSenTemp().toDouble()
@@ -2401,13 +2451,13 @@ def fanCtrlCheck() {
 		def curSetPoint = t0 ? t0.toDouble() : 0
 
 		def tempDiff = Math.abs(curSetPoint - curTstatTemp)
-		LogAction("fanCtrlCheck: Desired Temps - Heat: ${reqHeatSetPoint} | Cool: ${reqCoolSetPoint}", "info", false)
-		LogAction("fanCtrlCheck: Current Thermostat Sensor Temp: ${curTstatTemp} Temp Difference: (${tempDiff})", "info", false)
+		LogAction("fanCtrlCheck: Desired Temps - Heat: ${reqHeatSetPoint} | Cool: ${reqCoolSetPoint}", "info", true)
+		LogAction("fanCtrlCheck: Current Thermostat Sensor Temp: ${curTstatTemp} Temp Difference: (${tempDiff})", "info", true)
 
 		if(isFanCircConfigured()) {
 			def adjust = (getTemperatureScale() == "C") ? 0.5 : 1.0
 			def threshold = !fanCtrlTempDiffDegrees ? adjust : fanCtrlTempDiffDegrees.toDouble()
-			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode.toString() : null
+			def hvacMode = curMode
 /*
 			def curTstatFanMode = schMotTstat?.currentThermostatFanMode.toString()
 			def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
@@ -2625,7 +2675,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
 
 	def returnToAuto = can_Circ ? false : true
-	if(hvacMode in ["off", "eco"]) { returnToAuto = true }
+	if(hvacMode in ["off", "eco"]) { returnToAuto = true }  // This overrides ECO...
 
 	// Track approximate fan on / off times
 	if( !fanOn && atomicState?.lastfanCtrlRunDt > atomicState?.lastfanCtrlFanOffDt ) {
