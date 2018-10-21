@@ -28,7 +28,7 @@
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5.png",
             "published": true,
             "oAuth": true,
-            "version": "5.5.3",
+            "version": "5.5.4",
             "appSettings": {
                 "clientId": "",
                 "clientSecret": "",
@@ -41,7 +41,7 @@
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_automations_5.png",
             "published": true,
             "oAuth": false,
-            "version": "5.4.5",
+            "version": "5.4.6",
             "appSettings": {},
             "appUrl": "smartapps/tonesto7/nst-automations.src/nst-automations.groovy",
             "optional": false
@@ -51,7 +51,7 @@
             "name": "Nest Thermostat",
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_icon.png",
             "published": true,
-            "version": "5.4.2",
+            "version": "5.4.3",
             "appUrl": "deviceTypes/tonesto7/nest-thermostat.src/nest-thermostat.groovy",
             "optional": false
         },

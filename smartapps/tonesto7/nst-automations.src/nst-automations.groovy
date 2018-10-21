@@ -26,8 +26,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.4.5" }
-def appVerDate() { "09-18-2018" }
+def appVersion() { "5.4.6" }
+def appVerDate() { "10-19-2018" }
 
 preferences {
 	//startPage
@@ -1796,6 +1796,7 @@ private remSenCheck() {
 		} else {
 			//log.info "remSenCheck: Evaluating Event"
 
+			def tempScaleStr = "${tUnitStr()}"
 			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode?.toString() : null
 			if(hvacMode in [ "off", "eco"] ) {
 				LogAction("Remote Sensor: Skipping Evaluation; The Current Thermostat Mode is '${strCapitalize(hvacMode)}'", "info", true)
@@ -1940,7 +1941,7 @@ private remSenCheck() {
 						}
 
 					} else {
-						LogAction("Remote Sensor: NO CHANGE TO COOL - CoolSetpoint is (${curCoolSetpoint}${tUnitStr()}) ", "info", false)
+						LogAction("Remote Sensor: NO CHANGE TO COOL - CoolSetpoint is (${curCoolSetpoint}${tempScaleStr}) ", "info", false)
 					}
 				}
 			}
@@ -1999,7 +2000,7 @@ private remSenCheck() {
 							return // let all this take effect
 						}
 					} else {
-						LogAction("Remote Sensor: NO CHANGE TO HEAT - HeatSetpoint is already (${curHeatSetpoint}${tUnitStr()})", "info", false)
+						LogAction("Remote Sensor: NO CHANGE TO HEAT - HeatSetpoint is already (${curHeatSetpoint}${tempScaleStr})", "info", false)
 					}
 				}
 			}
@@ -2766,6 +2767,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, Boolean fanOn, operType) {
 
 	def turnOn = false
+	def tempScaleStr = "${tUnitStr()}"
 /*
 	def adjust = (getTemperatureScale() == "C") ? 0.5 : 1.0
 	if(threshold > (adjust * 2.0)) {
@@ -2780,8 +2782,8 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 	LogAction(" ├ adjust: ${adjust}}${tUnitStr()}", "debug", false)
 */
 
-	LogAction(" ├ operType: (${strCapitalize(operType)}) | Temp Threshold: ${threshold}${tUnitStr()} |  FanAlreadyOn: (${strCapitalize(fanOn)})", "debug", false)
-	LogAction(" ├ Sensor Temp: ${senTemp}${tUnitStr()} | Requested Setpoint Temp: ${reqsetTemp}${tUnitStr()}", "debug", false)
+	LogAction(" ├ operType: (${strCapitalize(operType)}) | Temp Threshold: ${threshold}${tempScaleStr} |  FanAlreadyOn: (${strCapitalize(fanOn)})", "debug", false)
+	LogAction(" ├ Sensor Temp: ${senTemp}${tempScaleStr} | Requested Setpoint Temp: ${reqsetTemp}${tempScaleStr}", "debug", false)
 
 	if(!reqsetTemp) {
 		LogAction("getCirculateFanTempOk: Bad reqsetTemp ${reqsetTemp}", "warn", false)
@@ -2805,8 +2807,8 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 //		if((senTemp < offtemp) && (senTemp >= (ontemp + adjust))) { turnOn = true }
 	}
 
-//	LogAction(" ├ onTemp: ${ontemp} | offTemp: ${offtemp}}${tUnitStr()}", "debug", false)
-	LogAction(" ├ offTemp: ${offtemp}${tUnitStr()} | Temp Threshold: ${threshold}${tUnitStr()}", "debug", false)
+//	LogAction(" ├ onTemp: ${ontemp} | offTemp: ${offtemp}}${tempScaleStr}", "debug", false)
+	LogAction(" ├ offTemp: ${offtemp}${tempScaleStr} | Temp Threshold: ${threshold}${tempScaleStr}", "debug", false)
 	LogAction(" ┌ Final Result: (${strCapitalize(turnOn)})", "debug", false)
 //	LogAction("getCirculateFanTempOk: ", "debug", false)
 
@@ -6220,7 +6222,7 @@ def getScheduleDesc(num = null) {
 			str += isRemSen && schData?.sen0 ?	"${isRemSen || isRestrict ? "\n │\n" : "\n"} └ Alternate Remote Sensor:" : ""
 			//str += isRemSen && schData?.sen0 ?	"\n      ├ Temp Sensors: (${schData?.sen0.size()})" : ""
 			settings["${sLbl}remSensor"]?.each { t ->
-				str += "\n      ├ ${t?.label}: ${(t?.label?.toString()?.length() > 10) ? "\n      │ └ " : ""}(${getDeviceTemp(t)}${tUnitStr()})"
+				str += "\n      ├ ${t?.label}: ${(t?.label?.toString()?.length() > 10) ? "\n      │ └ " : ""}(${getDeviceTemp(t)}${tempScaleStr})"
 			}
 			str += isRemSen && schData?.sen0 ?	"\n      └ Temp${(settings["${sLbl}remSensor"]?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(settings["${sLbl}remSensor"])}${tempScaleStr})" : ""
 			str += isRemSen && schData?.thres ?	"\n  └ Threshold: (${settings["${sLbl}remSenThreshold"]}${tempScaleStr})" : ""
@@ -7688,10 +7690,11 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, pName, mir=null) {
 	def reqHeat
 	def curCoolSetpoint
 	def curHeatSetpoint
+	def tempScaleStr = "${tUnitStr()}"
 
 	if(tstat) {
 		hvacMode = tstat?.currentnestThermostatMode.toString()
-		LogAction("setTstatAutoTemps: [tstat: ${tstat?.displayName} | Mode: ${hvacMode} | coolSetpoint: ${coolSetpoint}${tUnitStr()} | heatSetpoint: ${heatSetpoint}${tUnitStr()}]", "info", true)
+		LogAction("setTstatAutoTemps: [tstat: ${tstat?.displayName} | Mode: ${hvacMode} | coolSetpoint: ${coolSetpoint}${tempScaleStr} | heatSetpoint: ${heatSetpoint}${tempScaleStr}]", "info", true)
 
 		retVal = true
 		setStr = ""
@@ -7737,15 +7740,15 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, pName, mir=null) {
 	}
 	if(retVal) {
 		if(heatFirst && setHeat) {
-			setStr += "heatSetpoint: (${reqHeat}${tUnitStr()}) "
+			setStr += "heatSetpoint: (${reqHeat}${tempScaleStr}) "
 			if(reqHeat != curHeatSetpoint) {
 				tstat?.setHeatingSetpoint(reqHeat)
-				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}${tUnitStr()}", getDtNow(), pName, tstat)
+				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}${tempScaleStr}", getDtNow(), pName, tstat)
 				if(mir) { mir*.setHeatingSetpoint(reqHeat) }
 			}
 		}
 		if(setCool) {
-			setStr += "coolSetpoint: (${reqCool}${tUnitStr()}) "
+			setStr += "coolSetpoint: (${reqCool}${tempScaleStr}) "
 			if(reqCool != curCoolSetpoint) {
 				tstat?.setCoolingSetpoint(reqCool)
 				storeLastAction("Set ${tstat} Cool Setpoint ${reqCool}", getDtNow(), pName, tstat)
@@ -7753,10 +7756,10 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, pName, mir=null) {
 			}
 		}
 		if(!heatFirst && setHeat) {
-			setStr += "heatSetpoint: (${reqHeat}${tUnitStr()})"
+			setStr += "heatSetpoint: (${reqHeat}${tempScaleStr})"
 			if(reqHeat != curHeatSetpoint) {
 				tstat?.setHeatingSetpoint(reqHeat)
-				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}${tUnitStr()}", getDtNow(), pName, tstat)
+				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}${tempScaleStr}", getDtNow(), pName, tstat)
 				if(mir) { mir*.setHeatingSetpoint(reqHeat) }
 			}
 		}

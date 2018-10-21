@@ -34,12 +34,12 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.5.3" }
-def appVerDate() { "10-16-2018" }
+def appVersion() { "5.5.4" }
+def appVerDate() { "10-19-2018" }
 def minVersions() {
 	return [
-		"automation":["val":545, "desc":"5.4.5"],
-		"thermostat":["val":542, "desc":"5.4.2"],
+		"automation":["val":546, "desc":"5.4.6"],
+		"thermostat":["val":543, "desc":"5.4.3"],
 		"protect":["val":542, "desc":"5.4.2"],
 		"presence":["val":542, "desc":"5.4.2"],
 		"weather":["val":542, "desc":"5.4.2"],
@@ -4390,13 +4390,13 @@ def updateChildData(force = false) {
 					def automationChildApp = getChildApps().find{ it.id == atomicState?."vThermostatChildAppId${devId}" }
 					if(automationChildApp != null && !automationChildApp.getIsAutomationDisabled()) {
 						def tempC = 0.0
-						def tempF = 0
+						def tempF = 0.0
 						if(getTemperatureScale() == "C") {
 							tempC = automationChildApp.getRemoteSenTemp()
-							tempF = (tempC * (9 / 5) + 32) as Integer
+							tempF = (tempC * (9 / 5) + 32.0)
 						} else {
 							tempF = automationChildApp.getRemoteSenTemp()
-							tempC = (tempF - 32) * (5 / 9) as Double
+							tempC = (tempF - 32.0) * (5 / 9) as Double
 						}
 						data?.ambient_temperature_c = tempC
 						data?.ambient_temperature_f = tempF
