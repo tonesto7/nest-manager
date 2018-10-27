@@ -28,7 +28,7 @@
             "iconUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nst_manager_5.png",
             "published": true,
             "oAuth": true,
-            "version": "5.5.4",
+            "version": "5.5.5",
             "appSettings": {
                 "clientId": "",
                 "clientSecret": "",

@@ -34,8 +34,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.5.4" }
-def appVerDate() { "10-19-2018" }
+def appVersion() { "5.5.5" }
+def appVerDate() { "10-23-2018" }
 def minVersions() {
 	return [
 		"automation":["val":546, "desc":"5.4.6"],
@@ -1467,10 +1467,10 @@ def notifPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "notifPrefPage", install: false) {
 		section("Enable Text Messaging:") {
-			input "phones", "phone", title: "Send SMS to Number\n(Optional)", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png")
+			input "phone", "phone", title: "Send SMS to Number\n(Optional)", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png")
 		}
 		section("Enable Push Messages:") {
-			input "usePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
+			input "usePush", "bool", title: "Send Push Notifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
 		}
 		section("Enable Pushover Support:") {
 			input ("pushoverEnabled", "bool", title: "Use Pushover Integration", required: false, submitOnChange: true, image: getAppImg("pushover_icon.png"))
