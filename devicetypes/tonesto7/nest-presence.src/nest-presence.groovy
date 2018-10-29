@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.4.0" }
+def devVer() { return "5.4.1" }
 
 // for the UI
 metadata {
@@ -191,7 +191,7 @@ def processEvent(data) {
 	def eventData = data?.evt
 	state.remove("eventData")
 	//log.trace("processEvent Parsing data ${eventData}")
-	try {
+//	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
@@ -231,11 +231,12 @@ def processEvent(data) {
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
 		return null
-	}
+/*	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
 		exceptionDataHandler(ex?.message, "generateEvent")
 	}
+*/
 }
 
 def getDataByName(String name) {
