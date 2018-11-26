@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.4.2" }
+def devVer() { return "5.4.3" }
 
 // for the UI
 metadata {
@@ -99,6 +99,7 @@ metadata {
 		attribute "whoMadeChangesDesc", "string"
 		attribute "whoMadeChangesDescDt", "string"
 		attribute "whoSetEcoMode", "string"
+		attribute "temperatureur", "string"
 	}
 
 	simulator {
@@ -911,10 +912,14 @@ def thermostatSetpointEvent(Double targetTemp) {
 def temperatureEvent(Double tempVal) {
 	def temp = device.currentState("temperature")?.stringValue
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+	def unrounded_rTempVal = tempVal.round(1)
 	if(isStateChange(device, "temperature", rTempVal.toString())) {
 		LogAction("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}", displayed: true, isStateChange: true)
 	} else { LogAction("Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp})${tUnitStr()}") }
+	if(isStateChange(device, "temperatureur", unrounded_rTempVal.toString())) {
+		sendEvent(name:'temperatureur', value: unrounded_rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}", displayed: false, isStateChange: true)
+	}
 	checkSafetyTemps()
 }
 

@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.4.2" }
+def devVer() { return "5.4.3" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -325,7 +325,8 @@ def processEvent() {
 			softwareVerEvent(results?.software_version?.toString())
 			if(results?.activity_zones) { state?.activityZones = results?.activity_zones }
 			
-			if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
+			//if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
+			imageEvent(results?.snapshot_url?.toString())
 			if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
 			if(results?.last_event) {
@@ -719,6 +720,25 @@ void soundEvtHandler(data) {
 		sendEvent(name: "sound", value: sndStat, descriptionText: "Sound Sensor is: ${sndStat}", displayed: true, isStateChange: true, state: sndStat)
 		addCheckinReason("sound")
 	} else { LogAction("Sound Sensor State: (${sndStat}) | Original State: (${curSound})") }
+}
+
+def imageEvent(url) {
+	def clearUrl = true
+	if(state?.isOnline && state?.isStreaming && url != null && url != "") {
+		if(url?.startsWith("https://")) {
+			def curImage = device.currentState("image")?.stringValue
+			state.snapshot_url = url
+			clearUrl = false
+			if(isStateChange(device, "image", url?.toString())) {
+				LogAction("UPDATED | Image Url: (${url}) | Original State: (${curImage})")
+				sendEvent(name: "image", value: url, descriptionText: "Image URL ${url}", displayed: false, isStateChange: true, state: url) 
+			}
+		}
+	}
+	if(clearUrl) {
+		state.snapshot_url = null
+		sendEvent(name: "image", value: "", descriptionText: "Image URL Cleared", displayed: false) 
+	}
 }
 
 def debugOnEvent(debug) {

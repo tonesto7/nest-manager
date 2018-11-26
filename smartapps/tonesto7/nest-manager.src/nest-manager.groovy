@@ -34,16 +34,16 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.5.2" }
-def appVerDate() { "09-19-2018" }
+def appVersion() { "5.5.6" }
+def appVerDate() { "1l-11-2018" }
 def minVersions() {
 	return [
-		"automation":["val":545, "desc":"5.4.5"],
-		"thermostat":["val":542, "desc":"5.4.2"],
+		"automation":["val":547, "desc":"5.4.7"],
+		"thermostat":["val":543, "desc":"5.4.3"],
 		"protect":["val":542, "desc":"5.4.2"],
 		"presence":["val":542, "desc":"5.4.2"],
 		"weather":["val":542, "desc":"5.4.2"],
-		"camera":["val":542, "desc":"5.4.2"],
+		"camera":["val":543, "desc":"5.4.3"],
 		"stream":["val":201, "desc":"2.0.1"]
 	]
 }
@@ -809,7 +809,7 @@ def isAppLiteMode() {
 
 def showDevSharePrefs() {
 	section("Share Data with Developer:") {
-		paragraph title: "What is this used for?", "These options send non-user identifiable information and error data to diagnose catch trending issues."
+		paragraph title: "What is this used for?", "These options send non-user identifiable information and error data to diagnose or catch trending issues."
 		input ("optInAppAnalytics", "bool", title: "Send Install Data?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
 		input ("optInSendExceptions", "bool", title: "Send Error Data?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
 		if(settings?.optInAppAnalytics != false) {
@@ -1467,10 +1467,10 @@ def notifPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "notifPrefPage", install: false) {
 		section("Enable Text Messaging:") {
-			input "phones", "phone", title: "Send SMS to Number\n(Optional)", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png")
+			input "phone", "phone", title: "Send SMS to Number\n(Optional)", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png")
 		}
 		section("Enable Push Messages:") {
-			input "usePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
+			input "usePush", "bool", title: "Send Push Notifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
 		}
 		section("Enable Pushover Support:") {
 			input ("pushoverEnabled", "bool", title: "Use Pushover Integration", required: false, submitOnChange: true, image: getAppImg("pushover_icon.png"))
@@ -1954,7 +1954,7 @@ private diagLogProcChange(setOn) {
 def getRemDiagActSec() { return !getTimestampVal("remDiagLogActivatedDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("remDiagLogActivatedDt"), null, "getRemDiagActSec").toInteger() }
 def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
 
-def changeLogPage () {
+def changeLogPage() {
 	def execTime = now()
 	dynamicPage(name: "changeLogPage", title: "", nextPage: "mainPage", install: false) {
 		section() {
@@ -3618,21 +3618,21 @@ def getApiData(type = null) {
 						atomicState.structName = newStrucName ?: atomicState?.structName
 						locationPresNotify(getLocationPresence())
 					}
-					incApiStrReqCnt()
+					incrementCntByKey("apiStrReqCnt")
 				}
 				else if(type == "dev") {
 					def t0 = resp?.data
 					//LogTrace("API Device Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.deviceData, t0, "dev", "poll")
 					if(chg) { result = true }
-					incApiDevReqCnt()
+					incrementCntByKey("apiDevReqCnt")
 				}
 				else if(type == "meta") {
 					//LogTrace("API Metadata Resp.Data: ${resp?.data}")
 					def nresp = resp?.data?.metadata
 					def chg = didChange(atomicState?.metaData, nresp, "meta", "poll")
 					if(chg) { result = true }
-					incApiMetaReqCnt()
+					incrementCntByKey("apiMetaReqCnt")
 				}
 			} else {
 				LogAction("getApiData - ${type} Received: Resp (${resp?.status})", "error", true)
@@ -3727,7 +3727,7 @@ def procNestResponse(resp, data) {
 					locationPresNotify(getLocationPresence())
 				}
 				atomicState.qstrRequested = false
-				incApiStrReqCnt()
+				incrementCntByKey("apiStrReqCnt")
 			}
 			if(type == "dev") {
 				def t0 = resp?.json
@@ -3737,7 +3737,7 @@ def procNestResponse(resp, data) {
 					dev = true
 				}
 				atomicState.qdevRequested = false
-				incApiDevReqCnt()
+				incrementCntByKey("apiDevReqCnt")
 			}
 			if(type == "meta") {
 				def nresp = resp?.json?.metadata
@@ -3746,7 +3746,7 @@ def procNestResponse(resp, data) {
 				if(chg) {
 					meta = true
 				}
-				incApiMetaReqCnt()
+				incrementCntByKey("apiMetaReqCnt")
 			}
 		} else {
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
@@ -3853,7 +3853,7 @@ def receiveEventData(eventData=null) {
 			apiIssueEvent(false)
 			atomicState?.apiRateLimited = false
 			atomicState?.apiCmdFailData = null
-			incRestStrEvtCnt()
+			incrementCntByKey("apiRestStrEvtCnt")
 		}
 		if(atomicState?.forceChildUpd || atomicState?.needChildUpd || devChgd) {
 			schedFinishPoll(devChgd)
@@ -4390,13 +4390,13 @@ def updateChildData(force = false) {
 					def automationChildApp = getChildApps().find{ it.id == atomicState?."vThermostatChildAppId${devId}" }
 					if(automationChildApp != null && !automationChildApp.getIsAutomationDisabled()) {
 						def tempC = 0.0
-						def tempF = 0
+						def tempF = 0.0
 						if(getTemperatureScale() == "C") {
 							tempC = automationChildApp.getRemoteSenTemp()
-							tempF = (tempC * (9 / 5) + 32) as Integer
+							tempF = (tempC * (9 / 5) + 32.0)
 						} else {
 							tempF = automationChildApp.getRemoteSenTemp()
-							tempC = (tempF - 32) * (5 / 9) as Double
+							tempC = (tempF - 32.0) * (5 / 9) as Double
 						}
 						data?.ambient_temperature_c = tempC
 						data?.ambient_temperature_f = tempF
@@ -5429,7 +5429,7 @@ def nestCmdResponse(resp, data) {
 		if(resp?.status == 200) {
 			LogAction("nestCmdResponse | Processed Queue: ${qnum} | Obj: ($type{$obj:$objVal}) SUCCESSFULLY!", "info", true)
 			apiIssueEvent(false)
-			incCmdCnt()
+			incrementCntByKey("apiCommandCnt")
 			atomicState?.lastCmdSentStatus = "ok"
 			atomicState?.apiRateLimited = false
 			atomicState?.apiCmdFailData = null
@@ -5510,7 +5510,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, origcmd, redir = false)
 			else if(resp?.status == 200) {
 				LogAction("${myStr} Processed queue: ${qnum} ($type{$obj:$objVal}) SUCCESSFULLY!", "info", true)
 				apiIssueEvent(false)
-				incCmdCnt()
+				incrementCntByKey("apiCommandCnt")
 				atomicState?.lastCmdSentStatus = "ok"
 				atomicState?.apiRateLimited = false
 				atomicState?.apiCmdFailData = null
@@ -5600,46 +5600,12 @@ def apiRespHandler(code, errJson, methodName, tstr=null, isCmd=false) {
 	}
 }
 
-def incApiStrReqCnt() {
-	long reqCnt = atomicState?.apiStrReqCnt ?: 0
-	reqCnt = reqCnt?.toLong()+1
-	LogTrace("ApiStrReqCnt: $reqCnt")
-	atomicState?.apiStrReqCnt = reqCnt?.toLong()
-}
-
-def incApiDevReqCnt() {
-	long reqCnt = atomicState?.apiDevReqCnt ?: 0
-	reqCnt = reqCnt?.toLong()+1
-	LogTrace("ApiDevReqCnt: $reqCnt")
-	atomicState?.apiDevReqCnt = reqCnt?.toLong()
-}
-
-def incApiMetaReqCnt() {
-	long reqCnt = atomicState?.apiMetaReqCnt ?: 0
-	reqCnt = reqCnt?.toLong()+1
-	LogTrace("ApiMetaReqCnt: $reqCnt")
-	atomicState?.apiMetaReqCnt = reqCnt?.toLong()
-}
-
-def incCmdCnt() {
-	long cmdCnt = atomicState?.apiCommandCnt ?: 0
-	cmdCnt = cmdCnt?.toLong()+1
-	LogTrace("Api CmdCnt: $cmdCnt")
-	atomicState?.apiCommandCnt = cmdCnt?.toLong()
-}
-
-def incRestStrEvtCnt() {
-	long evtCnt = atomicState?.apiRestStrEvtCnt ?: 0
-	evtCnt = evtCnt?.toLong()+1
-	LogTrace("ApiRestStrEvtCnt: $evtCnt")
-	atomicState?.apiRestStrEvtCnt = evtCnt?.toLong()
-}
-
-def incAppNotifSentCnt() {
-	long notCnt = atomicState?.appNotifSentCnt ?: 0
-	notCnt = notCnt?.toLong()+1
-	LogTrace("AppNotifSentCnt: $notCnt")
-	atomicState?.appNotifSentCnt = notCnt?.toLong()
+private incrementCntByKey(String key) {
+	long evtCnt = atomicState?."${key}" ?: 0
+	// evtCnt = evtCnt?.toLong()+1
+	evtCnt++
+	LogTrace("${key?.toString()?.capitalize()}: $evtCnt")
+	atomicState?."${key}" = evtCnt?.toLong()
 }
 
 /*
@@ -5955,7 +5921,7 @@ def sendMsg(String msgType, String msg, Boolean showEvt=true, Map pushoverMap=nu
 				//atomicState?.lastMsg = flatMsg
 				//atomicState?.lastMsgDt = getDtNow()
 				LogAction("sendMsg: Sent ${sentstr} (${flatMsg})", "debug", true)
-				incAppNotifSentCnt()
+				incrementCntByKey("appNotifSentCnt")
 			}
 		}
 	} catch (ex) {
@@ -8119,7 +8085,7 @@ def strCapitalize(str) {
 
 def getInputEnumLabel(inputName, enumName) {
 	def result = "Not Set"
-	if(input && enumName) {
+	if(inputName && enumName) {
 		enumName.each { item ->
 			if(item?.key.toString() == inputName?.toString()) {
 				result = item?.value
