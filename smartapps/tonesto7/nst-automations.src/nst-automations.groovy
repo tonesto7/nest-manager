@@ -26,8 +26,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.4.6" }
-def appVerDate() { "10-19-2018" }
+def appVersion() { "5.4.7" }
+def appVerDate() { "11-08-2018" }
 
 preferences {
 	//startPage
@@ -6647,14 +6647,17 @@ def setNotificationPage(params) {
 					input "${pName}SendToAskAlexaQueue", "bool", title: "Send to Ask Alexa Message Queue?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
 							image: askAlexaImgUrl()
 					input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player(s)", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
+					input "${pName}EchoDevices", "device.echoSpeaksDevice", title: "Select Alexa Devices(s)", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg('echo_speaks.png')
 					input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesizer(s)", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
-					if(settings["${pName}SpeechMediaPlayer"]) {
+					if(settings["${pName}SpeechMediaPlayer"] || settings["${pName}EchoDevices"]) {
 						input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
-						input "${pName}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
+						if(settings["${pName}SpeechMediaPlayer"]) {
+							input "${pName}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
+						}
 					}
 					def desc = ""
 					if(pName in ["conWat", "extTmp", "leakWat"]) {
-						if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"] || settings["${pName}SendToAskAlexaQueue"]) ) {
+						if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"] || settings["${pName}EchoDevices"] || settings["${pName}SendToAskAlexaQueue"]) ) {
 							switch(pName) {
 								case "conWat":
 									desc = "Contact Close"
@@ -6811,7 +6814,9 @@ String getNotifSchedDesc(pName) {
 	return (notifDesc != "") ? "${notifDesc}" : null
 }
 
-def getOk2Notify(pName) { return (settings?."${pName}NotificationsOn" && daysOk(settings?."${pName}quietDays") && notificationTimeOk(pName) && modesOk(settings?."${pName}quietModes")) }
+def getOk2Notify(pName) { 
+	return ((settings["${pName}NotificationsOn"] == true) && (daysOk(settings?."${pName}quietDays") == true) && (notificationTimeOk(pName) == true) && (modesOk(settings?."${pName}quietModes") == true))
+}
 
 def notificationTimeOk(pName) {
 	def strtTime = null
@@ -6905,13 +6910,20 @@ def getVoiceNotifConfigDesc(pName) {
 	if(settings?."${pName}NotificationsOn" && settings["${pName}AllowSpeechNotif"]) {
 		def speaks = settings?."${pName}SpeechDevices"
 		def medias = settings?."${pName}SpeechMediaPlayer"
+		def echos = settings["${pName}EchoDevices"]
 		str += settings["${pName}SendToAskAlexaQueue"] ? "\n• Send to Ask Alexa: (True)" : ""
 		str += speaks ? "\n • Speech Devices:" : ""
 		if(speaks) {
 			def cnt = 1
 			speaks?.each { str += it ? "\n ${cnt < speaks.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
 		}
-		str += medias ? "${speaks ? "\n\n" : "\n"} • Media Players:" : ""
+		str += echos ? "\n • Alexa Devices:" : ""
+		if(echos) {
+			def cnt = 1
+			echos?.each { str += it ? "\n ${cnt < echos.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
+			str += (echos && settings?."${pName}SpeechVolumeLevel") ? "\n└ Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
+		}
+		str += medias ? "${(speaks || echos) ? "\n\n" : "\n"} • Media Players:" : ""
 		if(medias) {
 			def cnt = 1
 			medias?.sort { it?.displayName }?.each { str += it ? "\n│${cnt < medias.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
@@ -7112,7 +7124,7 @@ def sendNofificationMsg(msg, msgType, pName, pushoverMap=null, sms=null, push=nu
 	LogAction("sendNofificationMsg($msg, $msgType, $pName, $pushoverMap, $sms, $push)", "trace", false)
 	if(settings?."${pName}NotificationsOn" == true) {
 		if(settings?."${pName}UseMgrNotif" == false) {
-			def ok2Notify = setting?."${getAutoType()}UseParentNotifRestrictions" != false ? getOk2Notify(getAutoType()) : true //parent?.getOk2Notify()
+			def ok2Notify = setting?."${pName}UseParentNotifRestrictions" != false ? getOk2Notify(pName) : true //parent?.getOk2Notify()
 			if(!ok2Notify) {
 				LogAction("sendMsg: Message Skipped During Quiet Time ($msg)", "info", true)
 			} else {
@@ -7158,26 +7170,17 @@ private buildPushMessage(List devices,Map msgData,timeStamp=false){if(!devices||
 *************************************************************************************************/
 def sendEventPushNotifications(message, type, pName) {
 	LogTrace("sendEventPushNotifications($message, $type, $pName)")
-/*
-	if(settings?."${pName}NotificationsOn" == true) {
-		if(settings?."${pName}UseMgrNotif" == false) {
-			//TODO: Build out Pushover priorities 
-			sendNofificationMsg(message, type, pName, null, settings?."${pName}NotifPhones", settings?."${pName}UsePush")
-		} else {
-*/
-			sendNofificationMsg(message, type, pName)
-//		}
-//	}
+	sendNofificationMsg(message, type, pName)
 }
 
 def sendEventVoiceNotifications(vMsg, pName, msgId, rmAAMsg=false, rmMsgId) {
 	def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 	def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
-	def ok2Notify = setting?."${getAutoType()}UseParentNotifRestrictions" != false ? getOk2Notify(getAutoType()) : parent?.getOk2Notify()
+	def ok2Notify = setting?."${pName}UseParentNotifRestrictions" != false ? getOk2Notify(pName) : parent?.getOk2Notify()
 
-	LogAction("sendEventVoiceNotifications($vMsg, $pName) ok2Notify: $ok2Notify", "trace", false)
+	LogAction("sendEventVoiceNotifications($vMsg, $pName) | ok2Notify: $ok2Notify", "trace", false)
 	if(allowNotif && allowSpeech) {
-		if(ok2Notify && (settings["${pName}SpeechDevices"] || settings["${pName}SpeechMediaPlayer"])) {
+		if(ok2Notify && (settings["${pName}SpeechDevices"] || settings["${pName}SpeechMediaPlayer"] || settings["${pName}EchoDevices"])) {
 			sendTTS(vMsg, pName)
 		}
 		if(settings["${pName}SendToAskAlexaQueue"]) {		// we queue to Alexa regardless of quiet times
@@ -7218,7 +7221,7 @@ def removeAskAlexaQueueMsg(msgId, queue=null) {
 def scheduleAlarmOn(autoType) {
 	LogAction("scheduleAlarmOn: autoType: $autoType a1DelayVal: ${getAlert1DelayVal(autoType)}", "debug", true)
 	def timeVal = getAlert1DelayVal(autoType).toInteger()
-	def ok2Notify = setting?."${getAutoType()}UseParentNotifRestrictions" != false ? getOk2Notify(getAutoType()) : parent?.getOk2Notify()
+	def ok2Notify = setting?."${autoType}UseParentNotifRestrictions" != false ? getOk2Notify(autoType) : parent?.getOk2Notify()
 
 	LogAction("scheduleAlarmOn timeVal: $timeVal ok2Notify: $ok2Notify", "info", true)
 	if(canSchedule() && ok2Notify) {
@@ -7353,9 +7356,10 @@ void sendTTS(txt, pName) {
 		def msg = txt?.toString()?.replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
 		def spks = settings?."${pName}SpeechDevices"
 		def meds = settings?."${pName}SpeechMediaPlayer"
+		def echos = settings?."${pName}EchoDevices"
 		def res = settings?."${pName}SpeechAllowResume"
 		def vol = settings?."${pName}SpeechVolumeLevel"
-		LogAction("sendTTS msg: $msg | speaks: $spks | medias: $meds | resume: $res | volume: $vol", "debug", true)
+		LogAction("sendTTS msg: $msg | speaks: $spks | medias: $meds | echos: $echos| resume: $res | volume: $vol", "debug", false)
 		if(settings?."${pName}AllowSpeechNotif") {
 			if(spks) {
 				spks*.speak(msg)
@@ -7376,6 +7380,9 @@ void sendTTS(txt, pName) {
 						it?.playText(msg)
 					}
 				}
+			}
+			if(echos) {
+				echos*.setVolumeAndSpeak(settings?."${pName}SpeechVolumeLevel", msg as String)
 			}
 		}
 	} catch (ex) {
