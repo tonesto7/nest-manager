@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.4.2" }
+def devVer() { return "5.4.3" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7", ocfDeviceType: "x.com.st.d.sensor.smoke", vid: "generic-smoke-co") {
@@ -126,18 +126,19 @@ metadata {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 		}
 		valueTile("devTypeVer", "device.devTypeVer",  width: 3, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
+			state("default", label: 'Device Type:\nv${currentValue}', defaultState: true)
 		}
 		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
-			state "ok", label: "API Status:\nOK"
-			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+                        state "Good", label: "API Status:\nOK"
+                        state "Sporadic", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+                        state "Outage", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
 		valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
 		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp')
+			state("default", label: 'Reminder:\nHTML Content is Available in SmartApp', defaultState: true)
 		}
 		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 8)
 
@@ -588,7 +589,7 @@ def debugOnEvent(debug) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "Has Issue" : "Good"
+	def newStat = issue
 	state?.apiStatus = newStat
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")
@@ -912,7 +913,7 @@ def hasHtml() { return true }
 
 def getInfoHtml() {
 	try {
-		def battImg = (state?.battVal == "low") ? """<img class="battImg" src="${getImg("battery_low_h.png")}">""" : """<img class="battImg" src="${getImg("battery_ok_h.png")}">"""
+		def battImg = (state?.battVal == "replace") ? """<img class="battImg" src="${getImg("battery_low_h.png")}">""" : """<img class="battImg" src="${getImg("battery_ok_h.png")}">"""
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
@@ -1065,7 +1066,7 @@ def getInfoHtml() {
 
 def getDeviceTile(devNum) {
 	try {
-		def battImg = (state?.battVal == "low") ? """<img class="battImg" src="${getImg("battery_low_h.png")}">""" : """<img class="battImg" src="${getImg("battery_ok_h.png")}">"""
+		def battImg = (state?.battVal == "replace") ? """<img class="battImg" src="${getImg("battery_low_h.png")}">""" : """<img class="battImg" src="${getImg("battery_ok_h.png")}">"""
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""

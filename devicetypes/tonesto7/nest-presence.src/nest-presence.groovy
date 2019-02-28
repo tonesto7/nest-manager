@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.4.2" }
+def devVer() { return "5.4.4" }
 
 // for the UI
 metadata {
@@ -57,14 +57,15 @@ metadata {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 		}
 		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
-			state "ok", label: "API Status:\nOK"
-			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+                        state "Good", label: "API Status:\nOK"
+                        state "Sporadic", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+                        state "Outage", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
 		}
 		valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
+			state("default", label: 'Device Type:\nv${currentValue}', defaultState: true)
 		}
 		// htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
@@ -215,8 +216,8 @@ def processEvent(data) {
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException == false ? false : true }
 			lastUpdatedEvent(true)
 
-			if(eventData?.lastStrucDataUpd) {
-				def newDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", eventData?.lastStrucDataUpd?.toString()))
+			if(eventData?.lastStrDataUpd) {
+				def newDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", eventData?.lastStrDataUpd?.toString()))
 				//log.debug "newDt: $newDt"
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
@@ -337,8 +338,7 @@ def presenceEvent(presence) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "issue" : "ok"
-	state?.apiStatus = newStat
+	def newStat = issue
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)

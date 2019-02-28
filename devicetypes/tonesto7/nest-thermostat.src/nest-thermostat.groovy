@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.4.3" }
+def devVer() { return "5.4.5" }
 
 // for the UI
 metadata {
@@ -236,11 +236,12 @@ metadata {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 		}
 		valueTile("devTypeVer", "device.devTypeVer",  width: 3, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
+			state("default", label: 'Device Type:\nv${currentValue}', defaultState: true)
 		}
 		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
-			state "ok", label: "API Status:\nOK"
-			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+			state "Good", label: "API Status:\nOK"
+			state "Sporadic", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+			state "Outage", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
 		valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
 			state "true", 	label: 'Debug:\n${currentValue}'
@@ -257,7 +258,7 @@ metadata {
 		}
 		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 13, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 		valueTile("remind", "device.blah", inactiveLabel: false, width: 6, height: 2, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Reminder:\nHTML Graph and History Content is Available in SmartApp')
+			state("default", label: 'Reminder:\nHTML Graph and History Content is Available in SmartApp', defaultState: true)
 		}
 		main("temp2")
 		details([
@@ -1259,7 +1260,7 @@ def onlineStatusEvent(online) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "Has Issue" : "Good"
+	def newStat = issue
 	state?.apiStatus = newStat
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")
@@ -3595,7 +3596,7 @@ def getDeviceTile(devNum) {
 				state?.temperatureTableYesterday?.size() > 0 &&
 				state?.humidityTable?.size() > 0 &&
 				state?.coolSetpointTable?.size() > 0 &&
-				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : "")
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml(devNum) : (state?.showGraphs ? hideChartHtml() : "")
 
 		def whoSetEco = device?.currentValue("whoSetEcoMode")
 		def whoSetEcoDt = state?.ecoDescDt
@@ -4093,13 +4094,13 @@ def showChartHtml(devNum="") {
 		  <div class="swiper-slide">
 		  	<section class="sectionBg">
 			  <h3>Event History</h3>
-	  		  <div id="main_graph" style="width: 100%; height: 425px;"></div>
+	  		  <div id="main_graph${devNum}" style="width: 100%; height: 425px;"></div>
 			</section>
   		  </div>
   		  <div class="swiper-slide">
 		  	<section class="sectionBg">
 				<h3>Usage History</h3>
-  		    	<div id="use_graph" style="width: 100%; height: 425px;"></div>
+  		    	<div id="use_graph${devNum}" style="width: 100%; height: 425px;"></div>
 			</section>
   		  </div>
 	  """
