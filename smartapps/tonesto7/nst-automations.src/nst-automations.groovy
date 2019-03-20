@@ -26,8 +26,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.4.9" }
-def appVerDate() { "12-26-2018" }
+def appVersion() { "5.5.0" }
+def appVerDate() { "01-25-2019" }
 
 preferences {
 	//startPage
@@ -4162,7 +4162,7 @@ def nestModePresPage() {
 				input (name: "nModeCamOffHome", type: "bool", title: "Turn Off Nest Cams when Home?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_gray_icon.png"))
 				if(settings?.nModeCamOffHome || settings?.nModeCamOnAway) {
 					paragraph title: "Optional" , "You can choose which cameras are changed when Home/Away.  If you don't select any devices all will be changed."
-					input (name: "nModeCamsSel", type: "device.nestCamera", title: "Select your Nest Cams?", required: false, multiple: true, submitOnChange: true, image: getAppImg("camera_blue_icon.png"))
+					input (name: "nModeCamsSel", type: "capability.soundSensor", title: "Select your Nest Cams?", required: false, multiple: true, submitOnChange: true, image: getAppImg("camera_blue_icon.png"))
 				}
 			}
 		}

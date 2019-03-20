@@ -1,6 +1,6 @@
 /********************************************************************************************
 |    Application Name: NST Manager                                                          |
-|    Copyright (C) 2017, 2018 Anthony S.                                                    |
+|    Copyright (C) 2017 - 2019 Anthony S.                                                   |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
@@ -34,16 +34,16 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.5.8" }
-def appVerDate() { "12-27-2018" }
+def appVersion() { "5.6.0" }
+def appVerDate() { "02-16-2019" }
 def minVersions() {
 	return [
-		"automation":["val":549, "desc":"5.4.9"],
-		"thermostat":["val":544, "desc":"5.4.4"],
-		"protect":["val":542, "desc":"5.4.2"],
-		"presence":["val":542, "desc":"5.4.2"],
-		"weather":["val":550, "desc":"5.5.0"],
-		"camera":["val":543, "desc":"5.4.3"],
+		"automation":["val":550, "desc":"5.5.0"],
+		"thermostat":["val":545, "desc":"5.4.5"],
+		"protect":["val":543, "desc":"5.4.3"],
+		"presence":["val":544, "desc":"5.4.4"],
+		"weather":["val":551, "desc":"5.5.1"],
+		"camera":["val":544, "desc":"5.4.4"],
 		"stream":["val":201, "desc":"2.0.1"]
 	]
 }
@@ -70,7 +70,7 @@ preferences {
 	page(name: "devNamePage")
 	page(name: "alarmTestPage")
 	page(name: "simulateTestEventPage")
-	page(name: "devNameResetPage")
+//	page(name: "devNameResetPage")
 	page(name: "resetDiagQueuePage")
 	page(name: "devPrefPage")
 	page(name: "camMotionZoneFltrPage")
@@ -377,7 +377,7 @@ public storageAppInst(Boolean available) {
 
 private getStorageApp(honorState = true) {
 	Integer stateSz = getStateSizePerc()
-	if(honorState && stateSz < 50) { return null }
+	if(honorState && stateSz < 26) { return null }
 	if(honorState && isAppLiteMode()) { return null }
 	def storApp = getChildApps()?.find { it?.getAutomationType() == "storage" && it?.name == autoAppName() }
 	if(storApp) {
@@ -854,9 +854,11 @@ def helpPage () {
 				paragraph title: "How will the log collection work?", "When logs are enabled this SmartApp will create a child diagnostic app to store your logs which you can view under the diagnostics web page or share the url with the developer for remote troubleshooting.\n\n Turn off to remove the diag app and all data."
 			}
 			section("Log Collection:") {
+/*
 				def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 				def tf = new SimpleDateFormat(formatVal)
 				if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+*/
 				paragraph "Logging will automatically turn off in 48 hours and all logs will be purged."
 				input (name: "enRemDiagLogging", type: "bool", title: "Enable Log Collection?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("log.png"))
 				if(atomicState?.enRemDiagLogging) {
@@ -1300,13 +1302,23 @@ def automationStatisticsPage() {
 				section(" ") {
 					paragraph "${chld?.label}", state: "complete", image: getAutoIcon(autoType)
 					def data = chld?.getAutomationStats()
+					def fmt = "M/d/yyyy - h:mm a"
+/*
 					def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
 						tf.setTimeZone(getTimeZone())
-					def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
-					def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
-					def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
-					def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
-					def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
+					//def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
+					//def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
+					//def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
+					//def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
+					//def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
+*/
+
+					def lastModDt = data?.lastUpdatedDt ? formatDt2(data?.lastUpdatedDt.toString(), fmt) : null
+					def lastEvtDt = data?.lastEvent?.date ? formatdt2(data?.lastEvent?.date.toString(), fmt) : null
+					def lastActionDt = data?.lastActionData?.dt ? formatDt2(data?.lastActionData?.dt.toString(), fmt) : null
+					def lastEvalDt = data?.lastEvalDt ? formatDt2(data?.lastEvalDt.toString(), fmt) : null
+					def lastSchedDt = data?.lastSchedDt ? formatDt2(data?.lastSchedDt.toString(), fmt) : null
+
 					def lastExecVal = data?.lastExecVal ?: null
 					def execAvgVal = data?.execAvgVal ?: null
 
@@ -1938,11 +1950,12 @@ private diagLogProcChange(setOn) {
 		}
 	}
 	if(doInit) {
-		def kdata = getState()?.findAll { (it?.key in ["remDiagLogDataStore", "remDiagDataSentDt" ]) }
+		def kdata = getState()?.findAll { (it?.key in ["remDiagLogDataStore" /* , "remDiagDataSentDt"*/  ]) }
 		kdata.each { kitem ->
 			state.remove(kitem?.key.toString())
 		}
-		atomicState?.remDiagDataSentDt = getDtNow() // allow us some time for child to start
+		updTimestampMap("remDiagDataSentDt", getDtNow()) // allow us some time for child to start
+		//atomicState?.remDiagDataSentDt = getDtNow() // allow us some time for child to start
 		atomicState?.enRemDiagLogging = true
 		updTimestampMap("remDiagLogActivatedDt", getDtNow())
 		
@@ -1961,8 +1974,10 @@ private diagLogProcChange(setOn) {
 	}
 }
 
-def getRemDiagActSec() { return !getTimestampVal("remDiagLogActivatedDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("remDiagLogActivatedDt"), null, "getRemDiagActSec").toInteger() }
-def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
+def getRemDiagActSec() { return getTimeSeconds("remDiagLogActivatedDt", 100000, "getRemDiagActSec").toInteger() }
+def getLastRemDiagSentSec() { return getTimeSeconds("remDiagDataSentDt", 1000, "getLastRemDiagSentSec").toInteger() }
+//def getRemDiagActSec() { return !getTimestampVal("remDiagLogActivatedDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("remDiagLogActivatedDt"), null, "getRemDiagActSec").toInteger() }
+//def getLastRemDiagSentSec() { return !getTimestampVal("remDiagDataSentDt") ? 1000 : GetTimeDiffSeconds(getTimestampVal("remDiagDataSentDt"), null, "getLastRemDiagSentSec").toInteger() }
 
 def changeLogPage() {
 	def execTime = now()
@@ -2200,13 +2215,13 @@ def nestLoginPrefPage () {
 	} else {
 		def execTime = now()
 		return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
-			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-			def tf = new SimpleDateFormat(formatVal)
-			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+			//def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+			//def tf = new SimpleDateFormat(formatVal)
+			//if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
 			updTimestampMap("authTokenCreatedDt", (getTimestampVal("authTokenCreatedDt") ?: getDtNow()))
 			section() {
-				paragraph title: "Authorization Info:", "Authorization Date:\n• ${tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getTimestampVal("authTokenCreatedDt")))}", state: "complete"
-				paragraph "Last Nest Connection:\n• ${tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getTimestampVal("lastDevDataUpd")))}"
+				paragraph title: "Authorization Info:", "Authorization Date:\n• ${getTimestampVal("authTokenCreatedDt")}", state: "complete"
+				paragraph "Last Nest Connection:\n• ${getTimestampVal("lastDevDataUpd")}"
 			}
 			section("Revoke Authorization Reset:") {
 				href "nestTokenResetPage", title: "Log Out and Reset Nest Token", description: "Tap to Reset Nest Token", required: true, state: null, image: getAppImg("reset_icon.png")
@@ -2242,7 +2257,7 @@ def updated() {
 	LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
 	atomicState?.pollBlocked = true
 	atomicState?.pollBlockedReason = "Running updated"
-	//restStreamHandler(true)   // stop the rest stream
+	//restStreamHandler(true, false)   // stop the rest stream
 	//atomicState?.restStreamingOn = false
 	//atomicState.ssdpOn = false
 	// if(atomicState?.migrationInProgress == true) { LogAction("Skipping updated() as migration in-progress", "warn", true); return }
@@ -2261,8 +2276,8 @@ def initialize() {
 	LogTrace("initialize")
 	atomicState?.pollBlocked = true
 	atomicState?.pollBlockedReason = "Running Initialize"
-	restStreamHandler(true)   // stop the rest stream
-	atomicState?.restStreamingOn = false
+	restStreamHandler(true, false)   // stop the rest stream
+	//atomicState?.restStreamingOn = false
 	atomicState.ssdpOn = false
 	if(!atomicState?.tsMigration) { timestampMigration() }
 	if(atomicState?.resetAllData || settings?.resetAllData) {
@@ -2318,7 +2333,7 @@ def initBuiltin(btype) {
 			autoStr = "storage"
 			keepApp = true
 			def stateSz = getStateSizePerc()
-			if(stateSz < 50) { keepApp = false }
+			if(stateSz < 58) { keepApp = false }
 			else {
 				def kdata = getState()?.findAll { (it?.key in [ "curWeather", "curForecast", "curAstronomy", "curAlerts" ]) }
 				kdata.each { kitem ->
@@ -2390,14 +2405,15 @@ def initStorageApp() {
 def initManagerApp() {
 	LogTrace("initManagerApp (${atomicState?.pollBlocked}) (${atomicState?.pollBlockedReason})")
 	setStateVar()
-	restStreamHandler(true)   // stop the rest stream
-	atomicState?.restStreamingOn = false
-	atomicState.ssdpOn = false
+	//restStreamHandler(true, false)   // stop the rest stream
 	unschedule()
 	unsubscribe()
+	atomicState?.pollingOn = false
+	atomicState?.restStreamingOn = false
+	atomicState?.streamPolling = false
+	atomicState.ssdpOn = false
 	stateCleanup()
 
-	atomicState.pollingOn = false
 	initStorageApp()
 	def sData = atomicState?.swVer ?: [:]
 	sData["mgrVer"] = appVersion()
@@ -2971,7 +2987,7 @@ def startStopStream() {
 	else if (!settings?.restStreaming && atomicState?.restStreamingOn) {
 		LogTrace("startStopStream: Streaming should not be running Sending restStreamHandler(Stop) Event to local node service")
 		restStreamHandler(true)
-		atomicState?.restStreamingOn = false
+		//atomicState?.restStreamingOn = false
 		runIn(45, "restStreamCheck", [overwrite: true])
 	}
 }
@@ -2999,16 +3015,16 @@ def getRestHost() {
 	return res
 }
 
-def restStreamHandler(close = false) {
-	LogTrace("restStreamHandler: close: ${close}")
+def restStreamHandler(close = false, resetPoll=true) {
+	LogTrace("restStreamHandler: close: ${close}, resetPoll: ${resetPoll}")
 	def toClose = close
 	def host = getRestHost()
 	if(!host) {
 		atomicState.restStreamingOn = false;
 		host = atomicState?.lastRestHost ?: null
 		atomicState.lastRestHost = null
-		if(!host) { return }
-		toClose = true
+		return
+		//toClose = true
 	} else {
 		atomicState.lastRestHost = host
 	}
@@ -3039,10 +3055,15 @@ def restStreamHandler(close = false) {
 			body: ""
 		)
 		sendHubCommand(hubAction)
-	}
-	catch (Exception e) {
+	} catch (Exception e) {
 		log.error "restStreamHandler Exception $e on $hubAction"
 		atomicState.restStreamingOn = false
+	}
+	if(toClose) {
+		atomicState?.restStreamingOn = false
+		if(atomicState?.streamPolling && resetPoll) {
+			resetPolling()
+		}
 	}
 }
 
@@ -3124,7 +3145,7 @@ def receiveStreamStatus(eventData=null) {
 def uninstManagerApp() {
 	LogTrace("uninstManagerApp")
 	try {
-		restStreamHandler(true)   // stop the rest stream
+		restStreamHandler(true, false)   // stop the rest stream
 		//Revokes Smartthings endpoint token
 		revokeAccessToken()
 		//Revokes Nest Auth Token
@@ -3324,6 +3345,9 @@ def setPollingState() {
 		unschedule("poll")
 		atomicState.streamPolling = false
 	} else {
+		if(!atomicState?.authToken) {
+			atomicState.pollingOn = false
+		}
 		if(!atomicState?.pollingOn && atomicState?.authToken) {
 			//LogAction("Polling is ACTIVE", "info", true)
 			atomicState.pollingOn = true
@@ -3349,7 +3373,7 @@ def setPollingState() {
 			atomicState?.pollBlocked = false
 			atomicState?.pollBlockedReason = null
 			def timChk = atomicState?.streamPolling ? 1200 : 240
-			if(!getTimestampVal("lastDevDataUpd") || getLastDevicePollSec() > timChk) {
+			if(!getTimestampVal("lastDevDataUpd") || getLastDevPollSec() > timChk) {
 				if(atomicState.streamPolling) {
 					poll()
 				} else { poll(true) }
@@ -3444,8 +3468,8 @@ def poll(force = false, type = null) {
 		if(getLastHeardFromNestSec() > pollTimeout) {
 			if(settings?.restStreaming && atomicState?.restStreamingOn) {
 				LogAction("Have not heard from Rest Stream", "warn", true)
-				restStreamHandler(true)   // close the stream if we have not heard from it in a while
-				atomicState?.restStreamingOn = false
+				restStreamHandler(true, false)   // close the stream if we have not heard from it in a while
+				//atomicState?.restStreamingOn = false
 			}
 		}
 
@@ -3473,17 +3497,17 @@ def poll(force = false, type = null) {
 		def dev = false
 		def str = false
 		if(!okDevice && !okStruct && !(getLastHeardFromNestSec() > pollTimeout*2)) {
-			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago | Structures Last Updated ${getLastStructPollSec()} seconds ago", "info", true)
+			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevPollSec()} seconds ago | Structures Last Updated ${getLastStrPollSec()} seconds ago", "info", true)
 		} else {
 			def sstr = ""
 			def metstr = "async"
 			if(okStruct) {
-				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago)"
+				sstr += "Updating Structure Data (Last Updated: ${getLastStrPollSec()} seconds ago)"
 				str = queueGetApiData("str")
 			}
 			if(okDevice) {
 				sstr += sstr != "" ? " | " : ""
-				sstr += "Updating Device Data (Last Updated: ${getLastDevicePollSec()} seconds ago)"
+				sstr += "Updating Device Data (Last Updated: ${getLastDevPollSec()} seconds ago)"
 				dev = queueGetApiData("dev")
 			}
 			if(okMeta) {
@@ -3534,6 +3558,7 @@ def finishPoll(str=null, dev=null) {
 
 def resetPolling() {
 	atomicState.pollingOn = false
+	atomicState.streamPolling = false
 	unschedule("poll")
 	unschedule("finishPoll")
 	unschedule("postCmd")
@@ -3618,8 +3643,8 @@ def getApiData(type = null) {
 			if(resp?.status == 200) {
 				updTimestampMap("lastHeardFromNestDt", getDtNow())
 				apiIssueEvent(false)
-				atomicState?.apiRateLimited = false
-				atomicState?.apiCmdFailData = null
+				//atomicState?.apiRateLimited = false
+				//atomicState?.apiCmdFailData = null
 				if(type == "str") {
 					def t0 = resp?.data
 					//LogTrace("API Structure Resp.Data: ${t0}")
@@ -3655,8 +3680,7 @@ def getApiData(type = null) {
 			}
 		}
 	} catch (ex) {
-		apiIssueEvent(true)
-		atomicState?.apiRateLimited = false
+		//atomicState?.apiRateLimited = false
 		atomicState.forceChildUpd = true
 		log.error "getApiData (type: $type) Exception:", ex
 		if(ex instanceof groovyx.net.http.HttpResponseException && ex?.response) {
@@ -3667,6 +3691,7 @@ def getApiData(type = null) {
 			else if(type == "meta") { atomicState?.needMetaPoll = true }
 			sendExceptionData(ex, "getApiData")
 		}
+		apiIssueEvent(true)
 	}
 	return result
 }
@@ -3726,8 +3751,8 @@ def procNestResponse(resp, data) {
 		if(resp?.status == 200) {
 			updTimestampMap("lastHeardFromNestDt", getDtNow())
 			apiIssueEvent(false)
-			atomicState?.apiRateLimited = false
-			atomicState?.apiCmdFailData = null
+			//atomicState?.apiRateLimited = false
+			//atomicState?.apiCmdFailData = null
 			if(type == "str") {
 				def t0 = resp?.json
 				//LogTrace("API Structure Resp.Data: ${t0}")
@@ -3783,7 +3808,6 @@ def procNestResponse(resp, data) {
 		}
 
 	} catch (ex) {
-		log.error "procNestResponse (type: $type) | Exception:", ex
 		def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 		tstr += " Poll async"
 		//LogAction("procNestResponse - Received $tstr: Resp (${resp?.status})", "error", true)
@@ -3805,6 +3829,7 @@ def procNestResponse(resp, data) {
 		if(type == "str") { atomicState.needStrPoll = true }
 		else if(type == "dev") { atomicState?.needDevPoll = true }
 		else if(type == "meta") { atomicState?.needMetaPoll = true }
+		log.error "procNestResponse (type: $type) | Exception:", ex
 		sendExceptionData("${ex}", "procNestResponse_${type}")
 	}
 }
@@ -3876,6 +3901,7 @@ def receiveEventData(eventData=null) {
 		log.error "receiveEventData Exception:", ex
 		LogAction("receiveEventData Exception: ${ex}", "error", true)
 		status = [data:"${ex?.message}", code:500]
+		//apiIssueEvent(true)
 	}
 	if(eventData) {
 		return status
@@ -3924,7 +3950,7 @@ def didChange(old, newer, type, src) {
 	String srcStr = src.toString().toUpperCase()
 	if(newer != null) {
 		if(type == "str") {
-			updTimestampMap("lastStrucDataUpd", getDtNow())
+			updTimestampMap("lastStrDataUpd", getDtNow())
 			atomicState.needStrPoll = false
 			newer.each {
 				if(it?.value) {
@@ -4168,7 +4194,7 @@ def updateChildData(force = false) {
 		def logNamePrefix = (settings?.debugAppendAppName || settings?.debugAppendAppName == null) ? true : false
 		def remDiag = (atomicState?.enRemDiagLogging && settings?.enRemDiagLogging) ? true: false
 		def nestTz = getNestTimeZone()?.toString()
-		def api = !apiIssues() ? false : true
+		def api = apiIssueType()
 		def mobClientType = settings?.mobileClientType
 		def vRprtPrefs = getVoiceRprtPrefs()
 		def clientBl = atomicState?.cltBlacklisted == true ? true : false
@@ -4329,7 +4355,7 @@ def updateChildData(force = false) {
 				//devCodeIds["presence"] = it?.getDevTypeId()
 				def pData = ["debug":dbg, "logPrefix":logNamePrefix, "tz":nestTz, "mt":useMt, "pres":locPresence, "apiIssues":api, "allowDbException":allowDbException,
 							"latestVer":latestPresVer()?.ver?.toString(), "clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "hcRepairEnabled":hcRepairEnabled,
-							"enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth, "lastStrucDataUpd": getTimestampVal("lastStrucDataUpd"), "isBeta":isBeta ]
+							"enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth, "lastStrDataUpd": getTimestampVal("lastStrDataUpd"), "isBeta":isBeta ]
 				def oldPresData = atomicState?."oldPresData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldPresData${devId}" = pDataChecksum
@@ -4526,18 +4552,6 @@ def setNeedChildUpdate() {
 	atomicState.needChildUpd = true
 }
 
-void updTimestampMap(keyName, dt=null) {
-	def data = atomicState?.timestampDtMap ?: [:]
-	if(keyName) { data[keyName] = dt }
-	atomicState?.timestampDtMap = data
-}
-
-def getTimestampVal(val) {
-	def tsData = atomicState?.timestampDtMap
-	if(val && tsData && tsData[val]) { return tsData[val] }
-	return null
-}
-
 def tUnitStr() {
 	return "\u00b0${getTemperatureScale()}"
 }
@@ -4595,23 +4609,25 @@ void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 
 def apiIssues() {
 	def t0 = atomicState?.apiIssuesList ?: [false, false, false, false, false, false, false]
-	def result = t0[3..-1].every { it == true } ? true : false
+	atomicState?.apiIssuesList = t0
+	def result = t0[5..-1].every { it == true } ? true : false
 	def dt = getTimestampVal("apiIssueDt")
 	if(result) {
-		LogAction("Nest API Issues ${dt ? "may still be occurring. Status will clear when last updates are good (Last Updates: ${t0}) | Issues began at ($dt) " : "Detected (${getDtNow()})"}", "warn", true)
+		def str = dt ? "may still be occurring. Status will clear when last updates are good (Last Updates: ${t0}) | Issues began at ($dt) " : "Detected (${getDtNow()})"
+		LogAction("Nest API Issues ${str}", "warn", true)
 	}
-	apiIssueType()
-	updTimestampMap("apiIssueDt", (result ? (dt ?: getDtNow()) : null))
 	return result
 }
 
 def apiIssueType() {
-	def res = "none"
+	def res = "Good"
 	//this looks at the last 3 items added and determines whether issue is sporadic or outage
-	def t0 = atomicState?.apiIssuesList ?: [false, false, false, false, false, false, false]
+	def t0 = []
+	t0 = atomicState?.apiIssuesList ?: [false, false, false, false, false, false, false]
+	atomicState?.apiIssuesList = t0
 	def items = t0[3..-1].findAll { it == true }
-	if(items?.size() >= 1 && items?.size() <= 2) { res = "sporadic" }
-	else if(items?.size() >= 3) { res = "outage" }
+	if(items?.size() >= 1 && items?.size() <= 2) { res = "Sporadic" }
+	else if(items?.size() >= 3) { res = "Outage" }
 	//log.debug "apiIssueType: $res"
 	return res
 }
@@ -4635,10 +4651,27 @@ def apiIssueEvent(issue, cmd = null) {
 		nList?.push(issue)
 		list = nList
 	}
-	if(list) { atomicState?.apiIssuesList = list }
+	atomicState?.apiIssuesList = list
+	if(issue) {
+		if(!getTimestampVal("apiIssueDt")) {
+			updTimestampMap("apiIssueDt", getDtNow())
+		}
+	} else {
+		def result = list[3..-1].every { it == false }
+		def rateLimit = (atomicState?.apiRateLimited) ? true : false
+		if(rateLimit) {
+			def t0 = atomicState?.apiCmdFailData?.dt ? GetTimeDiffSeconds(atomicState?.apiCmdFailData?.dt, null, "apiIssueEvent").toInteger() : 200
+			if((t0 > 120 && result) || t0 > 300) {
+				atomicState?.apiRateLimited = false
+				rateLimit = false
+				LogAction("Clearing rate Limit", "info", true)
+			}
+		}
+	}
 }
 
 def ok2PollMetaData() {
+/*
 	if(!atomicState?.authToken) { return false }
 	if(!atomicState.metaData) { return true }
 	if(atomicState?.pollBlocked) { return false }
@@ -4647,9 +4680,13 @@ def ok2PollMetaData() {
 	def val = pollTime / 3
 	if(val > 60) { val = 50 }
 	return ( ((getLastMetaPollSec() + val) > pollTime) ? true : false )
+*/
+	def pollTime = !settings?.pollMetaValue ? (3600 * 4) : settings?.pollMetaValue.toInteger()
+	return (pollOk("Meta", pollTime, "metaData")) ? true : false
 }
 
 def ok2PollDevice() {
+/*
 	if(!atomicState?.authToken) { return false }
 	if(!atomicState?.deviceData) { return true }
 	if(atomicState?.pollBlocked) { return false }
@@ -4658,10 +4695,14 @@ def ok2PollDevice() {
 	def val = pollTime / 3
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
-	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
+	return ( ((getLastDevPollSec() + val) > pollTime) ? true : false )
+*/
+	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
+	return (pollOk("Dev", pollTime, "deviceData")) ? true : false
 }
 
 def ok2PollStruct() {
+/*
 	if(!atomicState?.authToken) { return false }
 	if(!atomicState?.structData) { return true }
 	if(atomicState?.pollBlocked) { return false }
@@ -4670,9 +4711,22 @@ def ok2PollStruct() {
 	def val = pollStrTime / 3
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
-	return ( ((getLastStructPollSec() + val) > pollStrTime) ? true : false )
+	return ( ((getLastStrPollSec() + val) > pollStrTime) ? true : false )
+*/
+	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
+	return (pollOk("Str", pollStrTime, "structData")) ? true : false
 }
 
+def pollOk(typ, pTime, stVar) {
+	if(!atomicState?.authToken) { return false }
+	if(!atomicState?."${stVar}") { return true }
+	if(atomicState?.pollBlocked) { return false }
+	if(atomicState?."need${typ}Poll") { return true }
+	def pollTime = pTime as Integer
+	def val = pollTime / 3
+	val = Math.max(Math.min(val.toInteger(), 50),25)
+	return ( (("getLast${typ}PollSec"() + val) > pollTime) ? true : false )
+}
 
 def isPollAllowed() {
 	return (atomicState?.pollingOn && atomicState?.authToken &&
@@ -4680,13 +4734,21 @@ def isPollAllowed() {
 		(atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice || atomicState?.cameras)) ? true : false
 }
 
-def getLastMetaPollSec() { return !getTimestampVal("lastMetaDataUpd") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMetaDataUpd"), null, "getLastMetaPollSec").toInteger() }
-def getLastDevicePollSec() { return !getTimestampVal("lastDevDataUpd") ? 840 : GetTimeDiffSeconds(getTimestampVal("lastDevDataUpd"), null, "getLastDevicePollSec").toInteger() }
-def getLastStructPollSec() { return !getTimestampVal("lastStrucDataUpd") ? 1000 : GetTimeDiffSeconds(getTimestampVal("lastStrucDataUpd"), null, "getLastStructPollSec").toInteger() }
-def getLastForcedPollSec() { return !getTimestampVal("lastForcePoll") ? 1000 : GetTimeDiffSeconds(getTimestampVal("lastForcePoll"), null, "getLastForcedPollSec").toInteger() }
-def getLastChildUpdSec() { return !getTimestampVal("lastChildUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastChildUpdDt"), null, "getLastChildUpdSec").toInteger() }
-def getLastChildForceUpdSec() { return !getTimestampVal("lastChildForceUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastChildForceUpdDt"), null, "getLastChildForceUpdSec").toInteger() }
-def getLastHeardFromNestSec() { return !getTimestampVal("lastHeardFromNestDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastHeardFromNestDt"), null, "getLastHeardFromNestSec").toInteger() }
+def getLastMetaPollSec() { return getTimeSeconds("lastMetaDataUpd", 100000, "getLastMetaPollSec").toInteger() }
+def getLastDevPollSec() { return getTimeSeconds("lastDevDataUpd", 840, "getLastDevPollSec").toInteger() }
+def getLastStrPollSec() { return getTimeSeconds("lastStrDataUpd", 1000, "getLastStrPollSec").toInteger() }
+def getLastForcedPollSec() { return getTimeSeconds("lastForcePoll", 1000, "getLastForcedPollSec").toInteger() }
+def getLastChildUpdSec() { return getTimeSeconds("lastChildUpdDt", 100000, "getLastChildUpdSec").toInteger() }
+def getLastChildForceUpdSec() { return getTimeSeconds("lastChildForceUpdDt", 100000, "getLastChildForceUpdSec").toInteger() }
+def getLastHeardFromNestSec() { return getTimeSeconds("lastHeardFromNestDt", 100000, "getLastHeardFromNestSec").toInteger() }
+
+//def getLastMetaPollSec() { return !getTimestampVal("lastMetaDataUpd") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMetaDataUpd"), null, "getLastMetaPollSec").toInteger() }
+//def getLastDevPollSec() { return !getTimestampVal("lastDevDataUpd") ? 840 : GetTimeDiffSeconds(getTimestampVal("lastDevDataUpd"), null, "getLastDevPollSec").toInteger() }
+//def getLastStrPollSec() { return !getTimestampVal("lastStrDataUpd") ? 1000 : GetTimeDiffSeconds(getTimestampVal("lastStrDataUpd"), null, "getLastStrPollSec").toInteger() }
+//def getLastForcedPollSec() { return !getTimestampVal("lastForcePoll") ? 1000 : GetTimeDiffSeconds(getTimestampVal("lastForcePoll"), null, "getLastForcedPollSec").toInteger() }
+//def getLastChildUpdSec() { return !getTimestampVal("lastChildUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastChildUpdDt"), null, "getLastChildUpdSec").toInteger() }
+//def getLastChildForceUpdSec() { return !getTimestampVal("lastChildForceUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastChildForceUpdDt"), null, "getLastChildForceUpdSec").toInteger() }
+//def getLastHeardFromNestSec() { return !getTimestampVal("lastHeardFromNestDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastHeardFromNestDt"), null, "getLastHeardFromNestSec").toInteger() }
 
 /************************************************************************************************
 |										Nest API Commands										|
@@ -4694,7 +4756,8 @@ def getLastHeardFromNestSec() { return !getTimestampVal("lastHeardFromNestDt") ?
 
 private cmdProcState(Boolean value) { atomicState?.cmdIsProc = value }
 private cmdIsProc() { return (!atomicState?.cmdIsProc) ? false : true }
-private getLastProcSeconds() { return getTimestampVal("cmdLastProcDt") ? GetTimeDiffSeconds(getTimestampVal("cmdLastProcDt"), null, "getLastProcSeconds") : 0 }
+private getLastProcSeconds() { return getTimeSeconds("cmdLastProcDt", 0, "getLastProcSeconds") }
+//private getLastProcSeconds() { return getTimestampVal("cmdLastProcDt") ? GetTimeDiffSeconds(getTimestampVal("cmdLastProcDt"), null, "getLastProcSeconds") : 0 }
 
 def apiVar() {
 	def api = [
@@ -5268,8 +5331,10 @@ def sendEcoActionDescToDevice(dev, desc) {
 	}
 }
 
-private getLastAnyCmdSentSeconds() { return getTimestampVal("lastCmdSentDt") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt"), null, "getLastAnyCmdSentSeconds") : 3601 }
-private getLastCmdSentSeconds(qnum) { return getTimestampVal("lastCmdSentDt${qnum}") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt${qnum}"), null, "getLastCmdSentSeconds") : 3601 }
+private getLastAnyCmdSentSeconds() { return getTimeSeconds("lastCmdSentDt", 3601, "getLastAnyCmdSentSeconds") }
+private getLastCmdSentSeconds(qnum) { return getTimeSeconds("lastCmdSentDt${qnum}", 3601, "getLastCmdSentSeconds") }
+//private getLastAnyCmdSentSeconds() { return getTimestampVal("lastCmdSentDt") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt"), null, "getLastAnyCmdSentSeconds") : 3601 }
+//private getLastCmdSentSeconds(qnum) { return getTimestampVal("lastCmdSentDt${qnum}") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt${qnum}"), null, "getLastCmdSentSeconds") : 3601 }
 
 private setLastCmdSentSeconds(qnum, val) {
 	updTimestampMap("lastCmdSentDt${qnum}", val)
@@ -5485,8 +5550,8 @@ def nestCmdResponse(resp, data) {
 			apiIssueEvent(false)
 			incrementCntByKey("apiCommandCnt")
 			atomicState?.lastCmdSentStatus = "ok"
-			atomicState?.apiRateLimited = false
-			atomicState?.apiCmdFailData = null
+			//atomicState?.apiRateLimited = false
+			//atomicState?.apiCmdFailData = null
 			result = true
 		}
 /*
@@ -5505,11 +5570,11 @@ def nestCmdResponse(resp, data) {
 		}
 */
 		if(resp?.status != 200) {
-			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
 			if(resp?.hasError()) {
 				apiRespHandler((resp?.getStatus() ?: null), (resp?.getErrorJson() ?: null), "nestCmdResponse", "nestCmdResponse ${qnum} ($type{$obj:$objVal})", true)
 			}
+			apiIssueEvent(true)
 		}
 /*
 		if(resp?.status == 429) {
@@ -5519,14 +5584,14 @@ def nestCmdResponse(resp, data) {
 		finishWorkQ(command, result)
 
 	} catch (ex) {
-		log.error "nestCmdResponse (command: $command) Exception:", ex
-		sendExceptionData(ex, "nestCmdResponse")
-		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
+		cmdProcState(false)
 		if(resp?.hasError()) {
 			apiRespHandler((resp?.getStatus() ?: null), (resp?.getErrorJson() ?: null), "nestCmdResponse", "nestCmdResponse ${qnum} ($type{$obj:$objVal})", true)
 		}
-		cmdProcState(false)
+		apiIssueEvent(true)
+		log.error "nestCmdResponse (command: $command) Exception:", ex
+		sendExceptionData(ex, "nestCmdResponse")
 	}
 }
 
@@ -5566,8 +5631,8 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, origcmd, redir = false)
 				apiIssueEvent(false)
 				incrementCntByKey("apiCommandCnt")
 				atomicState?.lastCmdSentStatus = "ok"
-				atomicState?.apiRateLimited = false
-				atomicState?.apiCmdFailData = null
+				//atomicState?.apiRateLimited = false
+				//atomicState?.apiCmdFailData = null
 				result = true
 				return result
 			}
@@ -5586,10 +5651,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, origcmd, redir = false)
 				atomicState."cmdQ${qnum}" = tempQueue
 			}
 */
-			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
 			result = false
 			apiRespHandler(resp?.status, resp?.data, myStr, "${myStr} ${qnum} ($type{$obj:$objVal})", true)
+			apiIssueEvent(true)
 /*
 			if(resp?.status == 429) {
 				result = true // we requeued the command
@@ -5597,7 +5662,6 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, origcmd, redir = false)
 */
 		}
 	} catch (ex) {
-		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
 		cmdProcState(false)
 		if (ex instanceof groovyx.net.http.HttpResponseException && ex?.response) {
@@ -5605,6 +5669,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, origcmd, redir = false)
 		} else {
 			sendExceptionData(ex, "procNestApiCmd")
 		}
+		apiIssueEvent(true)
 		log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
 	}
 	return result
@@ -5645,7 +5710,7 @@ def apiRespHandler(code, errJson, methodName, tstr=null, isCmd=false) {
 				notif = false
 				break
 		}
-		def failData = ["code":code, "msg":result, "method":methodName, "dt":getDtNow()]
+		def failData = ["code":code, "msg":result, "method":methodName, "dt":getDtNow(), isCmd: isCmd]
 		atomicState?.apiCmdFailData = failData
 		if(notif || isCmd) {
 			failedCmdNotify(failData, tstr)
@@ -5662,32 +5727,25 @@ private incrementCntByKey(String key) {
 	atomicState?."${key}" = evtCnt?.toLong()
 }
 
-/*
-ERS
-void updTimestampMap(keyName, dt=null) {
-	def data = atomicState?.timestampDtMap ?: [:]
-	if(keyName) { data[keyName] = dt }
-	atomicState?.timestampDtMap = data
-}
-
-def getTimestampVal(val) {
-	def tsData = atomicState?.timestampDtMap
-	if(val && tsData && tsData[val]) { return tsData[val] }
-	return null
-}
-*/
-
 /************************************************************************************************
 |								Push Notification Functions										|
 *************************************************************************************************/
 def pushStatus() { return (settings?.phone || settings?.usePush || settings?.pushoverEnabled) ? ((settings?.usePush || (settings?.pushoverEnabled && settings?.pushoverDevices)) ? "Push Enabled" : "Enabled") : null }
 //def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt, null, "getLastMsgSec").toInteger() }
-def getLastUpdMsgSec() { return !getTimestampVal("lastUpdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdMsgDt"), null, "getLastUpdMsgSec").toInteger() }
-def getLastMissPollMsgSec() { return !getTimestampVal("lastMisPollMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMisPollMsgDt"), null, "getLastMissPollMsgSec").toInteger() }
-def getLastApiIssueMsgSec() { return !getTimestampVal("lastApiIssueMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastApiIssueMsgDt"), null, "getLastApiIssueMsgSec").toInteger() }
-def getLastLogRemindMsgSec() { return !getTimestampVal("lastLogRemindMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastLogRemindMsgDt"), null, "getLastLogRemindMsgSec").toInteger() }
-def getLastFailedCmdMsgSec() { return !getTimestampVal("lastFailedCmdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastFailedCmdMsgDt"), null, "getLastFailedCmdMsgSec").toInteger() }
-def getDebugLogsOnSec() { return !getTimestampVal("debugEnableDt") ? 0 : GetTimeDiffSeconds(getTimestampVal("debugEnableDt"), null, "getDebugLogsOnSec").toInteger() }
+
+def getLastUpdMsgSec() { return getTimeSeconds("lastUpdMsgDt", 100000, "getLastUpdMsgSec").toInteger() }
+def getLastMissPollMsgSec() { return getTimeSeconds("lastMisPollMsgDt", 100000, "getLastMissPollMsgSec").toInteger() }
+def getLastApiIssueMsgSec() { return getTimeSeconds("lastApiIssueMsgDt", 100000, "getLastApiIssueMsgSec").toInteger() }
+def getLastLogRemindMsgSec() { return getTimeSeconds("lastLogRemindMsgDt", 100000, "getLastLogRemindMsgSec").toInteger() }
+def getLastFailedCmdMsgSec() { return getTimeSeconds("lastFailedCmdMsgDt", 100000, "getLastFailedCmdMsgSec").toInteger() }
+def getDebugLogsOnSec() { return getTimeSeconds("debugEnableDt", 0, "getDebugLogsOnSec").toInteger() }
+
+//def getLastUpdMsgSec() { return !getTimestampVal("lastUpdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdMsgDt"), null, "getLastUpdMsgSec").toInteger() }
+//def getLastMissPollMsgSec() { return !getTimestampVal("lastMisPollMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMisPollMsgDt"), null, "getLastMissPollMsgSec").toInteger() }
+//def getLastApiIssueMsgSec() { return !getTimestampVal("lastApiIssueMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastApiIssueMsgDt"), null, "getLastApiIssueMsgSec").toInteger() }
+//def getLastLogRemindMsgSec() { return !getTimestampVal("lastLogRemindMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastLogRemindMsgDt"), null, "getLastLogRemindMsgSec").toInteger() }
+//def getLastFailedCmdMsgSec() { return !getTimestampVal("lastFailedCmdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastFailedCmdMsgDt"), null, "getLastFailedCmdMsgSec").toInteger() }
+//def getDebugLogsOnSec() { return !getTimestampVal("debugEnableDt") ? 0 : GetTimeDiffSeconds(getTimestampVal("debugEnableDt"), null, "getDebugLogsOnSec").toInteger() }
 
 //PushOver-Manager Input Generation Functions
 private getPushoverSounds(){return (Map) atomicState?.pushoverManager?.sounds?:[:]}
@@ -5786,13 +5844,24 @@ def locationPresNotify(pres) {
 	atomicState?.curNestLocStatus = pres
 }
 
+def getApiIssueSec() { return getTimeSeconds("apiIssueDt", 100000, "getApiIssueSec").toInteger() }
+//def getApiIssueSec() { return !getTimestampVal("apiIssueDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("getApiIssueDt"), null, "getApiIssueSec").toInteger() }
+
 def apiIssueNotify(msgOn, rateOn, wait) {
+	if( (getApiIssueSec() > 600) && (getLastAnyCmdSentSeconds() > 600)) {
+		updTimestampMap("apiIssueDt", null)
+		atomicState.apiIssuesList = []
+		if(atomicState?.apiRateLimited) {
+			atomicState.apiRateLimited = false
+			LogAction("Clearing rate Limit", "info", true)
+		}
+	}
 	if(!msgOn || !wait || !(getLastApiIssueMsgSec() > wait.toInteger())) { return }
 	def apiIssue = apiIssues() ? true : false
 	def rateLimit = (rateOn && atomicState?.apiRateLimited) ? true : false
-	if((apiIssue && !getTimestampVal("apiIssueDt")) || rateLimit) {
+	if(apiIssue || rateLimit) {
 		def msg = ""
-		msg += !rateLimit && apiIssue ? "\nThe Nest API appears to be having issues. This will effect the updating of device and location data.\nThe issues started at (${getTimestampVal("apiIssueDt")})" : ""
+		msg += apiIssue ? "\nThe Nest API appears to be having issues. This will effect the updating of device and location data.\nThe issues started at (${getTimestampVal("apiIssueDt")})" : ""
 		msg += rateLimit ? "${apiIssue ? "\n\n" : "\n"}Your API connection is currently being Rate-limited for excessive commands." : ""
 		if(sendMsg("${app?.label} API Issue Warning", msg, true)) {
 			updTimestampMap("lastApiIssueMsgDt", getDtNow())
@@ -5829,7 +5898,7 @@ def loggingRemindNotify(msgOn) {
 
 def missPollNotify(on) {
 	def theWait = settings?.misPollNotifyWaitVal ?: 1800
-	if(getLastDevicePollSec() < theWait.toInteger()) {
+	if(getLastDevPollSec() < theWait.toInteger()) {
 		if(!getTimestampVal("lastDevDataUpd")) {
 			def now = new Date()
 			def val = new Date(now.time - ( (theWait.toInteger()+1) * 60 * 1000) ) // if uninitialized, set 31 mins in past
@@ -5837,12 +5906,14 @@ def missPollNotify(on) {
 		}
 		return
 	} else {
-		def msg = "\nThe app has not refreshed data in the last (${getLastDevicePollSec()}) seconds.\nPlease try refreshing data using device refresh button."
+		def msg = "\nThe app has not refreshed data in the last (${getLastDevPollSec()}) seconds.\nPlease try refreshing data using device refresh button."
 		LogAction(msg, "error", true)
+/* poll handles this
 		if(settings?.restStreaming && atomicState?.restStreamingOn) {
 			restStreamHandler(true)   // close the stream if we have not heard from it in a while
-			atomicState?.restStreamingOn = false
+			//atomicState?.restStreamingOn = false
 		}
+*/
 		if(atomicState?.notificationPrefs == null) { atomicState?.notificationPrefs = buildNotifPrefMap() }
 		def msgWait = atomicState?.notificationPrefs?.msgDefaultWait ?: 3600
 		if(on && getLastMissPollMsgSec() > msgWait.toInteger()) {
@@ -5985,11 +6056,17 @@ def sendMsg(String msgType, String msg, Boolean showEvt=true, Map pushoverMap=nu
 	return sent
 }
 
-def getLastWebUpdSec() { return !getTimestampVal("lastWebUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastWebUpdDt"), null, "getLastWebUpdSec").toInteger() }
-def getLastWeatherUpdSec() { return !getTimestampVal("lastWeatherUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastWeatherUpdDt"), null, "getLastWeatherUpdSec").toInteger() }
-def getLastForecastUpdSec() { return !getTimestampVal("lastForecastUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastForecastUpdDt"), null, "getLastForecastUpdSec").toInteger() }
-def getLastAnalyticUpdSec() { return !getTimestampVal("lastAnalyticUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastAnalyticUpdDt"), null, "getLastAnalyticUpdSec").toInteger() }
-def getLastUpdateMsgSec() { return !getTimestampVal("lastUpdateMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdateMsgDt"), null, "getLastUpdateMsgSec").toInteger() }
+def getLastWebUpdSec() { return getTimeSeconds("lastWebUpdDt", 100000, "getLastWebUpdSec").toInteger() }
+def getLastWeatherUpdSec() { return getTimeSeconds("lastWeatherUpdDt", 100000, "getLastWeatherUpdSec").toInteger() }
+def getLastForecastUpdSec() { return getTimeSeconds("lastForecastUpdDt", 100000, "getLastForecastUpdSec").toInteger() }
+def getLastAnalyticUpdSec() { return getTimeSeconds("lastAnalyticUpdDt", 100000, "getLastAnalyticUpdSec").toInteger() }
+def getLastUpdateMsgSec() { return getTimeSeconds("lastUpdateMsgDt", 100000, "getLastUpdateMsgSec").toInteger() }
+
+//def getLastWebUpdSec() { return !getTimestampVal("lastWebUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastWebUpdDt"), null, "getLastWebUpdSec").toInteger() }
+//def getLastWeatherUpdSec() { return !getTimestampVal("lastWeatherUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastWeatherUpdDt"), null, "getLastWeatherUpdSec").toInteger() }
+//def getLastForecastUpdSec() { return !getTimestampVal("lastForecastUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastForecastUpdDt"), null, "getLastForecastUpdSec").toInteger() }
+//def getLastAnalyticUpdSec() { return !getTimestampVal("lastAnalyticUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastAnalyticUpdDt"), null, "getLastAnalyticUpdSec").toInteger() }
+//def getLastUpdateMsgSec() { return !getTimestampVal("lastUpdateMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdateMsgDt"), null, "getLastUpdateMsgSec").toInteger() }
 
 def getStZipCode() { return location?.zipCode?.toString() }
 
@@ -6128,10 +6205,11 @@ def getWeatherData(dataName) {
 	def storageApp = getStorageApp(false)
 	def stateSz = getStateSizePerc()
 	def t1 = isAppLiteMode()
-	if(storageApp && (stateSz < 46 || t1)) {
+	if(storageApp && (stateSz < 33 || t1)) {
 		initStorageApp() // should delete storageapp
+		storageApp = null
 	}
-	storageApp = getStorageApp()
+	//storageApp = getStorageApp()
 	if(storageApp && !t1) {
 		def t0 = findStateStorageVal(dataName)
 		if(t0) {
@@ -7304,10 +7382,15 @@ def getAccessToken() {
 void resetSTAccessToken(reset) {
 	if(reset != true) { return }
 	LogAction("Resetting SmartApp Access Token....", "info", true)
-	restStreamHandler(true)
-	atomicState?.restStreamingOn = false
+	atomicState?.pollBlocked = true
+	atomicState?.pollBlockedReason = "reseting Access Token"
+	restStreamHandler(true, false)
+	//atomicState?.restStreamingOn = false
 	revokeAccessToken()
 	atomicState?.accessToken = null
+	atomicState?.pollBlocked = false
+	atomicState?.pollBlockedReason = ""
+
 	if(getAccessToken()) {
 		LogAction("Reset SmartApp Access Token... Successful", "info", true)
 		settingUpdate("resetSTAccessToken", "false", "bool")
@@ -7401,8 +7484,8 @@ def finalizeRemap() {
 def revokeNestToken() {
 	if(atomicState?.authToken) {
 		LogAction("revokeNestToken()", "info", true)
-		restStreamHandler(true)
-		atomicState?.restStreamingOn = false
+		restStreamHandler(true, false)
+		//atomicState?.restStreamingOn = false
 		def params = [
 			uri: "https://api.home.nest.com",
 			path: "/oauth2/access_tokens/${atomicState?.authToken}",
@@ -7435,14 +7518,15 @@ def revokeCleanState() {
 	unschedule()
 	atomicState.authToken = null
 	updTimestampMap("authTokenCreatedDt", null)
-	atomicState.authTokenExpires = getDtNow()
+	atomicState.authTokenExpires = null
 	atomicState.structData = null
 	atomicState.deviceData = null
 	atomicState.metaData = null
-	updTimestampMap("lastStrucDataUpd", null)
+	updTimestampMap("lastStrDataUpd", null)
 	updTimestampMap("lastDevDataUpd", null)
 	updTimestampMap("lastMetaDataUpd", null)
 	atomicState?.pollingOn = false
+	atomicState.streamPolling = false
 	atomicState?.pollBlocked = false
 	atomicState?.workQrunInActive = false
 	atomicState?.pollBlockedReason = "No Auth Token"
@@ -7659,7 +7743,8 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null, frc=f
 				def remDiagApp = getRemDiagApp()
 				if(remDiagApp) {
 					remDiagApp?.savetoRemDiagChild(data)
-					atomicState?.remDiagDataSentDt = getDtNow()
+					updTimestampMap("remDiagDataSentDt", getDtNow())
+					//atomicState?.remDiagDataSentDt = getDtNow()
 				} else {
 					log.warn "Remote Diagnostics Child app not found"
 					if(getRemDiagActSec() > 20) {	// avoid race that child did not start yet
@@ -7803,7 +7888,7 @@ def setStateVar(frc = false) {
 
 def timestampMigration() {
 	def items = ["apiIssueDt","authTokenCreatedDt", "cmdLastProcDt", "debugEnableDt", "lastApiIssueMsgDt", "lastChildUpdDt", "lastDevDataUpd", "lastFailedCmdMsgDt", "lastForcePoll", "lastForecastUpdDt",
-			"lastHeardFromNestDt", "lastMetaDataUpd", "lastMisPollMsgDt", "lastStrucDataUpd", "lastUpdMsgDt", "lastUpdateMsgDt", "lastWeatherUpdDt", "lastWebUpdDt", "remDiagLogActivatedDt"
+			"lastHeardFromNestDt", "lastMetaDataUpd", "lastMisPollMsgDt", "lastStrDataUpd", "lastUpdMsgDt", "lastUpdateMsgDt", "lastWeatherUpdDt", "lastWebUpdDt", "remDiagLogActivatedDt"
 	]
 	def sData = atomicState?.timestampDtMap ?: [:]
 	items?.each { item->
@@ -8022,19 +8107,35 @@ def formatDt(dt) {
 	return tf.format(dt)
 }
 
-def formatDt2(tm) {
-	def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+def formatDt2(tm, fmt=null) {
+	def formatVal = fmt == null ? (settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : fmt
 	def tf = new SimpleDateFormat(formatVal)
 	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
 	return tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", tm.toString()))
+}
+
+private getTimeSeconds(timeKey, defVal, meth) {
+	def t0 = getTimestampVal(timeKey)
+	return !t0 ? defVal : GetTimeDiffSeconds(t0, null, meth).toInteger()
+}
+
+void updTimestampMap(keyName, dt=null) {
+	def data = atomicState?.timestampDtMap ?: [:]
+	if(keyName) { data[keyName] = dt }
+	atomicState?.timestampDtMap = data
+}
+
+def getTimestampVal(val) {
+	def tsData = atomicState?.timestampDtMap
+	if(val && tsData && tsData[val]) { return tsData[val] }
+	return null
 }
 
 def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
 	if((strtDate && !stpDate) || (strtDate && stpDate)) {
 		//if(strtDate?.contains("dtNow")) { return 10000 }
-		def now = new Date()
-		def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+		def stopVal = stpDate ? stpDate.toString() : getDtNow() //formatDt(now)
 /*
 		def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
@@ -8087,7 +8188,7 @@ def time2Str(time) {
 
 def epochToTime(tm) {
 	def tf = new SimpleDateFormat("h:mm a")
-		tf?.setTimeZone(getTimeZone())
+		tf.setTimeZone(getTimeZone())
 	return tf.format(tm)
 }
 
@@ -9638,7 +9739,7 @@ def sendInstallSlackNotif(inst=true) {
 	str += atomicState?.authToken && getTimestampVal("authTokenCreatedDt") ? "\n • TokenCreated: ${getTimestampVal("authTokenCreatedDt")}" : ""
 	def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
 	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-	str += atomicState?.authToken && atomicState?.authTokenExpires ? "\n • TokenExpires: ${tf?.format(atomicState?.authTokenExpires)}" : ""
+	str += atomicState?.authToken && atomicState?.authTokenExpires ? "\n • TokenExpires: ${tf.format(atomicState?.authTokenExpires)}" : ""
 	def res = [:]
 	res << ["username":"New User Notification"]
 	res << ["icon_emoji":":spock-hand:"]
@@ -9839,22 +9940,14 @@ def removeFirebaseData(pathVal) {
 
 // Calls by Automation children
 // parent only method
-def automationNestModeEnabled(val=null) {
-	LogTrace("automationNestModeEnabled: val: $val")
-	if(val == null) {
-		return atomicState?.automationNestModeEnabled ?: false
-	} else {
-		atomicState.automationNestModeEnabled = val.toBoolean()
-	}
-	return atomicState?.automationNestModeEnabled ?: false
-}
 
 def remSenLock(val, myId) {
 	def res = false
+	def k = "remSenLock${val}"
 	if(val && myId && !parent) {
-		def lval = atomicState?."remSenLock${val}"
+		def lval = atomicState?."${k}"
 		if(!lval) {
-			atomicState?."remSenLock${val}" = myId
+			atomicState?."${k}" = myId
 			res = true
 		} else if(lval == myId) { res = true }
 	}
@@ -9864,11 +9957,12 @@ def remSenLock(val, myId) {
 def remSenUnlock(val, myId) {
 	def res = false
 	if(val && myId && !parent) {
-		def lval = atomicState?."remSenLock${val}"
+		def k = "remSenLock${val}"
+		def lval = atomicState?."${k}"
 		if(lval) {
 			if(lval == myId) {
-				atomicState?."remSenLock${val}" = null
-				state.remove("remSenLock${val}" as String)
+				atomicState?."${k}" = null
+				state.remove("${k}" as String)
 				res = true
 			}
 		} else { res = true }
@@ -9876,8 +9970,26 @@ def remSenUnlock(val, myId) {
 	return res
 }
 
+def automationNestModeEnabled(val=null) {
+	LogTrace("automationNestModeEnabled: $val")
+	return getSetVal("automationNestModeEnabled", val)
+/*
+	if(val == null) {
+		return atomicState?.automationNestModeEnabled ?: false
+	} else {
+		atomicState.automationNestModeEnabled = val.toBoolean()
+	}
+	return atomicState?.automationNestModeEnabled ?: false
+*/
+}
+
 def setNModeActive(val=null) {
-	LogTrace("setNModeActive: val: $val")
+	LogTrace("setNModeActive: $val")
+	def myKey = "automationNestModeEcoActive"
+	def retVal
+	if(!automationNestModeEnabled(null)) {
+		retVal = getSetVal(myKey, false)
+/*
 	if(automationNestModeEnabled(null)) {
 		if(val == null) {
 			return atomicState?.automationNestModeEcoActive ?: false
@@ -9886,6 +9998,18 @@ def setNModeActive(val=null) {
 		}
 	} else { atomicState.automationNestModeEcoActive = false }
 	return atomicState?.automationNestModeEcoActive ?: false
+*/
+	} else { retVal = getSetVal(myKey, val) }
+	return retVal
+}
+
+def getSetVal(k, val=null) {
+	if(val == null) {
+		return atomicState?."${k}" ?: false
+	} else {
+		atomicState."${k}" = val.toBoolean()
+	}
+	return atomicState?."${k}" ?: false
 }
 
 // Most of this is obsolete after upgrade to V5 is complete
