@@ -52,6 +52,7 @@
         },
         "database": {
             "disableExceptions": true,
+            "sendExceptions": false,
             "exceptionKey": "exceptions",
             "pullSettingFromFB": false,
             "metricsUrl": "https://nst-manager-metrics.firebaseio.com",
@@ -63,6 +64,9 @@
         },
         "schedules": {
             "count": 8
+        },
+        "streaming": {
+            "allowLocal": false
         },
         "healthcheck": {
             "camTimeout": 120,
