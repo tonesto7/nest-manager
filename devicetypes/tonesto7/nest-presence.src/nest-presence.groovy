@@ -3,7 +3,7 @@
  *	Author: Anthony S. (@tonesto7)
  *	Co-Authors: Ben W. (@desertBlade), Eric S. (@E_Sch)
  *
- *	Copyright (C) 2017, 2018 Anthony S., Ben W.
+ *	Copyright (C) 2017, 2018, 2019 Anthony S., Ben W.
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 

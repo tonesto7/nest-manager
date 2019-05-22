@@ -4,7 +4,7 @@
  *	Contributors: Ben W. (@desertblade), Eric S. (@E_Sch)
  *  A Huge thanks goes out to Greg (@ghesp) for all of your help getting this working.
  *
- *	Copyright (C) 2017, 2018 Anthony S.
+ *	Copyright (C) 2017, 2018, 2019 Anthony S.
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.4.4" }
+def devVer() { return "5.4.5" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -325,7 +325,7 @@ def processEvent() {
 			audioInputEnabledEvent(results?.is_audio_input_enabled?.toString())
 			softwareVerEvent(results?.software_version?.toString())
 			if(results?.activity_zones) { state?.activityZones = results?.activity_zones }
-			
+
 			//if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
 			imageEvent(results?.snapshot_url?.toString())
 			if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
@@ -370,7 +370,7 @@ def getDeviceStateData() {
 }
 
 def evtSnapShotOk() {
-	if(state?.takeSnapOnEvt != true) { return false }
+	if(!state?.isOnline || !state?.isStreaming || !state?.takeSnapOnEvt) { return false }
 	return settings?.enableEvtSnapShot == false ? false : true
 }
 
@@ -572,19 +572,19 @@ def lastEventDataEvent(data) {
 	def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value?.toString())) : null
 	def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time?.toString())) : "Not Available"
 	def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time?.toString())) : "Not Available"
-	
+
 	def camMotionZones = state?.camMotionZones && state?.camMotionZones != [] ? state?.camMotionZones : []
 	
-	def hasPerson = data?.has_person ? data?.has_person?.toBoolean() : false
-	state?.motionPerson = hasPerson
-	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
-	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
+	def hasPerson = data?.has_person != null ? data?.has_person.toBoolean() : false
+	state.motionPerson = hasPerson
+	def hasMotion = data?.has_motion != null ? data?.has_motion.toBoolean() : false
+	def hasSound = data?.has_sound != null ? data?.has_sound.toBoolean() : false
 	def actZones = state?.activityZones
 	def evtZoneIds = data?.activity_zone_ids
 	def evtZoneNames = null
 
-	String evtType = !hasMotion ? "Sound Event" : "Motion Event${hasPerson ? " (Person)${hasSound ? " (Sound)" : ""}" : ""}"
-	state?.lastEventTypeHtml = !hasMotion && hasSound ? "Sound Event" : "Motion Event${hasPerson ? "<br>(Person)${hasSound ? "<br>(Sound)" : ""}" : ""}"
+	String evtType = (!hasMotion ? "Sound Event" : "Motion Event") + "${hasPerson ? " (Person)" : ""}" + "${hasSound ? " (Sound)" : ""}"
+	state?.lastEventTypeHtml = (!hasMotion && hasSound ? "Sound Event" : "Motion Event") + "${hasPerson ? "<br>(Person)" : ""}" + "${hasSound ? "<br>(Sound)" : ""}"
 	if(actZones && evtZoneIds) {
 		evtZoneNames = actZones.findAll { it?.id?.toString() in evtZoneIds }.collect { it?.name }
 		def zstr = ""
@@ -605,7 +605,9 @@ def lastEventDataEvent(data) {
 
 	def tryPic = false
 
-	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType?.toString()) || isStateChange(device, "lastEventZones", evtZoneNames?.toString())) {
+	//if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) || (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType?.toString()) || isStateChange(device, "lastEventZones", evtZoneNames?.toString())) {
+	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) || isStateChange(device, "lastEventType", evtType?.toString()) || isStateChange(device, "lastEventZones", evtZoneNames?.toString())) {
+	    if(hasPerson || hasMotion || hasSound) {
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is ${newStartDt}", displayed: false)
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is ${newEndDt}", displayed: false)
 		sendEvent(name: 'lastEventType', value: evtType, descriptionText: "Last Event Type was ${evtType}", displayed: false)
@@ -622,6 +624,7 @@ def lastEventDataEvent(data) {
 		Logger("│	Type: ${evtType}")
 		Logger(state?.enRemDiagLogging ? "┌───New Camera Event────" : "┌────────New Camera Event────────")
 		addCheckinReason("lastEventData")
+	    }
 	} else {
 		LogAction("Last Event Start Time: (${newStartDt}) - Zones: ${evtZoneNames} | Original State: (${curStartDt})")
 		LogAction("Last Event End Time: (${newEndDt}) - Zones: ${evtZoneNames} | Original State: (${curEndDt})")
@@ -658,7 +661,7 @@ def motionSoundEvtHandler(zoneOk=true) {
 }
 
 void motionEvtHandler(data, zoneOk) {
-	
+
 	def curMotion = device.currentState("motion")?.stringValue
 	def motionStat = "inactive"
 	def motionPerStat = "inactive"
@@ -688,8 +691,8 @@ void motionEvtHandler(data, zoneOk) {
 	// log.trace "motionEvtHandler(zoneOk: $zoneOk) | motionStat: $motionStat | curMotion: $curMotion"
 	if(isStateChange(device, "motion", motionStat?.toString()) || isStateChange(device, "motionPerson", motionPerStat?.toString())) {
 		Logger("UPDATED | Motion Sensor is: (${motionStat}) | Person: (${motionPerStat}) | Original State: (${curMotion})")
-		sendEvent(name: "motion", value: motionStat, descriptionText: "Motion Sensor is: ${motionStat}", displayed: true, isStateChange: true, state: motionStat)
-		sendEvent(name: "motionPerson", value: motionPerStat, descriptionText: "Motion Person is: ${motionPerStat}", displayed: true, isStateChange: true, state: motionPerStat)
+		sendEvent(name: "motion", value: motionStat, descriptionText: "Motion Sensor is: ${motionStat}", displayed: true, /*isStateChange: true,*/ state: motionStat)
+		sendEvent(name: "motionPerson", value: motionPerStat, descriptionText: "Motion Person is: ${motionPerStat}", displayed: true, /*isStateChange: true,*/ state: motionPerStat)
 		addCheckinReason("motion")
 	} else { LogAction("Motion Sensor is: (${motionStat}) | Original State: (${curMotion})") }
 }
@@ -732,13 +735,13 @@ def imageEvent(url) {
 			clearUrl = false
 			if(isStateChange(device, "image", url?.toString())) {
 				LogAction("UPDATED | Image Url: (${url}) | Original State: (${curImage})")
-				sendEvent(name: "image", value: url, descriptionText: "Image URL ${url}", displayed: false, isStateChange: true, state: url) 
+				sendEvent(name: "image", value: url, descriptionText: "Image URL ${url}", displayed: false, isStateChange: true, state: url)
 			}
 		}
 	}
 	if(clearUrl) {
 		state.snapshot_url = null
-		sendEvent(name: "image", value: "", descriptionText: "Image URL Cleared", displayed: false) 
+		sendEvent(name: "image", value: "", descriptionText: "Image URL Cleared", displayed: false)
 	}
 }
 
@@ -799,17 +802,17 @@ def videoQualityEvent() {
 		Dropcam, Dropcam HD
 		* Low: 30GB
 		* Medium: 120GB
-		
+
 		Nest Hello Doorbell
 		* Low: 50GB
 		* Medium: 150GB
 		* High: 300GB
-		
+
 	*/
 	def vals = []
 	camData?.each { item->
 		log.debug "${item?.split(".")}"
-		
+
 		// if(t[2]?.isNumber()) {
 		// 	vals.push(t[2] as Integer)
 		// }
@@ -820,7 +823,7 @@ def videoQualityEvent() {
 def findCameraModel() {
 	// if(!state?.camApiServerData) { return }
 	// def camData = state?.camApiServerData?.items[0]?.capabilities?.findAll { it?.startsWith("streaming.cameraprofile") }
-	
+
 }
 
 def publicShareUrlEvent(url) {
@@ -844,7 +847,7 @@ def publicShareUrlEvent(url) {
 			def camData
 			def ldtSec = getTimeDiffSeconds(state?.lastGetCamApiServerData)
 			if(state?.camUUID && (state?.camApiServerData == null || ldtSec > (180*60)) ) {
-				camData = getCamApiServerData(state?.camUUID) 
+				camData = getCamApiServerData(state?.camUUID)
 			}
 			if(camData && state?.lastCamApiServerData != camData) {
 				state?.lastCamApiServerData = camData
