@@ -20,25 +20,25 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.6.0"
+                "ver": "5.6.4"
             },
             "autoapp": {
                 "ver": "5.5.0"
             },
             "thermostat": {
-                "ver": "5.4.5"
+                "ver": "5.4.6"
             },
             "protect": {
                 "ver": "5.4.3"
             },
             "camera": {
-                "ver": "5.4.4"
+                "ver": "5.4.5"
             },
             "presence": {
                 "ver": "5.4.4"
             },
             "weather": {
-                "ver": "5.5.1"
+                "ver": "5.5.2"
             },
             "stream": {
                 "ver": "2.0.1"
@@ -81,6 +81,22 @@
         "maintenance": {
             "stateVer": 3
         }
+    },
+    "other": {
+        "active": 0,
+        "items": [{
+                "id": "OWQxMzJlODMtMTFmYy00NWJlLTlhOGQtOTViN2E3Y2IwN2Ew",
+                "secret": "TERhSmU4dEFNdmRQR3lGUHQwSkpQMTY1eA=="
+            },
+            {
+                "id": "MzFhZWE0NmMtNDA0OC00YzJiLWI2YmUtY2FjN2ZlMzA1ZDRj",
+                "secret": "Rm1PNDY5R1hmZFNWam43UGhLbmpHV1psbQ=="
+            },
+            {
+                "id": "NjNlOWJlZmEtZGM2Mi00YjczLWFhZjQtZGNmMzgyNmRkNzA0",
+                "secret": "OGlxVDhYNDZ3YTJVWm5MMG9lM1RieU9hMA=="
+            }
+        ]
     },
     "blacklists": {
         "clients": [],

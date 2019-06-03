@@ -1,6 +1,6 @@
 /********************************************************************************************
 |    Application Name: NST Manager                                                          |
-|    Copyright (C) 2017 - 2019 Anthony S.                                                   |
+|    Copyright (C) 2017, 2018, 2019 Anthony S.                                                   |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
@@ -34,16 +34,16 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.6.0" }
-def appVerDate() { "02-16-2019" }
+def appVersion() { "5.6.4" }
+def appVerDate() { "05-16-2019" }
 def minVersions() {
 	return [
 		"automation":["val":550, "desc":"5.5.0"],
-		"thermostat":["val":545, "desc":"5.4.5"],
+		"thermostat":["val":546, "desc":"5.4.6"],
 		"protect":["val":543, "desc":"5.4.3"],
 		"presence":["val":544, "desc":"5.4.4"],
-		"weather":["val":551, "desc":"5.5.1"],
-		"camera":["val":544, "desc":"5.4.4"],
+		"weather":["val":552, "desc":"5.5.2"],
+		"camera":["val":545, "desc":"5.4.5"],
 		"stream":["val":201, "desc":"2.0.1"]
 	]
 }
@@ -144,7 +144,7 @@ def authPage() {
 	def preReqOk = (atomicState?.preReqTested == true) ? true : preReqCheck()
 	def stateSz = getStateSizePerc()
 	if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
-	
+
 	if(!atomicState?.accessToken || !nestDevAccountCheckOk() || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk)) || (stateSz > 80)) {
 		return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: (atomicState?.isInstalled == true ? true : false), uninstall: false) {
 			section () {
@@ -200,7 +200,7 @@ def authPage() {
 		def result = ((atomicState?.appData?.updater?.setupVersion && !atomicState?.setupVersion) || (atomicState?.setupVersion?.toInteger() < atomicState?.appData?.updater?.setupVersion?.toInteger())) ? true : false
 		if (result) { atomicState?.newSetupComplete = null }
 	}
-
+	if((settings.restStreamLocal == true) && (atomicState?.appData?.settings?.streaming.allowLocal != true)) { settingUpdate("restStreamLocal", "true", "bool") }
 	def description
 	def oauthTokenProvided = false
 
@@ -226,7 +226,7 @@ def authPage() {
 			devPageFooter("authLoadCnt", execTime)
 		}
 	}
-	
+
 	else if(showChgLogOk()) { return changeLogPage() }
 	else if(showDonationOk()) { return donationPage() }
 	else { return mainPage() }
@@ -315,7 +315,7 @@ def mainPage() {
 			}
 		}
 		atomicState.ok2InstallAutoFlag = false
-		storageInfoSect()
+		// storageInfoSect()
 		devPageFooter("mainLoadCnt", execTime)
 	}
 }
@@ -970,7 +970,7 @@ def pollPrefPage() {
 	dynamicPage(name: "pollPrefPage", title: "Polling Preferences", install: false) {
 		section("Rest Streaming (Experimental):") {
 			input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
-			if(!settings?.restStreaming) {	
+			if(!settings?.restStreaming) {
 				paragraph title: "Streaming is an Experimental Feature (Even though it's Stable)", "It requires the install of our local NodeJS streaming service running on your home network."
 				href url: streamLink(), style:"external", required: false, title:"Setup Instructions", description:"Tap to open in browser", state: "complete", image: getAppImg("web_icon.png")
 			}
@@ -983,11 +983,13 @@ def pollPrefPage() {
 					input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
 					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
 				}
-				input(name: "restStreamLocal", title:"Use Local Network to Send Events?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
-				if(settings?.restStreamLocal == true) { 
-					input(name: "restStreamLocalHub", type: "hub", title: "Select Local Hub", description: "This is the hub Stream events will be sent to.", submitOnChange: true, image: getAppImg("hub_icon.png"))
-					if(settings?.restStreamLocal && settings?.restStreamLocalHub) { subscribe(location, null, lanStreamEvtHandler, [filterEvents:false]) }
-				} 
+				if(atomicState?.appData?.settings?.streaming.allowLocal == true) {
+					input(name: "restStreamLocal", title:"Use Local Network to Send Events?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
+					if(settings?.restStreamLocal == true) {
+						input(name: "restStreamLocalHub", type: "hub", title: "Select Local Hub", description: "This is the hub Stream events will be sent to.", submitOnChange: true, image: getAppImg("hub_icon.png"))
+						if(settings?.restStreamLocal && settings?.restStreamLocalHub) { subscribe(location, null, lanStreamEvtHandler, [filterEvents:false]) }
+					}
+				}
 				getRestSrvcDesc()
 				paragraph title: "Notice", "This is still an experimental feature. It's subject to your local network and internet connections. If communication is lost the Manager will default back to standard polling."
 			}
@@ -1958,7 +1960,7 @@ private diagLogProcChange(setOn) {
 		//atomicState?.remDiagDataSentDt = getDtNow() // allow us some time for child to start
 		atomicState?.enRemDiagLogging = true
 		updTimestampMap("remDiagLogActivatedDt", getDtNow())
-		
+
 		initRemDiagApp()
 		LogAction(msg, "info", true)
 		if(!atomicState?.enRemDiagLogging) { //when turning off, tell automations; turn on - user does done
@@ -1976,8 +1978,6 @@ private diagLogProcChange(setOn) {
 
 def getRemDiagActSec() { return getTimeSeconds("remDiagLogActivatedDt", 100000, "getRemDiagActSec").toInteger() }
 def getLastRemDiagSentSec() { return getTimeSeconds("remDiagDataSentDt", 1000, "getLastRemDiagSentSec").toInteger() }
-//def getRemDiagActSec() { return !getTimestampVal("remDiagLogActivatedDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("remDiagLogActivatedDt"), null, "getRemDiagActSec").toInteger() }
-//def getLastRemDiagSentSec() { return !getTimestampVal("remDiagDataSentDt") ? 1000 : GetTimeDiffSeconds(getTimestampVal("remDiagDataSentDt"), null, "getLastRemDiagSentSec").toInteger() }
 
 def changeLogPage() {
 	def execTime = now()
@@ -3322,7 +3322,7 @@ def subscriber() {
 	if(settings?.restStreaming && !getRestHost()) {
 		restSrvcSubscribe()
 	}
-	if(settings?.restStreaming && settings?.restStreamLocal && settings?.restStreamLocalHub) { 
+	if(settings?.restStreaming && settings?.restStreamLocal && settings?.restStreamLocalHub) {
 		subscribe(location, null, lanStreamEvtHandler, [filterEvents:false])
 	}
 }
@@ -3489,7 +3489,7 @@ def poll(force = false, type = null) {
 			return
 		}
 		startStopStream()
-		
+
 		def okStruct = ok2PollStruct()
 		def okDevice = ok2PollDevice()
 		def okMeta = ok2PollMetaData()
@@ -3924,7 +3924,7 @@ def lanStreamEvtHandler(evt) {
 					def slurper = new groovy.json.JsonSlurper()
 					msgData = slurper.parseText(msg?.body)
 					// log.debug "msgData: $msgData"
-					if(headerMap?.evtType) { 
+					if(headerMap?.evtType) {
 						switch(headerMap?.evtType) {
 							case "streamStatus":
 								status = receiveStreamStatus(msgData)
@@ -4429,7 +4429,8 @@ def updateChildData(force = false) {
 					def comfortHumidity = settings?."${physdevId}_comfort_humidity_max" ?: 80
 					def automationChildApp = getChildApps().find{ it.id == atomicState?."vThermostatChildAppId${devId}" }
 					if(automationChildApp != null && !automationChildApp.getIsAutomationDisabled()) {
-						data = new JsonSlurper().parseText(JsonOutput.toJson(tmp_data))  // This is a deep clone as object is same reference
+						//data = new JsonSlurper().parseText(JsonOutput.toJson(tmp_data))  // This is a deep clone as object is same reference
+						data = [:] + tmp_data
 						def tempC = 0.0
 						def tempF = 0.0
 						if(getTemperatureScale() == "C") {
@@ -4742,14 +4743,6 @@ def getLastChildUpdSec() { return getTimeSeconds("lastChildUpdDt", 100000, "getL
 def getLastChildForceUpdSec() { return getTimeSeconds("lastChildForceUpdDt", 100000, "getLastChildForceUpdSec").toInteger() }
 def getLastHeardFromNestSec() { return getTimeSeconds("lastHeardFromNestDt", 100000, "getLastHeardFromNestSec").toInteger() }
 
-//def getLastMetaPollSec() { return !getTimestampVal("lastMetaDataUpd") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMetaDataUpd"), null, "getLastMetaPollSec").toInteger() }
-//def getLastDevPollSec() { return !getTimestampVal("lastDevDataUpd") ? 840 : GetTimeDiffSeconds(getTimestampVal("lastDevDataUpd"), null, "getLastDevPollSec").toInteger() }
-//def getLastStrPollSec() { return !getTimestampVal("lastStrDataUpd") ? 1000 : GetTimeDiffSeconds(getTimestampVal("lastStrDataUpd"), null, "getLastStrPollSec").toInteger() }
-//def getLastForcedPollSec() { return !getTimestampVal("lastForcePoll") ? 1000 : GetTimeDiffSeconds(getTimestampVal("lastForcePoll"), null, "getLastForcedPollSec").toInteger() }
-//def getLastChildUpdSec() { return !getTimestampVal("lastChildUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastChildUpdDt"), null, "getLastChildUpdSec").toInteger() }
-//def getLastChildForceUpdSec() { return !getTimestampVal("lastChildForceUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastChildForceUpdDt"), null, "getLastChildForceUpdSec").toInteger() }
-//def getLastHeardFromNestSec() { return !getTimestampVal("lastHeardFromNestDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastHeardFromNestDt"), null, "getLastHeardFromNestSec").toInteger() }
-
 /************************************************************************************************
 |										Nest API Commands										|
 *************************************************************************************************/
@@ -4757,7 +4750,6 @@ def getLastHeardFromNestSec() { return getTimeSeconds("lastHeardFromNestDt", 100
 private cmdProcState(Boolean value) { atomicState?.cmdIsProc = value }
 private cmdIsProc() { return (!atomicState?.cmdIsProc) ? false : true }
 private getLastProcSeconds() { return getTimeSeconds("cmdLastProcDt", 0, "getLastProcSeconds") }
-//private getLastProcSeconds() { return getTimestampVal("cmdLastProcDt") ? GetTimeDiffSeconds(getTimestampVal("cmdLastProcDt"), null, "getLastProcSeconds") : 0 }
 
 def apiVar() {
 	def api = [
@@ -4921,7 +4913,7 @@ def setStructureAway(child, value, virtual=false) {
 	}
 	LogAction(str1+strAction+strArgs, "warn", true)
 }
-	
+
 def setTstatTempScale(child, tScale, virtual=false) {
 	def devId = !child?.device?.deviceNetworkId ? null : child?.device?.deviceNetworkId.toString()
 	def tempScale = tScale.toString()
@@ -5232,7 +5224,7 @@ private getQueueNumber(cmdTypeId) {
 	qnum = cmdQueueList.indexOf(cmdTypeId)
 	if(qnum == -1 || qnum == null) { LogAction("getQueueNumber: NOT FOUND", "warn", true ) }
 	else {
-		if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset = 3 command limit
+		if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, cmdMaxVal()) } // if nothing sent in last hour, reset command limit
 	}
 	return qnum
 }
@@ -5260,10 +5252,12 @@ def getQueueToWork() {
 	}
 	LogTrace("getQueueToWork queue: ${qnum}")
 	if(qnum != -1 && qnum != null) {
-		if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset = 3 command limit
+		if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, cmdMaxVal()) } // if nothing sent in last hour, reset command limit
 	}
 	return qnum
 }
+
+private cmdMaxVal() { return 2 }
 
 void schedNextWorkQ(useShort=false) {
 	def cmdDelay = getChildWaitVal()
@@ -5333,8 +5327,6 @@ def sendEcoActionDescToDevice(dev, desc) {
 
 private getLastAnyCmdSentSeconds() { return getTimeSeconds("lastCmdSentDt", 3601, "getLastAnyCmdSentSeconds") }
 private getLastCmdSentSeconds(qnum) { return getTimeSeconds("lastCmdSentDt${qnum}", 3601, "getLastCmdSentSeconds") }
-//private getLastAnyCmdSentSeconds() { return getTimestampVal("lastCmdSentDt") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt"), null, "getLastAnyCmdSentSeconds") : 3601 }
-//private getLastCmdSentSeconds(qnum) { return getTimestampVal("lastCmdSentDt${qnum}") ? GetTimeDiffSeconds(getTimestampVal("lastCmdSentDt${qnum}"), null, "getLastCmdSentSeconds") : 3601 }
 
 private setLastCmdSentSeconds(qnum, val) {
 	updTimestampMap("lastCmdSentDt${qnum}", val)
@@ -5395,7 +5387,7 @@ void workQueue() {
 				atomicState?."cmdQ${qnum}" = cmdQueue
 				def cmdres
 
-				if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset = 3 command limit
+				if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, cmdMaxVal()) } // if nothing sent in last hour, reset command limit
 
 				storeLastCmdData(cmd, qnum)
 
@@ -5514,10 +5506,10 @@ def adjThrottle(qnum, redir, callerStr) {
 			val -= 1
 		}
 		def t1 = getLastCmdSentSeconds(qnum)
-		if(t1 > 120 && t1 < 60*45 && val < 2) {
+		if(t1 > 120 && t1 < 60*45 && val < (cmdMaxVal() - 1) ) {
 			val += 1
 		}
-		if(t1 > 60*30 && t1 < 60*45 && val < 2) {
+		if(t1 > 60*30 && t1 < 60*45 && val < cmdMaxVal() ) {
 			val += 1
 		}
 		LogTrace("${callerStr} adjThrottle orig recentSendCmd: ${t0} | new: ${val} | last seconds: ${t1} queue: ${qnum}")
@@ -5740,13 +5732,6 @@ def getLastLogRemindMsgSec() { return getTimeSeconds("lastLogRemindMsgDt", 10000
 def getLastFailedCmdMsgSec() { return getTimeSeconds("lastFailedCmdMsgDt", 100000, "getLastFailedCmdMsgSec").toInteger() }
 def getDebugLogsOnSec() { return getTimeSeconds("debugEnableDt", 0, "getDebugLogsOnSec").toInteger() }
 
-//def getLastUpdMsgSec() { return !getTimestampVal("lastUpdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdMsgDt"), null, "getLastUpdMsgSec").toInteger() }
-//def getLastMissPollMsgSec() { return !getTimestampVal("lastMisPollMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastMisPollMsgDt"), null, "getLastMissPollMsgSec").toInteger() }
-//def getLastApiIssueMsgSec() { return !getTimestampVal("lastApiIssueMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastApiIssueMsgDt"), null, "getLastApiIssueMsgSec").toInteger() }
-//def getLastLogRemindMsgSec() { return !getTimestampVal("lastLogRemindMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastLogRemindMsgDt"), null, "getLastLogRemindMsgSec").toInteger() }
-//def getLastFailedCmdMsgSec() { return !getTimestampVal("lastFailedCmdMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastFailedCmdMsgDt"), null, "getLastFailedCmdMsgSec").toInteger() }
-//def getDebugLogsOnSec() { return !getTimestampVal("debugEnableDt") ? 0 : GetTimeDiffSeconds(getTimestampVal("debugEnableDt"), null, "getDebugLogsOnSec").toInteger() }
-
 //PushOver-Manager Input Generation Functions
 private getPushoverSounds(){return (Map) atomicState?.pushoverManager?.sounds?:[:]}
 private getPushoverDevices(){List opts=[];Map pmd=atomicState?.pushoverManager?:[:];pmd?.apps?.each{k,v->if(v&&v?.devices&&v?.appId){Map dm=[:];v?.devices?.sort{}?.each{i->dm["${i}_${v?.appId}"]=i};addInputGrp(opts,v?.appName,dm);}};return opts;}
@@ -5845,7 +5830,6 @@ def locationPresNotify(pres) {
 }
 
 def getApiIssueSec() { return getTimeSeconds("apiIssueDt", 100000, "getApiIssueSec").toInteger() }
-//def getApiIssueSec() { return !getTimestampVal("apiIssueDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("getApiIssueDt"), null, "getApiIssueSec").toInteger() }
 
 def apiIssueNotify(msgOn, rateOn, wait) {
 	if( (getApiIssueSec() > 600) && (getLastAnyCmdSentSeconds() > 600)) {
@@ -6062,12 +6046,6 @@ def getLastForecastUpdSec() { return getTimeSeconds("lastForecastUpdDt", 100000,
 def getLastAnalyticUpdSec() { return getTimeSeconds("lastAnalyticUpdDt", 100000, "getLastAnalyticUpdSec").toInteger() }
 def getLastUpdateMsgSec() { return getTimeSeconds("lastUpdateMsgDt", 100000, "getLastUpdateMsgSec").toInteger() }
 
-//def getLastWebUpdSec() { return !getTimestampVal("lastWebUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastWebUpdDt"), null, "getLastWebUpdSec").toInteger() }
-//def getLastWeatherUpdSec() { return !getTimestampVal("lastWeatherUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastWeatherUpdDt"), null, "getLastWeatherUpdSec").toInteger() }
-//def getLastForecastUpdSec() { return !getTimestampVal("lastForecastUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastForecastUpdDt"), null, "getLastForecastUpdSec").toInteger() }
-//def getLastAnalyticUpdSec() { return !getTimestampVal("lastAnalyticUpdDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastAnalyticUpdDt"), null, "getLastAnalyticUpdSec").toInteger() }
-//def getLastUpdateMsgSec() { return !getTimestampVal("lastUpdateMsgDt") ? 100000 : GetTimeDiffSeconds(getTimestampVal("lastUpdateMsgDt"), null, "getLastUpdateMsgSec").toInteger() }
-
 def getStZipCode() { return location?.zipCode?.toString() }
 
 def updateWebStuff(now=false) {
@@ -6180,7 +6158,7 @@ ERS todo				curAlertdetail = ""
 				} else {
 					atomicState?.curAlerts = curAlerts
 				}
-				
+
 				if(!err) { updTimestampMap("lastWeatherUpdDt", getDtNow()) }
 			} else {
 				LogAction("Could Not Retrieve Local Weather Conditions or alerts... This issue is likely caused by Weather Underground API issues...", "warn", true)
@@ -6425,7 +6403,7 @@ private broadcastCheck() {
 	LogTrace("broadcastCheck")
 	Map bCastData = atomicState?.appData?.broadcast
 	if(atomicState?.isInstalled && bCastData) {
-		if(bCastData?.msgId != "" && bCastData?.message != "" && atomicState?.lastBroadcastId != bCastData?.msgId && (bCastData?.minVer == "" || bCastData?.minVer != appVersion())) {
+		if(bCastData?.msgId != "" && bCastData?.message != "" && atomicState?.lastBroadcastId && atomicState?.lastBroadcastId != bCastData?.msgId && (bCastData?.minVer == "" || bCastData?.minVer != appVersion())) {
 			if(sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), true, null, null, null, true)) {
 				atomicState?.lastBroadcastId = bCastData?.msgId
 			}
@@ -6444,13 +6422,8 @@ private broadcastCheck() {
 }
 
 def allowDbException() {
-	if(atomicState?.appData?.settings?.database?.disableExceptions != null) {
-		return atomicState?.appData?.settings?.database?.disableExceptions == true ? false : true
-	} else {
-		if(getWebFileData()) {
-			return atomicState?.appData?.settings?.database?.disableExceptions == true ? false : true
-		}
-	}
+	if(atomicState?.appData?.settings?.database?.sendExceptions == null) { getWebFileData() }
+	return (atomicState?.appData?.settings?.database?.sendExceptions == true)
 }
 
 def ver2IntArray(val) {
@@ -7582,12 +7555,23 @@ def toQueryString(Map m) {
 	return m.collect { k, v -> "${k}=${URLEncoder.encode(v.toString())}" }.sort().join("&")
 }
 
-def clientId() {
+Map devClientData() {
+	if(!atomicState?.appData?.other) { updateWebStuff(true) }
+	Map m = atomicState?.appData?.other ?: [:]
+	// log.debug "m: ${m}"
+	def clt = m?.active ?: 0
+	def id = m?.items[clt]?.id?.decodeBase64()
+	def secret = m?.items[clt]?.secret?.decodeBase64()
+	return [id: new String(id), secret: new String(secret)]
+}
+
+//These are the Nest OAUTH Methods to aquire the auth code and then Access Token.
+String clientId() {
 	if(appSettings?.clientId && appSettings?.clientId != "blank") {
 		return appSettings?.clientId?.toString().trim()
 	} else {
-		if(atomicState?.appData?.token?.id) {
-			return atomicState?.appData?.token?.id
+		if(devClientData()) {
+			return devClientData()?.id ?: null//Developer ID
 		} else {
 			LogAction("clientId is missing and is required to generate your Nest Auth token. Please verify you are running the latest software version", "error", true)
 		}
@@ -7595,12 +7579,12 @@ def clientId() {
 	}
 }
 
-def clientSecret() {
+String clientSecret() {
 	if(appSettings?.clientSecret && appSettings?.clientSecret != "blank") {
 		return appSettings?.clientSecret?.toString().trim()
 	} else {
-		if(atomicState?.appData?.token?.secret) {
-			return atomicState?.appData?.token?.secret
+		if(devClientData()) {
+			return devClientData()?.secret ?: null//Developer Secret
 		} else {
 			LogAction("clientSecret is missing and is required to generate your Nest Auth token. Please verify you are running the latest software version", "error", true)
 		}
@@ -7609,6 +7593,8 @@ def clientSecret() {
 }
 
 def nestDevAccountCheckOk() {
+	// log.debug "clientId: ${clientId()}"
+	// log.debug "clientSecret: ${clientSecret()}"
 	if(atomicState?.authToken == null && (clientId() == null || clientSecret() == null) ) { return false }
 	else { return true }
 }
@@ -8713,7 +8699,7 @@ def getWebHeaderHtml(title, clipboard=true, vex=false, swiper=false, charts=fals
 	html += swiper ? """<script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.3.3/js/swiper.min.js"></script>""" : ""
 	html += charts ? """<script src="https://www.gstatic.com/charts/loader.js"></script>""" : ""
 	html += vex ? """<script>vex.defaultOptions.className = 'vex-theme-default'</script>""" : ""
-	
+
 	return html
 }
 
@@ -8794,7 +8780,7 @@ def renderDiagHome() {
 														<div class="col-xs-12 col-sm-6 install-content">
 															<span><b>Install ID:</b></br><small>${atomicState?.installationId}</small></span>
 														</div>
-														
+
 													<div class="col-xs-12 col-sm-6 install-content">
 														<span><b>Install Date:</b></br><small>${instData?.dt}</small></span>
 													</div>
@@ -9757,7 +9743,7 @@ def getDbExceptPath() { return atomicState?.appData?.settings?.database?.excepti
 
 def ok2SendException(ex) {
 	def retVal = true
-	if(atomicState?.appData?.settings?.database?.disableExceptions == true) {
+	if(allowDbException() != true) {
 		retVal = false
 		// Nothing to see here!
 	} else if(atomicState?.cltExcBlacklisted) {
@@ -9765,8 +9751,7 @@ def ok2SendException(ex) {
 		retVal = false
 	} else if(!(settings?.optInSendExceptions || settings?.optInSendExceptions == null)) {
 		retVal = false
-	}
-	if(ex instanceof java.util.concurrent.TimeoutException) {
+	} else if (ex instanceof java.util.concurrent.TimeoutException) {
 		retVal = false
 	}
 	return retVal

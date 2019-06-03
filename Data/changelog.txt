@@ -1,3 +1,19 @@
+V5.6.4 (May 16th, 2019):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • Token Updates
+
+V5.6.2 (April 9th, 2019):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • Adjust for more conservative nest throttling
+
+V5.6.1 (March 29th, 2019):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • REMOVED: Local rest stream support (Until ST restores the feature)
+ • UPDATED: Simplified exception report logic.
+
 V5.5.6 (November 14th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
@@ -32,21 +48,3 @@ Manager App:
 
 Automation App 5.4.3:
  • FIXED: Bug Fixes
-
-V5.4.0 (August 10th, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • ADDED: Pushover Manager Integration
-
-Automation App 5.4.0:
- • ADDED: Pushover Manager Integration
-
-V5.3.9 (July 30th, 2018):
-▔▔▔▔▔▔▔▔▔▔▔
-Manager App:
- • ADDED: Camera Motion Zone Filtering (Requires Nest Aware and NST Streaming Service)
- • FIXED: Bug fixes and Code Cleanups/Optimizations
-
-Automation App 5.3.6:
-• REMOVED: Support for Contact Book
-
