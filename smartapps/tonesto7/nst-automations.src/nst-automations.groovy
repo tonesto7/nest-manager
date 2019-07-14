@@ -1,6 +1,6 @@
 /********************************************************************************************
 |    Application Name: NST Automations                                                      |
-|    Copyright (C) 2017, 2018 Anthony S.                                                    |
+|    Copyright (C) 2017, 2018, 2019 Anthony S.                                                    |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
@@ -234,12 +234,12 @@ def fixState() {
 	def before = getStateSizePerc()
 	if(!atomicState?.resetAllData && parent?.settings?.resetAllData) { // automation cleanup called from update() -> initAutoApp()
 		def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "lastScheduleList", "resetAllData", "disableAutomationDt",
-			"leakWatRestoreMode", "leakWatTstatOffRequested", 
+			"leakWatRestoreMode", "leakWatTstatOffRequested",
 			"conWatRestoreMode", "conWatlastMode", "conWatTstatOffRequested",
 			"oldremSenTstat", /* "remSenTstat", */
 			"haveRunFan", "lastfanCtrlRunDt", "lastfanCtrlFanOffDt",
-			"extTmpRestoreMode", "extTmpTstatOffRequested", "extTmpLastDesiredTemp", "extTmplastMode", "extTmpLastDesiredCTemp", "extTmpLastDesiredHTemp", "extTmpChgWhileOnDt", "extTmpChgWhileOffDt", 
-			"remDiagLogDataStore", 
+			"extTmpRestoreMode", "extTmpTstatOffRequested", "extTmpLastDesiredTemp", "extTmplastMode", "extTmpLastDesiredCTemp", "extTmpLastDesiredHTemp", "extTmpChgWhileOnDt", "extTmpChgWhileOffDt",
+			"remDiagLogDataStore",
 			"restoreId", "restoredFromBackup", "restoreCompleted", "automationTypeFlag", "newAutomationFile", "installData", "usageMetricsStore" ]) }
 //  "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive",
 		data.each { item ->
@@ -6574,7 +6574,7 @@ def setNotificationPage(params) {
 	}
 	dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
 		section("Notification Preferences:") {
-			input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: (!settings["${pName}NotificationsOn"] ? "Enable Text, Voice, Ask Alexa, or Alarm Notifications" : ""), required: false, 
+			input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: (!settings["${pName}NotificationsOn"] ? "Enable Text, Voice, Ask Alexa, or Alarm Notifications" : ""), required: false,
 					defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
 		}
 		def fixSettings = false
@@ -6617,7 +6617,7 @@ def setNotificationPage(params) {
 						}
 					}
 				}
-			
+
 			} else {
 				fixSettings = true
 			}
@@ -6816,7 +6816,7 @@ String getNotifSchedDesc(pName) {
 	return (notifDesc != "") ? "${notifDesc}" : null
 }
 
-def getOk2Notify(pName) { 
+def getOk2Notify(pName) {
 	return ((settings["${pName}NotificationsOn"] == true) && (daysOk(settings?."${pName}quietDays") == true) && (notificationTimeOk(pName) == true) && (modesOk(settings?."${pName}quietModes") == true))
 }
 
