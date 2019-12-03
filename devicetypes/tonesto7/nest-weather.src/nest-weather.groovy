@@ -4,7 +4,7 @@
  *  Co-Authors: Ben W. (@desertBlade)  Eric S. (@E_sch)
  *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
- *	Copyright (C) 2017, 2018 Anthony S., Ben W.
+ *	Copyright (C) 2017, 2018, 2019 Anthony S., Ben W.
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.5.1" }
+def devVer() { return "5.5.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -611,11 +611,11 @@ def getWeatherConditions(weatData, weatLocation) {
 				illuminanceEvent(estimateLux(state?.curWeatherIcon))
 
 /*
-				def hum = 
-				def Tc = 
+				def hum =
+				def Tc =
 				state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
 */
-			
+
 				state.curWeatherDewPoint_c = wantMetric() ? Math.round(cur?.temperatureDewPoint.toDouble()) : Math.round( ( (cur?.temperatureDewPoint - 32.0) * (5/9) )).toDouble()
 				if(state.curWeatherTemp_c < state.curWeatherDewPoint_c) { state.curWeatherDewPoint_c = state.curWeatherTemp_c }
 				state.curWeatherDewPoint_f = Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
@@ -874,7 +874,7 @@ def getWeatherAlerts(weatData) {
 						}
 						state.walertCount = cntr
 
-						if(cntr < 4) { cntr += 1 } else { log.error "Many Alerts"; return true }
+						if(cntr <= 4) { cntr += 1 } else { log.error "Many Alerts"; return true }
 					}
 					state?.lastWeatherAlertNotif = newWalertNotif
 
@@ -1135,8 +1135,8 @@ def getFileBase64(url, preType, fileType) {
 		}
 		return null
     }
-}					
-					
+}
+
 def getWebData(params, desc, text=true) {
 	try {
 		Logger("getWebData: ${desc} data", "info")
@@ -1709,7 +1709,7 @@ def getWeatherHTML() {
 					<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex.min.css" async/>
 					<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-top.min.css" async />
 					<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/css/vex-theme-default.min.css" async/>
-					
+
 					<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 					<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.1/js/vex.combined.min.js"></script>
 					<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>

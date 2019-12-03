@@ -6,18 +6,18 @@
  *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
  * Modeled after the EcoBee thermostat under Templates in the IDE
- * Copyright (C) 2017, 2018 Anthony S.
+ * Copyright (C) 2017, 2018, 2019 Anthony S.
  * Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.4.5" }
+def devVer() { return "5.4.6" }
 
 // for the UI
 metadata {
-	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.", vid: "SmartThings-smartthings-Z-Wave_Thermostat") {
+	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.", vid: "SmartThings-smartthings-Z-Wave_Thermostat", ocfDeviceType: "oic.d.thermostat") {
 		capability "Actuator"
 		capability "Relative Humidity Measurement"
 		capability "Refresh"
@@ -92,6 +92,7 @@ metadata {
 		attribute "sunlightCorrectionActive", "string"
 		attribute "timeToTarget", "string"
 		attribute "nestType", "string"
+		attribute "usingEmergencyHeat", "string"
 		attribute "pauseUpdates", "string"
 		attribute "nestReportData", "string"
 		attribute "previousthermostatMode", "string"
@@ -147,16 +148,15 @@ metadata {
 			state("default", label:'${currentValue}\u00b0', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png",
 					backgroundColors: getTempColors())
 		}
-		standardTile("thermostatMode", "device.nestThermostatMode", width:2, height:2, decoration: "flat") {
-			state("off", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
-			state("heat", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
-			state("cool", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
-			state("auto", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
-			state("eco", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
+		standardTile("thermostatMode", "device.nestThermostatMode", width: 2, height: 2, supportedStates: "device.supportedThermostatModes", decoration: "flat") {
+			state("off",  action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+			state("heat", action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+			state("cool", action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+			state("auto", action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+			state("eco",  action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
 			state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 		}
-
 
 		standardTile("offBtn", "device.off", width:2, height:2, decoration: "flat") {
 			state("default", action: "offbtn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
@@ -178,16 +178,16 @@ metadata {
 		}
 
 		standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
-			state("auto", action: "changeFanMode", 	nextState: "updating",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png")
-			state("on",	action: "changeFanMode",	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png")
+			state("auto", 	action: "changeFanMode", 	nextState: "updating",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png")
+			state("on",			action: "changeFanMode",	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state "disabled", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_disabled_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-			state "home", 		action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
-			state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
-			state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
-			state "unknown",	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
+			state "home",       action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "away",       action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
+			state "auto-away",  action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
+			state "unknown",		action: "setPresence", 	icon: "st.unknown.unknown.unknown"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
@@ -222,7 +222,7 @@ metadata {
 			state "default", label:'', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
 			state "", label: ''
 		}
-		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, range: getRange(), inactiveLabel: false) {
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, range: getRange(), debouncePeriod: 1500, inactiveLabel: false) {
 			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
 			state "", label: ''
 		}
@@ -542,6 +542,7 @@ void processEvent(data) {
 			safetyTempsEvent(eventData?.safetyTemps)
 			comfortHumidityEvent(eventData?.comfortHumidity)
 			comfortDewpointEvent(eventData?.comfortDewpoint)
+			emergencyHeatEvent(eventData?.data?.is_using_emergency_heat)
 			state.voiceReportPrefs = eventData?.vReportPrefs
 			autoSchedDataEvent(eventData?.autoSchedData)
 			state?.devBannerData = eventData?.devBannerData ?: null
@@ -1285,6 +1286,16 @@ def autoSchedDataEvent(schedData) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 	}
 	state?.curAutoSchedData = schedData
+}
+
+def emergencyHeatEvent(emerHeat) {
+	def curStat = device.currentState("usingEmergencyHeat")?.value
+	def newStat = emerHeat
+	if(isStateChange(device, "usingEmergencyHeat", newStat.toString())) {
+		state.is_using_emergency_heat = !!newStat
+		Logger("Using Emergency Heat is: (${newStat.toString().capitalize()}) | Previous State: (${curStat.toString().capitalize()})")
+		sendEvent(name: "usingEmergencyHeat", value: newStat, descriptionText: "Using Emergency Heat is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+	}
 }
 
 def canHeatCool(canHeat, canCool) {
@@ -2816,7 +2827,7 @@ def updateOperatingHistory(today) {
 				hm.OperatingState_lastYear_fanonly = hm.OperatingState_thisYear_fanonly
 				hm.FanMode_lastYear_On = hm.FanMode_thisYear_On
 				hm.FanMode_lastYear_auto = hm.FanMode_thisYear_auto
-	
+
 				hm.OperatingState_thisYear_cooling = 0L
 				hm.OperatingState_thisYear_heating = 0L
 				hm.OperatingState_thisYear_idle = 0L
@@ -3430,7 +3441,7 @@ def getGraphHTML() {
 				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 				<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.2/js/swiper.min.js"></script>
 				<style>
-					
+
 				</style>
 			</head>
 			<body>
