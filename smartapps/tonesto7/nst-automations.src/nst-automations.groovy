@@ -8338,7 +8338,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 */
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
+		int diff = (stop - start) / 1000
 		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
