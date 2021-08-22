@@ -1,0 +1,106 @@
+{
+    "broadcast": {
+        "msgId": "7lswwqfVCjHA",
+        "message": "A critical SmartApp update was just published for NST Manager.  Please update your NST Manager SmartApps and Devices to avoid any disruptions",
+        "type": "warn",
+        "minVer": "5.5.2",
+        "devBannerMsg": {
+            "msgId": "",
+            "message": "",
+            "type": "warn",
+            "minVer": "5.5.2",
+            "expireDt": "Wed Feb 20 00:00:00 EST 2018"
+        }
+    },
+    "updater": {
+        "updateVer": 1,
+        "updateMsg": "",
+        "updateDesc": "",
+        "updateType": "std",
+        "setupVersion": 2,
+        "versions": {
+            "app": {
+                "ver": "5.6.4"
+            },
+            "autoapp": {
+                "ver": "5.5.0"
+            },
+            "thermostat": {
+                "ver": "5.4.6"
+            },
+            "protect": {
+                "ver": "5.4.3"
+            },
+            "camera": {
+                "ver": "5.4.5"
+            },
+            "presence": {
+                "ver": "5.4.4"
+            },
+            "weather": {
+                "ver": "5.5.2"
+            },
+            "stream": {
+                "ver": "2.0.1"
+            }
+        }
+    },
+    "settings": {
+        "askAlexa": {
+            "enAaMsgQueue": true,
+            "enMultiQueue": false
+        },
+        "database": {
+            "disableExceptions": true,
+            "sendExceptions": false,
+            "exceptionKey": "exceptions",
+            "pullSettingFromFB": false,
+            "metricsUrl": "https://nst-manager-metrics.firebaseio.com",
+            "exceptionUrl": "https://nst-manager-exceptions.firebaseio.com"
+        },
+        "reports": {
+            "disVoiceZoneRprt": false,
+            "disVoiceUsageRprt": false
+        },
+        "schedules": {
+            "count": 8
+        },
+        "streaming": {
+            "allowLocal": false
+        },
+        "healthcheck": {
+            "camTimeout": 120,
+            "protWireTimeout": 45,
+            "protBattTimeout": 1500,
+            "tstatTimeout": 45,
+            "longTimeout": 120,
+            "timeout": 45,
+            "enabled": true,
+            "repairEnabled": false
+        },
+        "maintenance": {
+            "stateVer": 3
+        }
+    },
+    "other": {
+        "active": 0,
+        "items": [{
+                "id": "OWQxMzJlODMtMTFmYy00NWJlLTlhOGQtOTViN2E3Y2IwN2Ew",
+                "secret": "TERhSmU4dEFNdmRQR3lGUHQwSkpQMTY1eA=="
+            },
+            {
+                "id": "MzFhZWE0NmMtNDA0OC00YzJiLWI2YmUtY2FjN2ZlMzA1ZDRj",
+                "secret": "Rm1PNDY5R1hmZFNWam43UGhLbmpHV1psbQ=="
+            },
+            {
+                "id": "NjNlOWJlZmEtZGM2Mi00YjczLWFhZjQtZGNmMzgyNmRkNzA0",
+                "secret": "OGlxVDhYNDZ3YTJVWm5MMG9lM1RieU9hMA=="
+            }
+        ]
+    },
+    "blacklists": {
+        "clients": [],
+        "metrics": [],
+        "exceptions": []
+    }
+}
