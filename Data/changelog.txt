@@ -1,29 +1,50 @@
-V5.2.3 (November 8th, 2017):
+V5.6.4 (May 16th, 2019):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
- • FIXED: Empty Locations on New Installs
- • FIXED: Tweaked the way app updates messages are determined
- • ADDED: Workaround step added to stop the issues preventing users from uninstalling the App
- • UPDATED: Minor Device Health Tweaks
+ • Token Updates
 
-Automation App 5.1.8:
-• FIXED: Tweaks to the Uninstall Process
-• FIXED: More Cleanups
-
-V5.2.2 (November 7th, 2017):
+V5.6.2 (April 9th, 2019):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
- • FIXED: Minor Bug Fixes and Code Cleanups.
+ • Adjust for more conservative nest throttling
 
-V5.2.1 (October 14th, 2017):
+V5.6.1 (March 29th, 2019):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
- • UPDATED: I have changed the app to no longer use our tokens and it will tell you when you are missing the required id and secret.
+ • REMOVED: Local rest stream support (Until ST restores the feature)
+ • UPDATED: Simplified exception report logic.
 
-V5.2.0 (July 22nd, 2017):
+V5.5.6 (November 14th, 2018):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
- • FIXED: NP issues
+ • Enabled Echo Speaks device support for Voice Notifications
+ • FIXED: Bug Fixes
 
-Automation App 5.1.7:
-• FIXED: NP issues
+Automation App 5.4.7:
+ • FIXED: Bug Fixes
+
+V5.5.2 (September 9th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • Enabled new camera options
+ • FIXED: Bug Fixes
+
+Automation App 5.4.5:
+ • FIXED: Bug Fixes
+
+V5.5.1 (September 8th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: Bug Fixes
+
+Automation App 5.4.4:
+ • FIXED: Bug Fixes
+
+V5.5.0 (August 28th, 2018):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: NST Streaming is now communicates via local network (when enabled)
+ • FIXED: Bug Fixes
+
+Automation App 5.4.3:
+ • FIXED: Bug Fixes

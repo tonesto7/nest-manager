@@ -3,7 +3,7 @@
  *	Author: Anthony S. (@tonesto7)
  *	Co-Authors: Ben W. (@desertBlade), Eric S. (@E_Sch)
  *
- *	Copyright (C) 2017 Anthony S., Ben W.
+ *	Copyright (C) 2017, 2018, 2019 Anthony S., Ben W.
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.2.0" }
+def devVer() { return "5.4.4" }
 
 // for the UI
 metadata {
@@ -57,19 +57,20 @@ metadata {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 		}
 		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
-			state "ok", label: "API Status:\nOK"
-			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+                        state "Good", label: "API Status:\nOK"
+                        state "Sporadic", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
+                        state "Outage", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
 		}
 		valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
+			state("default", label: 'Device Type:\nv${currentValue}', defaultState: true)
 		}
-		htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		// htmlTile(name:"html", action: "getHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main ("presence")
-		details ("presence", "nestPresence", "refresh", "html")
+		details ("presence", "nestPresence", "lastUpdateDt", "apiStatus", "devTypeVer", "refresh")
 	}
 }
 
@@ -79,8 +80,7 @@ mappings {
 
 void installed() {
 	Logger("installed...")
-	initialize()
-	state?.isInstalled = true
+	runIn(5, "initialize", [overwrite: true])
 }
 
 def initialize() {
@@ -89,6 +89,7 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
+		state?.isInstalled = true
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
 	}
@@ -96,7 +97,7 @@ def initialize() {
 
 void updated() {
 	Logger("updated...")
-	initialize()
+	runIn(5, "initialize", [overwrite: true])
 }
 
 def useTrackedHealth() { return state?.useTrackedHealth ?: false }
@@ -130,9 +131,7 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	Logger("ping...")
-//	if(useTrackedHealth()) {
-		keepAwakeEvent()
-//	}
+	keepAwakeEvent()
 }
 
 def keepAwakeEvent() {
@@ -193,20 +192,19 @@ def processEvent(data) {
 	def eventData = data?.evt
 	state.remove("eventData")
 	//log.trace("processEvent Parsing data ${eventData}")
-	try {
+//	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.isBeta = eventData?.isBeta == true ? true : false
 			state.hcRepairEnabled = eventData?.hcRepairEnabled == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			state.healthMsg = eventData?.healthNotify == true ? true : false
-//			if(useTrackedHealth()) {
-				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-					state.hcTimeout = eventData?.hcTimeout
-					verifyHC()
-				}
-//			}
+			state.healthMsg = eventData?.healthNotify?.healthMsg == true ? true : false
+			state.healthMsgWait = eventData?.healthNotify?.healthMsgWait
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.nestTimeZone = eventData?.tz ?: null
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -215,11 +213,11 @@ def processEvent(data) {
 			presenceEvent(eventData?.pres)
 			apiStatusEvent((!eventData?.apiIssues ? false : true))
 			deviceVerEvent(eventData?.latestVer.toString())
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException == false ? false : true }
 			lastUpdatedEvent(true)
 
-			if(eventData?.lastStrucDataUpd) {
-				def newDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", eventData?.lastStrucDataUpd?.toString()))
+			if(eventData?.lastStrDataUpd) {
+				def newDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", eventData?.lastStrDataUpd?.toString()))
 				//log.debug "newDt: $newDt"
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
@@ -234,16 +232,19 @@ def processEvent(data) {
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
 		return null
-	}
+/*	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
-		exceptionDataHandler(ex.message, "generateEvent")
+		exceptionDataHandler(ex?.message, "generateEvent")
 	}
+*/
 }
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
 }
+
+def getDevTypeId() { return device?.getTypeId() }
 
 def getDeviceStateData() {
 	return getState()
@@ -337,8 +338,7 @@ def presenceEvent(presence) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "issue" : "ok"
-	state?.apiStatus = newStat
+	def newStat = issue
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
@@ -363,7 +363,8 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 600) {
+		def t0 = state?.healthMsgWait ?: 3600
+		if(ldtSec < t0) {
 			return false
 		}
 	}
@@ -393,7 +394,7 @@ void setPresence() {
 	}
 	catch (ex) {
 		log.error "setPresence Exception:", ex
-		exceptionDataHandler(ex.message, "setPresence")
+		exceptionDataHandler(ex?.message, "setPresence")
 	}
 }
 
@@ -405,7 +406,7 @@ void setAway() {
 	}
 	catch (ex) {
 		log.error "setAway Exception:", ex
-		exceptionDataHandler(ex.message, "setAway")
+		exceptionDataHandler(ex?.message, "setAway")
 	}
 }
 
@@ -417,7 +418,7 @@ void setHome() {
 	}
 	catch (ex) {
 		log.error "setHome Exception:", ex
-		exceptionDataHandler(ex.message, "setHome")
+		exceptionDataHandler(ex?.message, "setHome")
 	}
 }
 
@@ -425,29 +426,30 @@ void setHome() {
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
-	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
-	switch (logType) {
-		case "trace":
-			log.trace "${smsg}"
-			break
-		case "debug":
-			log.debug "${smsg}"
-			break
-		case "info":
-			log.info "${smsg}"
-			break
-		case "warn":
-			log.warn "${smsg}"
-			break
-		case "error":
-			log.error "${smsg}"
-			break
-		default:
-			log.debug "${smsg}"
-			break
-	}
+	def smsg = state?.showLogNamePrefix ? "${device.displayName} (v${devVer()}) | ${msg}" : "${msg}"
 	if(state?.enRemDiagLogging) {
 		parent.saveLogtoRemDiagStore(smsg, logType, "Presence")
+	} else {
+		switch (logType) {
+			case "trace":
+				log.trace "${smsg}"
+				break
+			case "debug":
+				log.debug "${smsg}"
+				break
+			case "info":
+				log.info "${smsg}"
+				break
+			case "warn":
+				log.warn "${smsg}"
+				break
+			case "error":
+				log.error "${smsg}"
+				break
+			default:
+				log.debug "${smsg}"
+				break
+		}
 	}
 }
 
@@ -499,7 +501,6 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
 	try {
 		if(strtDate) {
-			//if(strtDate?.contains("dtNow")) { return 10000 }
 			def now = new Date()
 			def stopVal = stpDate ? stpDate.toString() : getDtNow()
 			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
@@ -515,42 +516,26 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	}
 }
 
-def getFileBase64(url,preType,fileType) {
-	def params = [
-		uri: url,
-		contentType: '$preType/$fileType'
-	]
+def getFileBase64(url, preType, fileType) {
+	def params = [uri: url, contentType: "$preType/$fileType"]
 	httpGet(params) { resp ->
-		if(resp.data) {
-			def respData = resp?.data
-			ByteArrayOutputStream bos = new ByteArrayOutputStream()
-			int len
-			int size = 4096
-			byte[] buf = new byte[size]
-			while ((len = respData.read(buf, 0, size)) != -1)
-				bos.write(buf, 0, len)
-			buf = bos.toByteArray()
-			//log.debug "buf: $buf"
-			String s = buf?.encodeBase64()
-			//log.debug "resp: ${s}"
-			return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+		if(resp?.status == 200) {
+			if(resp.data) {
+				def respData = resp?.data
+				byte[] byteData = resp?.data?.getBytes()
+				String enc = byteData?.encodeBase64()
+				// log.debug "enc: ${enc}"
+				return enc ? "data:${preType}/${fileType};base64,${enc?.toString()}" : null
+			}
+		} else {
+			LogAction("getFileBase64 Resp: ${resp?.status} ${url}", "error")
+			exceptionDataHandler("resp ${ex?.response?.status} ${url}", "getFileBase64")
+			return null
 		}
 	}
 }
 
-def getCssData() {
-	def cssData = null
-	def htmlInfo = state?.htmlInfo
-	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssVer = htmlInfo?.cssVer
-	} else {
-		cssData = getFileBase64(cssUrl(), "text", "css")
-	}
-	return cssData
-}
-
-def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
+def hasHtml() { return false }
 
 def getHtml() {
 	try {
@@ -568,7 +553,7 @@ def getHtml() {
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+				<link rel="stylesheet prefetch" type="text/css" href="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css"/>
 			</head>
 			<body>
 				${clientBl}
@@ -581,10 +566,10 @@ def getHtml() {
 	}
 	catch (ex) {
 		log.error "getHtml Exception:", ex
-		exceptionDataHandler(ex.message, "getHtml")
+		exceptionDataHandler(ex?.message, "getHtml")
 	}
 }
 
-private def textDevName()   { return "Nest Presence${appDevName()}" }
-private def appDevType()    { return false }
-private def appDevName()    { return appDevType() ? " (Dev)" : "" }
+private def textDevName() { return "Nest Presence${appDevName()}" }
+private def appDevType()  { return false }
+private def appDevName()  { return appDevType() ? " (Dev)" : "" }

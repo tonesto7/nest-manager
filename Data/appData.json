@@ -24,38 +24,35 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.2.3"
+                "ver": "5.6.4"
             },
             "autoapp": {
-                "ver": "5.2.0"
+                "ver": "5.5.0"
+            },
+            "storapp": {
+                "ver": "5.4.0"
             },
             "thermostat": {
-                "ver": "5.2.0"
+                "ver": "5.4.6"
             },
             "protect": {
-                "ver": "5.2.0"
+                "ver": "5.4.3"
             },
             "camera": {
-                "ver": "5.2.0"
+                "ver": "5.4.5"
             },
             "presence": {
-                "ver": "5.2.0"
+                "ver": "5.4.4"
             },
             "weather": {
-                "ver": "5.2.0"
+                "ver": "5.5.2"
             }
         },
         "allowInApp": false
     },
-    "html": {
-        "cssVer": 1,
-        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css",
-        "chartJsVer": 1,
-        "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
-    },
     "database": {
         "allowRemoteDiag": true,
-        "disableExceptions": false,
+        "disableExceptions": true,
         "exceptionPath": "exceptionData",
         "newexceptionPath": "newexceptionData",
         "remoteDiagPath": "remoteDiagLogs"
@@ -89,11 +86,11 @@
     },
     "healthcheck": {
         "camTimeout": 120,
-        "protWireTimeout": 35,
+        "protWireTimeout": 45,
         "protBattTimeout": 1500,
-        "tstatTimeout": 35,
+        "tstatTimeout": 45,
         "longTimeout": 120,
-        "timeout": 35,
+        "timeout": 45,
         "enabled": true,
         "repairEnabled": false
     },

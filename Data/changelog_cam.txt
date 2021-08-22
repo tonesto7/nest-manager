@@ -1,15 +1,22 @@
-<p style="font-size: 15px;"><strong>V5.2.0 (November 8th, 2017):</strong><p>
+<p style="font-size: 15px;"><strong>V5.4.1 (September 8th, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>ADDED:</strong> Preference now available to only modify motion events when person detected (Requires Nest Aware Subscription!).</li>
-    <li><strong>ADDED:</strong> Android Disclaimer for HTML.</li>
-    <li><strong>ADDED:</strong> Added New Attribute called 'motionPerson' for WebCoRE to Monitor for changes.</li>
-    <li><strong>UPDATED:</strong> Some Minor Device Health Tweaks.</li>
-    <li><strong>FIXED:</strong> Refresh Button now works again on HTML (iOS only).</li>
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks</li>
 </ul>
 <br>
-<p style="font-size: 15px;"><strong>V5.1.4 (July 21st, 2017):</strong><p>
+
+<p style="font-size: 15px;"><strong>V5.3.8 (July 30th, 2018):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>FIXED:</strong> The bug discovered with Storing the Images to ST is not entirely fixed but is now handled correctly and reporting the error.</li>
+    <li><strong>ADDED:</strong> Now Supports filtering of Motion Zones when using Nest Aware and NST Streaming Service</li>
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks</li>
+</ul>
+<br>
+
+<p style="font-size: 15px;"><strong>V5.3.7 (July 4th, 2018):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>FIXED:</strong> Performance optimizations</li>
+    <li><strong>FIXED:</strong> HTML Optimizations</li>
+    <li><strong>FIXED:</strong> Bug Fixes / Tweaks.</li>
 </ul>
